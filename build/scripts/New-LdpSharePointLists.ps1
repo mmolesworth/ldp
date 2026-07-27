@@ -16,7 +16,7 @@
       4. Indexes          (Constitution III — delegation)
 
 .PARAMETER SiteUrl
-    Target site, e.g. https://markmolesworth.sharepoint.com/sites/leadership-development-program
+    Target site, e.g. <site-url>
 
 .PARAMETER ClientId
     Entra ID app registration client ID used for interactive sign-in.
@@ -37,10 +37,10 @@
     reachable at Settings > Site contents.
 
 .EXAMPLE
-    ./New-LdpSharePointLists.ps1 -SiteUrl https://markmolesworth.sharepoint.com/sites/leadership-development-program -ClientId <your-client-id> -WhatIf
+    ./New-LdpSharePointLists.ps1 -SiteUrl <site-url> -ClientId <your-client-id> -WhatIf
 
 .EXAMPLE
-    ./New-LdpSharePointLists.ps1 -SiteUrl https://markmolesworth.sharepoint.com/sites/leadership-development-program -ClientId <your-client-id>
+    ./New-LdpSharePointLists.ps1 -SiteUrl <site-url> -ClientId <your-client-id>
 
 .NOTES
     Source of truth: build/lists/*.md. If a definition changes there, change it
