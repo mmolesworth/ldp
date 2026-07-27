@@ -1,0 +1,842 @@
+# Criterion Catalog Screen — US8 (RQ109–116, FR-046–048)
+# Classic controls only (Constitution II). Colours = ColorPalette.*, fonts/sizes = Typography.*
+# (both Set in App.OnStart per build/theme/theme.md).
+#
+# ---------------------------------------------------------------------------
+# HOW TO TRANSCRIBE (Constitution IV)
+# ---------------------------------------------------------------------------
+#   1. New screen → Blank. Rename it "Criterion Catalog Screen".
+#   2. Set these screen properties by hand:
+#        Fill:      =ColorPalette.Gray50
+#        OnVisible: =UpdateContext({
+#                     locCriterion: Blank(),
+#                     locIsNewCriterion: true
+#                   })
+#   3. Select the screen and paste everything below.
+#   4. Data sources needed: CRITERION_CATALOG, CRITERION_ANCHORS.
+#   5. Preview (F5) to judge it — OnVisible does not run on the design surface,
+#      so locCriterion stays blank in the editor.
+#
+# ---------------------------------------------------------------------------
+# HOW THE FOUR ANCHORS ARE MODELLED
+# ---------------------------------------------------------------------------
+# CRITERION_ANCHORS holds FOUR ROWS per criterion (Score 0, 1, 3, 5). They are
+# rendered as four FIXED blocks, not a gallery — that is what enforces RQ110
+# ("the same four anchors for every criterion, no criterion-specific scale").
+# A gallery would imply the set is editable. Each block loads its row by
+# (CatalogCriterionID, Score) and btnSaveCriterion writes all four back.
+#
+# ---------------------------------------------------------------------------
+# IMMUTABILITY (RQ114 / FR-047)
+# ---------------------------------------------------------------------------
+# Published is a one-way door. Every input below sets
+#   DisplayMode: =If(locIsPublished, DisplayMode.Disabled, DisplayMode.Edit)
+# where locIsPublished is derived, not stored — see lblPublishedBanner. This is
+# a UI guard only; SharePoint itself will still accept a write, so the same rule
+# has to hold anywhere else that touches CRITERION_CATALOG.
+
+# ---------- Header ----------
+- conHeaderCC:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =ColorPalette.Navy900
+      Height: =64
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+    Children:
+      - lblCatalogTitle:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextOnDark
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =32
+            Size: =Typography.SizeTitle
+            Text: ="Criterion Catalog"
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =Parent.Height / 2 - Self.Height / 2
+
+# ---------- Left: catalog list ----------
+- conListCC:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =Parent.Height - 112
+      RadiusBottomLeft: =10
+      RadiusBottomRight: =10
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Width: =340
+      X: =24
+      Y: =88
+    Children:
+      - btnNewCriterion:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextOnDark
+            Fill: =ColorPalette.Blue600
+            Font: =Typography.Family
+            Height: =36
+            HoverFill: =ColorPalette.Blue700
+            OnSelect: |-
+              =UpdateContext({ locCriterion: Blank(), locIsNewCriterion: true })
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            Text: ="+ New Criterion"
+            Width: =Parent.Width - 32
+            X: =16
+            Y: =16
+      - galCriteria:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            Height: =Parent.Height - 68
+            # State is indexed (Constitution III). Sorted by code, the stable identifier.
+            Items: =Sort(CRITERION_CATALOG, CriterionCode)
+            TemplatePadding: =0
+            TemplateSize: =64
+            Width: =Parent.Width - 32
+            X: =16
+            Y: =60
+          Children:
+            - lblCritItemName:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =20
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =ThisItem.CriterionCode & " — " & ThisItem.CriterionName
+                  Width: =Parent.TemplateWidth - 24
+                  X: =12
+                  Y: =9
+            - lblCritItemState:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =If(ThisItem.State.Value = "Published",
+                       ColorPalette.SuccessText, ColorPalette.TextHelp)
+                  Font: =Typography.Family
+                  Height: =18
+                  Size: =Typography.SizeCaption
+                  Text: =ThisItem.State.Value
+                  Width: =120
+                  X: =12
+                  Y: =33
+            # RQ115 — a passed end date retires a criterion from selection (RQ116).
+            # Surfaced in the list so DTD can see it without opening each one.
+            - lblCritItemRetired:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Right
+                  Color: =ColorPalette.WarningText
+                  Font: =Typography.Family
+                  Height: =18
+                  Size: =Typography.SizeCaption
+                  Text: ="end date passed"
+                  Visible: |-
+                    =And(Not(IsBlank(ThisItem.EndDate)), ThisItem.EndDate < Today())
+                  Width: =140
+                  X: =Parent.TemplateWidth - 152
+                  Y: =33
+            - btnCritItemSelect:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =RGBA(0, 0, 0, 0)
+                  Height: =Parent.TemplateHeight
+                  HoverColor: =RGBA(0, 0, 0, 0)
+                  HoverFill: =ColorPalette.Blue50
+                  OnSelect: |-
+                    =UpdateContext({ locCriterion: ThisItem, locIsNewCriterion: false })
+                  PressedColor: =RGBA(0, 0, 0, 0)
+                  PressedFill: =ColorPalette.Blue50
+                  Text: |-
+                    ="Open criterion " & ThisItem.CriterionCode
+                  Width: =Parent.TemplateWidth
+                  X: =0
+                  Y: =0
+
+# ---------- Right: criterion + four-anchor editor ----------
+- conFormCC:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =Parent.Height - 112
+      RadiusBottomLeft: =10
+      RadiusBottomRight: =10
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Width: =Parent.Width - 404
+      X: =380
+      Y: =88
+    Children:
+      - lblCritFormTitle:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =28
+            Size: =Typography.SizeHeading
+            Text: |-
+              =If(locIsNewCriterion, "New Criterion", "Criterion " & locCriterion.CriterionCode)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =16
+
+      # RQ114 — the banner IS the derivation of locIsPublished used by every
+      # DisplayMode below. A published criterion is frozen; a change is a new one.
+      - lblPublishedBanner:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.WarningText
+            Font: =Typography.Family
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="Published — this criterion can no longer be changed. Create a new criterion instead."
+            Visible: |-
+              =And(Not(locIsNewCriterion), locCriterion.State.Value = "Published")
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =46
+
+      # --- Code / Name ---
+      - lblCritCodeLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeLabel
+            Text: ="Code (required)"
+            Width: =180
+            X: =24
+            Y: =70
+      - txtCriterionCode:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(locIsNewCriterion, "", locCriterion.CriterionCode)
+            DisplayMode: |-
+              =If(And(Not(locIsNewCriterion), locCriterion.State.Value = "Published"),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =32
+            HintText: ="e.g., C01"
+            Size: =Typography.SizeBody
+            Width: =180
+            X: =24
+            Y: =92
+      - lblCritNameLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeLabel
+            Text: ="Criterion name (required)"
+            Width: =txtCriterionName.Width
+            X: =txtCriterionName.X
+            Y: =70
+      - txtCriterionName:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(locIsNewCriterion, "", locCriterion.CriterionName)
+            DisplayMode: |-
+              =If(And(Not(locIsNewCriterion), locCriterion.State.Value = "Published"),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =32
+            HintText: ="What the rater evaluates"
+            Size: =Typography.SizeBody
+            Width: =Parent.Width - 244
+            X: =220
+            Y: =92
+
+      # --- Description ---
+      - lblCritDescLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeLabel
+            Text: ="Description (required)"
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =134
+      - txtCriterionDescription:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(locIsNewCriterion, "", locCriterion.Description)
+            DisplayMode: |-
+              =If(And(Not(locIsNewCriterion), locCriterion.State.Value = "Published"),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =52
+            HintText: ="Full description of what is being assessed"
+            Mode: =TextMode.MultiLine
+            Size: =Typography.SizeBody
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =156
+
+      # --- Availability window (RQ115) ---
+      # StartDate is set on publish (CRITERION_CATALOG.md). A NULL EndDate means
+      # "still available", which a DatePicker cannot express — hence the toggle.
+      - lblStartLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeLabel
+            Text: ="Start date"
+            Width: =180
+            X: =24
+            Y: =218
+      - dtpStartDate:
+          Control: Classic/DatePicker@2.6.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            DefaultDate: |-
+              =If(locIsNewCriterion, Today(), Coalesce(locCriterion.StartDate, Today()))
+            DisplayMode: |-
+              =If(And(Not(locIsNewCriterion), locCriterion.State.Value = "Published"),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Font: =Typography.Family
+            Height: =32
+            Width: =180
+            X: =24
+            Y: =240
+      - lblEndLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeLabel
+            Text: ="End date"
+            Width: =180
+            X: =220
+            Y: =218
+      - dtpEndDate:
+          Control: Classic/DatePicker@2.6.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            DefaultDate: |-
+              =If(locIsNewCriterion, Today(), Coalesce(locCriterion.EndDate, Today()))
+            DisplayMode: |-
+              =If(
+                Or(
+                  tglStillAvailable.Value,
+                  And(Not(locIsNewCriterion), locCriterion.State.Value = "Published")
+                ),
+                DisplayMode.Disabled, DisplayMode.Edit
+              )
+            Font: =Typography.Family
+            Height: =32
+            Width: =180
+            X: =220
+            Y: =240
+      - tglStillAvailable:
+          Control: Classic/Toggle@2.1.0
+          Properties:
+            Default: |-
+              =If(locIsNewCriterion, true, IsBlank(locCriterion.EndDate))
+            DisplayMode: |-
+              =If(And(Not(locIsNewCriterion), locCriterion.State.Value = "Published"),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Height: =32
+            Width: =60
+            X: =416
+            Y: =240
+      - lblStillAvailableLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeCaption
+            Text: ="No end date — still available for selection"
+            Width: =300
+            X: =484
+            Y: =246
+
+      # --- The four fixed anchors (RQ110) ---
+      - lblAnchorsHeader:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =22
+            Size: =Typography.SizeSubtitle
+            Text: ="Scoring anchors — fixed scale, all four required to publish"
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =288
+      - lblAnchorTextHeader:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =16
+            Size: =Typography.SizeCaption
+            Text: ="Anchor descriptor (required)"
+            Width: =txtAnchorText0.Width
+            X: =txtAnchorText0.X
+            Y: =312
+      - lblAnchorExampleHeader:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =16
+            Size: =Typography.SizeCaption
+            Text: ="Illustrative example (optional, RQ111)"
+            Width: =txtAnchorExample0.Width
+            X: =txtAnchorExample0.X
+            Y: =312
+
+      # ----- anchor 0 -----
+      - lblAnchorScore0:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =44
+            Size: =Typography.SizeBody
+            Text: ="0"
+            Width: =32
+            X: =24
+            Y: =332
+      - txtAnchorText0:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(locIsNewCriterion, "",
+                 LookUp(CRITERION_ANCHORS,
+                   And(CatalogCriterionID.Id = locCriterion.ID, Score = 0)).AnchorText)
+            DisplayMode: |-
+              =If(And(Not(locIsNewCriterion), locCriterion.State.Value = "Published"),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =44
+            Mode: =TextMode.MultiLine
+            Size: =Typography.SizeBody
+            Width: =(Parent.Width - 120) / 2
+            X: =64
+            Y: =332
+      - txtAnchorExample0:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(locIsNewCriterion, "",
+                 LookUp(CRITERION_ANCHORS,
+                   And(CatalogCriterionID.Id = locCriterion.ID, Score = 0)).ExampleText)
+            DisplayMode: |-
+              =If(And(Not(locIsNewCriterion), locCriterion.State.Value = "Published"),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =44
+            Mode: =TextMode.MultiLine
+            Size: =Typography.SizeBody
+            Width: =txtAnchorText0.Width
+            X: =txtAnchorText0.X + txtAnchorText0.Width + 16
+            Y: =332
+
+      # ----- anchor 1 -----
+      - lblAnchorScore1:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =44
+            Size: =Typography.SizeBody
+            Text: ="1"
+            Width: =32
+            X: =24
+            Y: =384
+      - txtAnchorText1:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(locIsNewCriterion, "",
+                 LookUp(CRITERION_ANCHORS,
+                   And(CatalogCriterionID.Id = locCriterion.ID, Score = 1)).AnchorText)
+            DisplayMode: |-
+              =If(And(Not(locIsNewCriterion), locCriterion.State.Value = "Published"),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =44
+            Mode: =TextMode.MultiLine
+            Size: =Typography.SizeBody
+            Width: =txtAnchorText0.Width
+            X: =64
+            Y: =384
+      - txtAnchorExample1:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(locIsNewCriterion, "",
+                 LookUp(CRITERION_ANCHORS,
+                   And(CatalogCriterionID.Id = locCriterion.ID, Score = 1)).ExampleText)
+            DisplayMode: |-
+              =If(And(Not(locIsNewCriterion), locCriterion.State.Value = "Published"),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =44
+            Mode: =TextMode.MultiLine
+            Size: =Typography.SizeBody
+            Width: =txtAnchorText0.Width
+            X: =txtAnchorExample0.X
+            Y: =384
+
+      # ----- anchor 3 (note the scale skips 2 — RQ110) -----
+      - lblAnchorScore3:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =44
+            Size: =Typography.SizeBody
+            Text: ="3"
+            Width: =32
+            X: =24
+            Y: =436
+      - txtAnchorText3:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(locIsNewCriterion, "",
+                 LookUp(CRITERION_ANCHORS,
+                   And(CatalogCriterionID.Id = locCriterion.ID, Score = 3)).AnchorText)
+            DisplayMode: |-
+              =If(And(Not(locIsNewCriterion), locCriterion.State.Value = "Published"),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =44
+            Mode: =TextMode.MultiLine
+            Size: =Typography.SizeBody
+            Width: =txtAnchorText0.Width
+            X: =64
+            Y: =436
+      - txtAnchorExample3:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(locIsNewCriterion, "",
+                 LookUp(CRITERION_ANCHORS,
+                   And(CatalogCriterionID.Id = locCriterion.ID, Score = 3)).ExampleText)
+            DisplayMode: |-
+              =If(And(Not(locIsNewCriterion), locCriterion.State.Value = "Published"),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =44
+            Mode: =TextMode.MultiLine
+            Size: =Typography.SizeBody
+            Width: =txtAnchorText0.Width
+            X: =txtAnchorExample0.X
+            Y: =436
+
+      # ----- anchor 5 -----
+      - lblAnchorScore5:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =44
+            Size: =Typography.SizeBody
+            Text: ="5"
+            Width: =32
+            X: =24
+            Y: =488
+      - txtAnchorText5:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(locIsNewCriterion, "",
+                 LookUp(CRITERION_ANCHORS,
+                   And(CatalogCriterionID.Id = locCriterion.ID, Score = 5)).AnchorText)
+            DisplayMode: |-
+              =If(And(Not(locIsNewCriterion), locCriterion.State.Value = "Published"),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =44
+            Mode: =TextMode.MultiLine
+            Size: =Typography.SizeBody
+            Width: =txtAnchorText0.Width
+            X: =64
+            Y: =488
+      - txtAnchorExample5:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(locIsNewCriterion, "",
+                 LookUp(CRITERION_ANCHORS,
+                   And(CatalogCriterionID.Id = locCriterion.ID, Score = 5)).ExampleText)
+            DisplayMode: |-
+              =If(And(Not(locIsNewCriterion), locCriterion.State.Value = "Published"),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =44
+            Mode: =TextMode.MultiLine
+            Size: =Typography.SizeBody
+            Width: =txtAnchorText0.Width
+            X: =txtAnchorExample0.X
+            Y: =488
+
+      # --- Validation + actions ---
+      - lblCritValidation:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.DangerText
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeCaption
+            Text: ="Code, name, and description are required before this criterion can be saved."
+            Visible: |-
+              =Or(
+                IsBlank(Trim(txtCriterionCode.Text)),
+                IsBlank(Trim(txtCriterionName.Text)),
+                IsBlank(Trim(txtCriterionDescription.Text))
+              )
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =540
+
+      # Writes the criterion row, then all four anchor rows. Anchors are matched on
+      # (CatalogCriterionID, Score) so a re-save updates in place rather than
+      # appending a fifth row — FR-046 requires exactly four.
+      - btnSaveCriterion:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextOnDark
+            DisplayMode: |-
+              =If(
+                Or(
+                  And(Not(locIsNewCriterion), locCriterion.State.Value = "Published"),
+                  IsBlank(Trim(txtCriterionCode.Text)),
+                  IsBlank(Trim(txtCriterionName.Text)),
+                  IsBlank(Trim(txtCriterionDescription.Text))
+                ),
+                DisplayMode.Disabled, DisplayMode.Edit
+              )
+            Fill: =ColorPalette.Blue600
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.Blue700
+            OnSelect: |-
+              =UpdateContext({
+                locSaved: Patch(
+                  CRITERION_CATALOG,
+                  If(IsBlank(locCriterion), Defaults(CRITERION_CATALOG), locCriterion),
+                  {
+                    CriterionCode: txtCriterionCode.Text,
+                    CriterionName: txtCriterionName.Text,
+                    Description: txtCriterionDescription.Text,
+                    State: If(IsBlank(locCriterion), { Value: "Draft" }, locCriterion.State),
+                    StartDate: dtpStartDate.SelectedDate,
+                    EndDate: If(tglStillAvailable.Value, Blank(), dtpEndDate.SelectedDate)
+                  }
+                )
+              });
+              If(
+                IsBlank(locSaved.ID),
+                Notify("The criterion could not be saved, so no anchors were written.", NotificationType.Error),
+                ForAll(
+                  Table(
+                    { Sc: 0, Txt: txtAnchorText0.Text, Ex: txtAnchorExample0.Text },
+                    { Sc: 1, Txt: txtAnchorText1.Text, Ex: txtAnchorExample1.Text },
+                    { Sc: 3, Txt: txtAnchorText3.Text, Ex: txtAnchorExample3.Text },
+                    { Sc: 5, Txt: txtAnchorText5.Text, Ex: txtAnchorExample5.Text }
+                  ) As a,
+                  Patch(CRITERION_ANCHORS,
+                    If(IsBlank(LookUp(CRITERION_ANCHORS, And(CatalogCriterionID.Id = locSaved.ID, Score = a.Sc))),
+                       Defaults(CRITERION_ANCHORS),
+                       LookUp(CRITERION_ANCHORS, And(CatalogCriterionID.Id = locSaved.ID, Score = a.Sc))),
+                    {
+                      CatalogCriterionID: {
+                        '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                        Id: locSaved.ID,
+                        Value: locSaved.CriterionCode
+                      },
+                      Score: a.Sc,
+                      AnchorText: a.Txt,
+                      ExampleText: a.Ex
+                    }
+                  )
+                );
+                UpdateContext({ locCriterion: locSaved, locIsNewCriterion: false });
+                Notify("Criterion saved as Draft.", NotificationType.Success)
+              )
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            Text: ="Save Draft"
+            Width: =150
+            X: =24
+            Y: =570
+
+      # FR-046 — no publish unless all four anchors carry text. Checked against the
+      # inputs, not the stored rows: the user may have typed a fourth anchor and not
+      # yet saved, and CountRows over CRITERION_ANCHORS would not delegate anyway.
+      - btnPublishCriterion:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextOnDark
+            DisplayMode: |-
+              =If(
+                Or(
+                  locIsNewCriterion,
+                  locCriterion.State.Value = "Published"
+                ),
+                DisplayMode.Disabled, DisplayMode.Edit
+              )
+            Fill: =ColorPalette.SuccessText
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.SuccessText
+            OnSelect: |-
+              =If(
+                Or(
+                  IsBlank(Trim(txtAnchorText0.Text)),
+                  IsBlank(Trim(txtAnchorText1.Text)),
+                  IsBlank(Trim(txtAnchorText3.Text)),
+                  IsBlank(Trim(txtAnchorText5.Text))
+                ),
+                Notify(
+                  "All four anchors (0, 1, 3 and 5) need a descriptor before this criterion can be published.",
+                  NotificationType.Error
+                ),
+                Patch(CRITERION_CATALOG, locCriterion,
+                  {
+                    State: { Value: "Published" },
+                    StartDate: Coalesce(locCriterion.StartDate, Today())
+                  }
+                );
+                UpdateContext({ locCriterion: LookUp(CRITERION_CATALOG, ID = locCriterion.ID) });
+                Notify("Criterion published and is now locked against further change.", NotificationType.Success)
+              )
+            PressedFill: =ColorPalette.SuccessText
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            Text: ="Publish"
+            Width: =150
+            X: =190
+            Y: =570
+      - lblPublishHint:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="Save the draft before publishing. Publishing is permanent."
+            Visible: =Not(locIsNewCriterion)
+            Width: =Parent.Width - 400
+            X: =356
+            Y: =580

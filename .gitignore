@@ -1,0 +1,17 @@
+# Leadership Development — Power Apps canvas app (YAML-authored) + SharePoint
+# No compiled sources; keep the tree clean of OS/editor and download cruft.
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+.vscode/
+.idea/
+
+# Windows download marker alternate-data-streams (seen on WSL)
+*:Zone.Identifier
+*Zone.Identifier
+
+# Local secrets / environment (should never be committed)
+.env*

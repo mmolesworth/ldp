@@ -1,0 +1,1179 @@
+- lblCycTitle:
+    Control: Label@2.5.1
+    Properties:
+      Color: =ColorPalette.TextHeading
+      Font: =Typography.Family
+      FontWeight: =Typography.WeightBold
+      Height: =30
+      Size: =Typography.SizeHeading
+      Text: ="Application Cycles"
+      Width: =400
+      X: =24
+      Y: =18
+
+- btnCycAdd:
+    Control: Classic/Button@2.2.0
+    Properties:
+      BorderColor: =ColorPalette.Blue600
+      BorderStyle: =BorderStyle.Solid
+      BorderThickness: =0
+      Color: =ColorPalette.TextOnDark
+      Fill: =ColorPalette.Blue600
+      FocusedBorderColor: =ColorPalette.FocusOnDark
+      FocusedBorderThickness: =3
+      Font: =Typography.Family
+      Height: =32
+      HoverFill: =ColorPalette.Blue700
+      OnSelect: |-
+        =UpdateContext({
+          locCycle: Blank(),
+          locNew: true,
+          locEdit: true,
+          locState: "Scheduled",
+          locOpenDate: Blank(),
+          locCloseDate: Blank(),
+          locDecisionDate: Blank(),
+          locCalTarget: ""
+        });
+        Reset(txtCycName)
+      PressedFill: =ColorPalette.Blue700
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      Size: =Typography.SizeBody
+      Text: ="Add cycle"
+      Width: =130
+      X: =Parent.Width - 154
+      Y: =18
+
+- conCycHead:
+    Control: GroupContainer@1.5.0
+    Variant: AutoLayout
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =ColorPalette.Gray25
+      Height: =36
+      LayoutAlignItems: =LayoutAlignItems.Center
+      LayoutDirection: =LayoutDirection.Horizontal
+      PaddingLeft: =16
+      PaddingRight: =16
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =62
+    Children:
+      - btnCycHeadName:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =1.8
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverFill: =RGBA(0, 0, 0, 0)
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locCycAsc: If(locCycSort = "CycleName", Not(locCycAsc), true),
+                locCycSort: "CycleName"
+              })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Cycle" & If(locCycSort = "CycleName", If(locCycAsc, "  ▲", "  ▼"), "")
+      - btnCycHeadState:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =0.9
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverFill: =RGBA(0, 0, 0, 0)
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locCycAsc: If(locCycSort = "State", Not(locCycAsc), true),
+                locCycSort: "State"
+              })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="State" & If(locCycSort = "State", If(locCycAsc, "  ▲", "  ▼"), "")
+      - btnCycHeadOpen:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =0.9
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverFill: =RGBA(0, 0, 0, 0)
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locCycAsc: If(locCycSort = "OpenDate", Not(locCycAsc), true),
+                locCycSort: "OpenDate"
+              })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Opens" & If(locCycSort = "OpenDate", If(locCycAsc, "  ▲", "  ▼"), "")
+      - btnCycHeadClose:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =0.9
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverFill: =RGBA(0, 0, 0, 0)
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locCycAsc: If(locCycSort = "CloseDate", Not(locCycAsc), true),
+                locCycSort: "CloseDate"
+              })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Closes" & If(locCycSort = "CloseDate", If(locCycAsc, "  ▲", "  ▼"), "")
+      - btnCycHeadDecision:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =0.9
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverFill: =RGBA(0, 0, 0, 0)
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locCycAsc: If(locCycSort = "ExpectedDecisionDate", Not(locCycAsc), true),
+                locCycSort: "ExpectedDecisionDate"
+              })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Decisions" & If(locCycSort = "ExpectedDecisionDate", If(locCycAsc, "  ▲", "  ▼"), "")
+
+- galCycles:
+    Control: Gallery@2.15.0
+    Variant: Vertical
+    Properties:
+      BorderColor: =ColorPalette.Gray200
+      Height: =168
+      Items: |-
+        =SortByColumns(CYCLES, locCycSort,
+          If(locCycAsc, SortOrder.Ascending, SortOrder.Descending))
+      ShowScrollbar: =true
+      TemplatePadding: =0
+      TemplateSize: =44
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =98
+    Children:
+      - conCycRow:
+          Control: GroupContainer@1.5.0
+          Variant: AutoLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: |-
+              =If(And(Not(IsBlank(locCycle)), ThisItem.ID = locCycle.ID),
+                 ColorPalette.Blue50, ColorPalette.White)
+            Height: =Parent.TemplateHeight
+            LayoutAlignItems: =LayoutAlignItems.Center
+            LayoutDirection: =LayoutDirection.Horizontal
+            PaddingLeft: =16
+            PaddingRight: =16
+            Width: =Parent.TemplateWidth
+          Children:
+            - lblCycRowName:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  FillPortions: =1.8
+                  Font: =Typography.Family
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.CycleName
+            - lblCycRowState:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =Switch(ThisItem.State.Value,
+                       "Open", ColorPalette.SuccessText,
+                       "Scheduled", ColorPalette.Blue700,
+                       "In Review", ColorPalette.WarningText,
+                       ColorPalette.TextHelp)
+                  FillPortions: =0.9
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeCaption
+                  Text: =ThisItem.State.Value
+            - lblCycRowOpen:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  FillPortions: =0.9
+                  Font: =Typography.Family
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =Text(ThisItem.OpenDate, "mm/dd/yyyy")
+            - lblCycRowClose:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  FillPortions: =0.9
+                  Font: =Typography.Family
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =Text(ThisItem.CloseDate, "mm/dd/yyyy")
+            - lblCycRowDecision:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  FillPortions: =0.9
+                  Font: =Typography.Family
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =Text(ThisItem.ExpectedDecisionDate, "mm/dd/yyyy")
+      - btnCycRowSelect:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =RGBA(0, 0, 0, 0)
+            Fill: =RGBA(0, 0, 0, 0)
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Height: =Parent.TemplateHeight
+            HoverColor: =RGBA(0, 0, 0, 0)
+            HoverFill: =RGBA(0, 0, 0, 0.04)
+            OnSelect: |-
+              =UpdateContext({
+                locCycle: ThisItem,
+                locNew: false,
+                locEdit: false,
+                locState: ThisItem.State.Value,
+                locOpenDate: ThisItem.OpenDate,
+                locCloseDate: ThisItem.CloseDate,
+                locDecisionDate: ThisItem.ExpectedDecisionDate,
+                locCalTarget: ""
+              });
+              Reset(txtCycName)
+            PressedColor: =RGBA(0, 0, 0, 0)
+            PressedFill: =RGBA(0, 0, 0, 0.08)
+            Text: |-
+              ="Select " & ThisItem.CycleName
+            Width: =Parent.TemplateWidth
+            X: =0
+            Y: =0
+      - recCycRowLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.Gray200
+            Height: =1
+            Width: =Parent.TemplateWidth
+            Y: =Parent.TemplateHeight - 1
+
+- lblCycEmpty:
+    Control: Label@2.5.1
+    Properties:
+      Align: =Align.Center
+      Color: =ColorPalette.TextHelp
+      Font: =Typography.Family
+      Height: =40
+      Size: =Typography.SizeBody
+      Text: ="No cycles yet. Use Add cycle to create the first one."
+      Visible: =CountRows(galCycles.AllItems) = 0
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =140
+
+- conCycDetail:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =Max(300, Parent.Height - 306)
+      RadiusBottomLeft: =10
+      RadiusBottomRight: =10
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =282
+    Children:
+      - lblCycDetailEmpty:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =60
+            Size: =Typography.SizeBody
+            Text: |-
+              =If(CountRows(galCycles.AllItems) = 0,
+                 "No cycles exist yet. Use Add cycle above to create one.",
+                 "Select a cycle above to edit it, or use Add cycle to create one.")
+            Visible: =And(IsBlank(locCycle), Not(locNew))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =Parent.Height / 2 - 30
+
+      - btnCycEditToggle:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =Reset(txtCycName);
+              UpdateContext({
+                locEdit: Not(locEdit),
+                locCalTarget: "",
+                locNew: If(locEdit, false, locNew),
+                locState:
+                  If(locEdit, Coalesce(locCycle.State.Value, "Scheduled"), locState),
+                locOpenDate:
+                  If(locEdit, Coalesce(locCycle.OpenDate, Today()), locOpenDate),
+                locCloseDate:
+                  If(locEdit, Coalesce(locCycle.CloseDate, Today()), locCloseDate),
+                locDecisionDate:
+                  If(locEdit, Coalesce(locCycle.ExpectedDecisionDate, Today()), locDecisionDate)
+              })
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            TabIndex: =1
+            Text: |-
+              =If(locEdit, "Cancel", "Edit")
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =100
+            X: =Parent.Width - 124
+            Y: =18
+
+      - lblCycNameLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            PaddingLeft: =8
+            Size: =Typography.SizeCaption
+            Text: ="CYCLE NAME"
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =320
+            X: =24
+            Y: =20
+      - txtCycName:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(locNew, "", locCycle.CycleName)
+            DisabledBorderColor: =RGBA(0, 0, 0, 0)
+            DisabledColor: =ColorPalette.TextHeading
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEdit, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            PaddingLeft: =8
+            Size: =Typography.SizeBody
+            TabIndex: =3
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =320
+            X: =24
+            Y: =40
+
+      - lblCycStateLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            PaddingLeft: =8
+            Size: =Typography.SizeCaption
+            Text: ="STATE"
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =220
+            X: =372
+            Y: =20
+      - drpCycState:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            Color: |-
+              =Switch(locState,
+                 "Open", ColorPalette.SuccessText,
+                 "Scheduled", ColorPalette.Blue700,
+                 "In Review", ColorPalette.WarningText,
+                 ColorPalette.TextHelp)
+            Default: =locState
+            DisabledBorderColor: =RGBA(0, 0, 0, 0)
+            DisabledColor: |-
+              =Switch(locState,
+                 "Open", ColorPalette.SuccessText,
+                 "Scheduled", ColorPalette.Blue700,
+                 "In Review", ColorPalette.WarningText,
+                 ColorPalette.TextHelp)
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEdit, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =32
+            Items: =Choices(CYCLES.State)
+            OnChange: |-
+              =UpdateContext({
+                locWarn:
+                  Or(locWarn,
+                     And(drpCycState.Selected.Value = "Open",
+                         Not(IsEmpty(Filter(CYCLES, State.Value = "Open"))),
+                         First(Filter(CYCLES, State.Value = "Open")).ID <> locCycle.ID)),
+                locWarnTitle: "Another cycle is already open",
+                locWarnMsg:
+                  First(Filter(CYCLES, State.Value = "Open")).CycleName &
+                  " is currently open. Only one cycle can be open at a time. Close " &
+                  First(Filter(CYCLES, State.Value = "Open")).CycleName &
+                  " before opening this one.",
+                locState:
+                  If(And(drpCycState.Selected.Value = "Open",
+                         Not(IsEmpty(Filter(CYCLES, State.Value = "Open"))),
+                         First(Filter(CYCLES, State.Value = "Open")).ID <> locCycle.ID),
+                     locState,
+                     drpCycState.Selected.Value)
+              })
+            Size: =Typography.SizeBody
+            TabIndex: =4
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =220
+            X: =372
+            Y: =40
+
+      - lblCycOpenLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            PaddingLeft: =8
+            Size: =Typography.SizeCaption
+            Text: ="OPENS"
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =150
+            X: =24
+            Y: =96
+      - btnCycOpenDate:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: |-
+              =If(locCalTarget = "Open", ColorPalette.Blue600, ColorPalette.Gray300)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: |-
+              =If(IsBlank(locOpenDate), ColorPalette.TextMuted, ColorPalette.TextBody)
+            DisabledBorderColor: =RGBA(0, 0, 0, 0)
+            DisabledColor: |-
+              =If(IsBlank(locOpenDate), ColorPalette.TextHelp, ColorPalette.TextBody)
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEdit, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =UpdateContext({
+                locCalTarget: If(locCalTarget = "Open", "", "Open"),
+                locCalMonth:
+                  DateAdd(Coalesce(locOpenDate, Today()),
+                          1 - Day(Coalesce(locOpenDate, Today())), TimeUnit.Days)
+              });
+              UpdateContext({
+                locCalFirstInView:
+                  DateAdd(locCalMonth, -(Weekday(locCalMonth) - 1), TimeUnit.Days),
+                locCalLastOfMonth:
+                  DateAdd(DateAdd(locCalMonth, 1, TimeUnit.Months), -1, TimeUnit.Days)
+              })
+            PaddingLeft: =8
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            TabIndex: =5
+            Text: |-
+              =If(IsBlank(locOpenDate),
+                 If(locEdit, "Select a date", "—"),
+                 Text(locOpenDate, "mm/dd/yyyy"))
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =150
+            X: =24
+            Y: =116
+      - lblCycCloseLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            PaddingLeft: =8
+            Size: =Typography.SizeCaption
+            Text: ="CLOSES"
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =150
+            X: =190
+            Y: =96
+      - btnCycCloseDate:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: |-
+              =If(locCalTarget = "Close", ColorPalette.Blue600, ColorPalette.Gray300)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: |-
+              =If(IsBlank(locCloseDate), ColorPalette.TextMuted, ColorPalette.TextBody)
+            DisabledBorderColor: =RGBA(0, 0, 0, 0)
+            DisabledColor: |-
+              =If(IsBlank(locCloseDate), ColorPalette.TextHelp, ColorPalette.TextBody)
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEdit, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =UpdateContext({
+                locCalTarget: If(locCalTarget = "Close", "", "Close"),
+                locCalMonth:
+                  DateAdd(Coalesce(locCloseDate, Today()),
+                          1 - Day(Coalesce(locCloseDate, Today())), TimeUnit.Days)
+              });
+              UpdateContext({
+                locCalFirstInView:
+                  DateAdd(locCalMonth, -(Weekday(locCalMonth) - 1), TimeUnit.Days),
+                locCalLastOfMonth:
+                  DateAdd(DateAdd(locCalMonth, 1, TimeUnit.Months), -1, TimeUnit.Days)
+              })
+            PaddingLeft: =8
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            TabIndex: =6
+            Text: |-
+              =If(IsBlank(locCloseDate),
+                 If(locEdit, "Select a date", "—"),
+                 Text(locCloseDate, "mm/dd/yyyy"))
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =150
+            X: =190
+            Y: =116
+      - lblCycDecisionLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            PaddingLeft: =8
+            Size: =Typography.SizeCaption
+            Text: ="DECISIONS EXPECTED"
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =180
+            X: =356
+            Y: =96
+      - btnCycDecisionDate:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: |-
+              =If(locCalTarget = "Decision", ColorPalette.Blue600, ColorPalette.Gray300)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: |-
+              =If(IsBlank(locDecisionDate), ColorPalette.TextMuted, ColorPalette.TextBody)
+            DisabledBorderColor: =RGBA(0, 0, 0, 0)
+            DisabledColor: |-
+              =If(IsBlank(locDecisionDate), ColorPalette.TextHelp, ColorPalette.TextBody)
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEdit, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =UpdateContext({
+                locCalTarget: If(locCalTarget = "Decision", "", "Decision"),
+                locCalMonth:
+                  DateAdd(Coalesce(locDecisionDate, Today()),
+                          1 - Day(Coalesce(locDecisionDate, Today())), TimeUnit.Days)
+              });
+              UpdateContext({
+                locCalFirstInView:
+                  DateAdd(locCalMonth, -(Weekday(locCalMonth) - 1), TimeUnit.Days),
+                locCalLastOfMonth:
+                  DateAdd(DateAdd(locCalMonth, 1, TimeUnit.Months), -1, TimeUnit.Days)
+              })
+            PaddingLeft: =8
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            TabIndex: =7
+            Text: |-
+              =If(IsBlank(locDecisionDate),
+                 If(locEdit, "Select a date", "—"),
+                 Text(locDecisionDate, "mm/dd/yyyy"))
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =150
+            X: =356
+            Y: =116
+
+      - lblCycSpans:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Applications accepted for " &
+                DateDiff(locOpenDate, locCloseDate, TimeUnit.Days) &
+                " days · decisions " &
+                DateDiff(locCloseDate, locDecisionDate, TimeUnit.Days) &
+                " days after close"
+            Visible: |-
+              =And(Or(Not(IsBlank(locCycle)), locNew),
+                 Not(IsBlank(locOpenDate)),
+                 Not(IsBlank(locCloseDate)),
+                 Not(IsBlank(locDecisionDate)))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =158
+
+      - btnCycSave:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            DisplayMode: |-
+              =If(lblCycDirty.Visible, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.Blue600
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.Blue700
+            OnSelect: |-
+              =UpdateContext({
+                locWarnTitle: If(
+                  IsBlank(Trim(txtCycName.Text)),
+                  "Cycle name is required",
+                  Or(IsBlank(locOpenDate), IsBlank(locCloseDate),
+                     IsBlank(locDecisionDate)),
+                  "All three dates are required",
+                  locCloseDate < locOpenDate,
+                  "Check the cycle dates",
+                  locDecisionDate < locCloseDate,
+                  "Check the cycle dates",
+                  Not(IsEmpty(Filter(CYCLES, ID <> locCycle.ID,
+                      locOpenDate <= CloseDate, locCloseDate >= OpenDate))),
+                  "These dates overlap another cycle",
+                  And(locState = "Open",
+                  Not(IsEmpty(Filter(CYCLES, State.Value = "Open"))),
+                  First(Filter(CYCLES, State.Value = "Open")).ID <> locCycle.ID),
+                  "Another cycle is already open",
+                  ""),
+                locWarnMsg: If(
+                  IsBlank(Trim(txtCycName.Text)),
+                  "Give the cycle a name before saving it.",
+                  Or(IsBlank(locOpenDate), IsBlank(locCloseDate),
+                     IsBlank(locDecisionDate)),
+                  "Choose the open, close and decision dates before saving this cycle.",
+                  locCloseDate < locOpenDate,
+                  "This cycle is set to close on " & Text(locCloseDate, "mm/dd/yyyy") &
+                    ", before it opens on " & Text(locOpenDate, "mm/dd/yyyy") &
+                    ". The close date must be on or after the open date.",
+                  locDecisionDate < locCloseDate,
+                  "This cycle expects decisions on " & Text(locDecisionDate, "mm/dd/yyyy") &
+                    ", before it closes on " & Text(locCloseDate, "mm/dd/yyyy") &
+                    ". The decision date must be on or after the close date.",
+                  Not(IsEmpty(Filter(CYCLES, ID <> locCycle.ID,
+                      locOpenDate <= CloseDate, locCloseDate >= OpenDate))),
+                  First(Filter(CYCLES, ID <> locCycle.ID,
+                       locOpenDate <= CloseDate, locCloseDate >= OpenDate)).CycleName & " runs from " &
+                    Text(First(Filter(CYCLES, ID <> locCycle.ID,
+                       locOpenDate <= CloseDate, locCloseDate >= OpenDate)).OpenDate, "mm/dd/yyyy") & " to " &
+                    Text(First(Filter(CYCLES, ID <> locCycle.ID,
+                       locOpenDate <= CloseDate, locCloseDate >= OpenDate)).CloseDate, "mm/dd/yyyy") &
+                    ". Cycles cannot overlap, so this one cannot open before " &
+                    Text(DateAdd(First(Filter(CYCLES, ID <> locCycle.ID,
+                       locOpenDate <= CloseDate, locCloseDate >= OpenDate)).CloseDate, 1, TimeUnit.Days), "mm/dd/yyyy") & ".",
+                  And(locState = "Open",
+                  Not(IsEmpty(Filter(CYCLES, State.Value = "Open"))),
+                  First(Filter(CYCLES, State.Value = "Open")).ID <> locCycle.ID),
+                  First(Filter(CYCLES, State.Value = "Open")).CycleName &
+                    " is currently open. Only one cycle can be open at a time. Close " &
+                    First(Filter(CYCLES, State.Value = "Open")).CycleName &
+                    " before opening this one.",
+                  "")
+              });
+              UpdateContext({ locWarn: locWarnMsg <> "" });
+              UpdateContext({
+                locCycle:
+                  If(locWarnMsg = "",
+                     Patch(CYCLES,
+                       If(locNew, Defaults(CYCLES), locCycle),
+                       {
+                         CycleName: txtCycName.Text,
+                         OpenDate: locOpenDate,
+                         CloseDate: locCloseDate,
+                         ExpectedDecisionDate: locDecisionDate,
+                         State: { Value: locState }
+                       }),
+                     locCycle),
+                locNew: If(locWarnMsg = "", false, locNew),
+                locEdit: If(locWarnMsg = "", false, locEdit),
+                locCalTarget: If(locWarnMsg = "", "", locCalTarget)
+              });
+              If(Not(locWarn), Notify("Cycle saved.", NotificationType.Success))
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =2
+            Text: ="Save"
+            Visible: =locEdit
+            Width: =100
+            X: =Parent.Width - 232
+            Y: =18
+      - lblCycDirty:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.WarningText
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeCaption
+            Align: =Align.Right
+            Text: ="Unsaved changes"
+            Visible: |-
+              =And(locEdit,
+                 Or(locNew,
+                   And(Not(IsBlank(locCycle)),
+                     Or(txtCycName.Text <> locCycle.CycleName,
+                        locState <> locCycle.State.Value,
+                        locOpenDate <> locCycle.OpenDate,
+                        locCloseDate <> locCycle.CloseDate,
+                        locDecisionDate <> locCycle.ExpectedDecisionDate))))
+            Width: =150
+            X: =Parent.Width - 392
+            Y: =18
+
+- btnCalScrim:
+    Control: Classic/Button@2.2.0
+    Properties:
+      BorderStyle: =BorderStyle.None
+      Fill: =RGBA(0, 0, 0, 0)
+      Height: =Parent.Height
+      HoverFill: =RGBA(0, 0, 0, 0)
+      OnSelect: |-
+        =UpdateContext({ locCalTarget: "" })
+      PressedFill: =RGBA(0, 0, 0, 0)
+      Text: =""
+      Visible: =locCalTarget <> ""
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+
+- conCalendar:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Bold
+      Fill: =ColorPalette.White
+      Height: =380
+      RadiusBottomLeft: =10
+      RadiusBottomRight: =10
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Visible: =locCalTarget <> ""
+      Width: =294
+      X: |-
+        =24 + Switch(locCalTarget, "Open", 24, "Close", 190, "Decision", 356, 24)
+      Y: =8
+    Children:
+      - lblCalTarget:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            PaddingLeft: =16
+            Size: =Typography.SizeCaption
+            Text: |-
+              =Switch(locCalTarget,
+                 "Open", "SETTING: OPENS",
+                 "Close", "SETTING: CLOSES",
+                 "Decision", "SETTING: DECISIONS EXPECTED",
+                 "")
+            Width: =Parent.Width
+            X: =0
+            Y: =8
+      - lblCalMonthYear:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =28
+            PaddingLeft: =16
+            Size: =Typography.SizeSubtitle
+            Text: |-
+              =Text(locCalMonth, "mmmm yyyy")
+            Width: =Parent.Width * 0.6
+            X: =0
+            Y: =26
+      - icoCalPrev:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextHelp
+            Height: =28
+            HoverColor: =ColorPalette.TextHeading
+            Icon: =Icon.ChevronLeft
+            OnSelect: |-
+              =UpdateContext({
+                locCalMonth: DateAdd(locCalMonth, -1, TimeUnit.Months)
+              });
+              UpdateContext({
+                locCalFirstInView:
+                  DateAdd(locCalMonth, -(Weekday(locCalMonth) - 1), TimeUnit.Days),
+                locCalLastOfMonth:
+                  DateAdd(DateAdd(locCalMonth, 1, TimeUnit.Months), -1, TimeUnit.Days)
+              })
+            PaddingBottom: =6
+            PaddingLeft: =6
+            PaddingRight: =6
+            PaddingTop: =6
+            TabIndex: =0
+            Tooltip: ="Previous month"
+            Width: =28
+            X: =Parent.Width - 72
+            Y: =26
+      - icoCalNext:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextHelp
+            Height: =28
+            HoverColor: =ColorPalette.TextHeading
+            Icon: =Icon.ChevronRight
+            OnSelect: |-
+              =UpdateContext({
+                locCalMonth: DateAdd(locCalMonth, 1, TimeUnit.Months)
+              });
+              UpdateContext({
+                locCalFirstInView:
+                  DateAdd(locCalMonth, -(Weekday(locCalMonth) - 1), TimeUnit.Days),
+                locCalLastOfMonth:
+                  DateAdd(DateAdd(locCalMonth, 1, TimeUnit.Months), -1, TimeUnit.Days)
+              })
+            PaddingBottom: =6
+            PaddingLeft: =6
+            PaddingRight: =6
+            PaddingTop: =6
+            TabIndex: =0
+            Tooltip: ="Next month"
+            Width: =28
+            X: =Parent.Width - 40
+            Y: =26
+      - galCalWeekday:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Height: =Parent.Width / 7
+            Items: =Calendar.WeekdaysShort()
+            ShowScrollbar: =false
+            TemplatePadding: =0
+            TemplateSize: =Parent.Width / 7
+            Width: =Parent.Width
+            WrapCount: =7
+            X: =0
+            Y: =62
+          Children:
+            - lblCalWeekday:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Center
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =galCalWeekday.TemplateHeight
+                  Size: =Typography.SizeCaption
+                  Text: =Lower(Left(ThisItem.Value, 2))
+                  Width: =galCalWeekday.TemplateWidth
+                  Wrap: =false
+      - galCalDay:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Height: =(Parent.Width / 7) * 6
+            Items: |-
+              =[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,
+                24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41]
+            ShowScrollbar: =false
+            TemplatePadding: =0
+            TemplateSize: =Parent.Width / 7
+            Width: =Parent.Width
+            WrapCount: =7
+            X: =0
+            Y: =62 + (Parent.Width / 7)
+          Children:
+            - shpCalSelected:
+                Control: Circle@2.3.0
+                Properties:
+                  Fill: =ColorPalette.Blue600
+                  Height: =galCalDay.TemplateWidth * 0.72
+                  Visible: |-
+                    =And(
+                      DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days) =
+                        Switch(locCalTarget,
+                          "Open", locOpenDate,
+                          "Close", locCloseDate,
+                          "Decision", locDecisionDate),
+                      Month(DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days)) =
+                        Month(locCalMonth))
+                  Width: =galCalDay.TemplateWidth * 0.72
+                  X: =galCalDay.TemplateWidth / 2 - Self.Width / 2
+                  Y: =galCalDay.TemplateHeight / 2 - Self.Height / 2
+            - shpCalToday:
+                Control: Circle@2.3.0
+                Properties:
+                  Fill: =ColorPalette.Blue600
+                  Height: =4
+                  Visible: |-
+                    =And(
+                      DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days) = Today(),
+                      Month(DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days)) =
+                        Month(locCalMonth))
+                  Width: =4
+                  X: =galCalDay.TemplateWidth / 2 - Self.Width / 2
+                  Y: =galCalDay.TemplateHeight / 2 + (galCalDay.TemplateHeight * 0.28)
+            - lblCalDay:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Center
+                  Color: |-
+                    =If(
+                      And(
+                        DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days) =
+                          Switch(locCalTarget,
+                            "Open", locOpenDate,
+                            "Close", locCloseDate,
+                            "Decision", locDecisionDate),
+                        Month(DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days)) =
+                          Month(locCalMonth)),
+                      ColorPalette.TextOnDark,
+                      Month(DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days)) <>
+                        Month(locCalMonth),
+                      ColorPalette.Gray300,
+                      ColorPalette.TextBody)
+                  Font: =Typography.Family
+                  Height: =galCalDay.TemplateHeight
+                  OnSelect: |-
+                    =UpdateContext({
+                      locOpenDate:
+                        If(locCalTarget = "Open",
+                           DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days),
+                           locOpenDate),
+                      locCloseDate:
+                        If(locCalTarget = "Close",
+                           DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days),
+                           locCloseDate),
+                      locDecisionDate:
+                        If(locCalTarget = "Decision",
+                           DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days),
+                           locDecisionDate),
+                      locCalTarget: ""
+                    })
+                  Size: =Typography.SizeBody
+                  TabIndex: =0
+                  Text: |-
+                    =Day(DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days))
+                  Width: =galCalDay.TemplateWidth
+                  Wrap: =false
+
+- recCycWarnScrim:
+    Control: Rectangle@2.3.0
+    Properties:
+      BorderColor: =RGBA(0, 0, 0, 0)
+      Fill: =RGBA(0, 0, 0, 0.3)
+      Height: =Parent.Height
+      Visible: =locWarn
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+
+- conCycWarn:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Bold
+      Fill: =ColorPalette.White
+      Height: =256
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: =locWarn
+      Width: =520
+      X: =Parent.Width / 2 - Self.Width / 2
+      Y: =Parent.Height / 2 - Self.Height / 2
+    Children:
+      - shpCycWarnHalo:
+          Control: Circle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.DangerLight
+            Height: =56
+            Width: =56
+            X: =24
+            Y: =28
+      - icoCycWarn:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.DangerText
+            Height: =30
+            Icon: =Icon.Warning
+            Width: =30
+            X: =37
+            Y: =41
+      - lblCycWarnTitle:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =26
+            Size: =Typography.SizeHeading
+            Text: =locWarnTitle
+            Width: =380
+            X: =96
+            Y: =42
+      - lblCycWarnBody:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =76
+            Size: =Typography.SizeBody
+            Text: =locWarnMsg
+            VerticalAlign: =VerticalAlign.Top
+            Width: =400
+            X: =96
+            Y: =72
+      - btnCycWarnOk:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            Fill: =ColorPalette.Blue600
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.Blue700
+            OnSelect: |-
+              =UpdateContext({ locWarn: false });
+              Reset(drpCycState)
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =8
+            Text: ="OK"
+            Width: =110
+            X: =Parent.Width - 134
+            Y: =Parent.Height - 62

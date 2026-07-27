@@ -1,0 +1,1615 @@
+# Program Options Screen — US7 (RQ072–074, FR-038; FR-038a PROPOSED) — ADMIN
+# Rebuilt 2026-07-26. Classic controls only (Constitution II).
+# Colours = ColorPalette.*, sizes = Typography.*
+#
+# Composition (Constitution VIII):
+#   · PowerLibs `gallery-filter-header` — sortable headers, used TWICE
+#     (programs above, program options in tab 2)
+#   · PowerLibs `tab-bar-v2-1` — underline tab bar
+#
+# ---------------------------------------------------------------------------
+# HOW TO TRANSCRIBE (Constitution IV)
+# ---------------------------------------------------------------------------
+#   1. Open "Program Options Screen". Delete any existing content.
+#   2. Paste build/screens/_AdminShell.yaml FIRST.
+#   3. Select conMainArea, then paste EVERYTHING BELOW INSIDE IT.
+#      Every Parent.* below means conMainArea, not the screen.
+#   4. Data sources: PROGRAMS, PROGRAM_OPTIONS.
+#   5. OnVisible — transcribe by hand (no # prefixes, no leading =):
+#
+#      UpdateContext({
+#          locProgram: Blank(),
+#          locOption: Blank(),
+#          locTab: 1,
+#          locOptForm: false,
+#          locProgSort: "ProgramName",
+#          locProgAsc: true,
+#          locOptSort: "OptionName",
+#          locOptAsc: true,
+#          locProgMenu: false,
+#          locOptMenu: false,
+#          locProgModal: false
+#      })
+#
+#   6. Preview (F5) — OnVisible does not run on the design surface.
+#
+# ---------------------------------------------------------------------------
+# KEYS AND THE PARENT / CHILD RELATIONSHIP
+# ---------------------------------------------------------------------------
+# PROGRAMS.ID is SharePoint's auto-number (Counter) and IS the primary key.
+# PROGRAM_OPTIONS.ProgramID is a Lookup storing that value — `.Id` is the key,
+# `.Value` is only display text. Nothing else joins these lists.
+# ProgramCode was removed 2026-07-26: it was never part of the relationship.
+#
+# ---------------------------------------------------------------------------
+# RETIRE, DO NOT DELETE — both lists
+# ---------------------------------------------------------------------------
+# PROGRAMS.State and PROGRAM_OPTIONS.State are both Active/Retired. Retiring
+# keeps every historical reference resolvable — options under the program,
+# rating sheets, committee scores, an applicant's ranked choice — while removing
+# it from applicant-facing pickers. Reversible; deletion is not.
+#
+# BOTH COLUMNS ARE NEW. Re-run build/scripts/New-LdpSharePointLists.ps1 before
+# using this screen or every State cell is blank and Retire writes nowhere.
+#
+# STILL OWED ELSEWHERE: the Application Screen's step 2 dropdowns must filter
+# State = "Active" on both lists, or applicants get retired programs/options.
+#
+# ---------------------------------------------------------------------------
+# PROGRAM CRUD IS STILL [PROPOSED — FR-038a]
+# ---------------------------------------------------------------------------
+# Add/Edit/Retire of PROGRAMS has no ratified requirement; every source treats
+# NEXT/MDP/HPP as a closed set. Built here as instructed, but the three program
+# toolbar buttons are the fence — delete btnProgAdd, btnProgEdit, btnProgRetire
+# and the screen degrades to option management only (Constitution I).
+#
+# ---------------------------------------------------------------------------
+# SORTING
+# ---------------------------------------------------------------------------
+# Header buttons set locProgSort/locOptSort to a COLUMN NAME STRING and toggle
+# the direction. SortByColumns takes the column name as text, which is the only
+# reason a clickable-header gallery is possible at all in Power Fx.
+
+- lblPTitle:
+    Control: Label@2.5.1
+    Properties:
+      Color: =ColorPalette.TextHeading
+      Font: =Typography.Family
+      FontWeight: =Typography.WeightBold
+      Height: =30
+      Size: =Typography.SizeHeading
+      Text: ="Programs"
+      Width: =400
+      X: =24
+      Y: =18
+
+# ===========================================================================
+# PROGRAM TOOLBAR — [PROPOSED FR-038a] fence: these three controls
+# ===========================================================================
+- btnProgActions:
+    Control: Classic/Button@2.2.0
+    Properties:
+      BorderColor: =ColorPalette.Gray300
+      BorderStyle: =BorderStyle.Solid
+      BorderThickness: =1
+      Color: =ColorPalette.TextBody
+      Fill: =ColorPalette.White
+      FocusedBorderThickness: =1
+      Font: =Typography.Family
+      Height: =32
+      HoverFill: =ColorPalette.Gray50
+      OnSelect: |-
+        =UpdateContext({ locProgMenu: Not(locProgMenu), locOptMenu: false })
+      PressedFill: =ColorPalette.White
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      Size: =Typography.SizeBody
+      Text: ="Actions  ▾"
+      Width: =150
+      X: =Parent.Width - 174
+      Y: =18
+
+# ---- programs: sortable header row ----
+- conProgHead:
+    Control: GroupContainer@1.5.0
+    Variant: AutoLayout
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =ColorPalette.Gray25
+      Height: =36
+      LayoutAlignItems: =LayoutAlignItems.Center
+      LayoutDirection: =LayoutDirection.Horizontal
+      PaddingLeft: =16
+      PaddingRight: =16
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =62
+    Children:
+      - btnProgHeadName:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =1.6
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverFill: =RGBA(0, 0, 0, 0)
+            LayoutMinWidth: =0
+            # Same column clicked twice flips direction; a new column resets to
+            # ascending. locProgSort holds the column NAME as text.
+            OnSelect: |-
+              =UpdateContext({
+                locProgAsc: If(locProgSort = "ProgramName", Not(locProgAsc), true),
+                locProgSort: "ProgramName"
+              })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Program" & If(locProgSort = "ProgramName", If(locProgAsc, "  ▲", "  ▼"), "")
+      - btnProgHeadDesc:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =2.6
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverFill: =RGBA(0, 0, 0, 0)
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locProgAsc: If(locProgSort = "Description", Not(locProgAsc), true),
+                locProgSort: "Description"
+              })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Description" & If(locProgSort = "Description", If(locProgAsc, "  ▲", "  ▼"), "")
+      - btnProgHeadState:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =0.6
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverFill: =RGBA(0, 0, 0, 0)
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locProgAsc: If(locProgSort = "State", Not(locProgAsc), true),
+                locProgSort: "State"
+              })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="State" & If(locProgSort = "State", If(locProgAsc, "  ▲", "  ▼"), "")
+
+- galPrograms:
+    Control: Gallery@2.15.0
+    Variant: Vertical
+    Properties:
+      BorderColor: =ColorPalette.Gray200
+      Height: =168
+      # SortByColumns takes the column name as TEXT — that is what makes a
+      # clickable-header gallery possible. PROGRAMS is a tiny reference list.
+      Items: |-
+        =SortByColumns(PROGRAMS, locProgSort,
+          If(locProgAsc, SortOrder.Ascending, SortOrder.Descending))
+      ShowScrollbar: =true
+      TemplatePadding: =0
+      TemplateSize: =44
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =98
+    Children:
+      - conProgRow:
+          Control: GroupContainer@1.5.0
+          Variant: AutoLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            # Selected row is tinted so the tabs below have an obvious subject.
+            Fill: |-
+              =If(And(Not(IsBlank(locProgram)), ThisItem.ID = locProgram.ID),
+                 ColorPalette.Blue50, ColorPalette.White)
+            Height: =Parent.TemplateHeight
+            LayoutAlignItems: =LayoutAlignItems.Center
+            LayoutDirection: =LayoutDirection.Horizontal
+            PaddingLeft: =16
+            PaddingRight: =16
+            Width: =Parent.TemplateWidth
+          Children:
+            - lblProgRowName:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =If(ThisItem.State.Value = "Retired",
+                       ColorPalette.TextHelp, ColorPalette.TextHeading)
+                  FillPortions: =1.6
+                  Font: =Typography.Family
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.ProgramName
+            - lblProgRowDesc:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  FillPortions: =2.6
+                  Font: =Typography.Family
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeBody
+                  # Truncated to 45 characters. A full description overwhelms the
+                  # row; the whole text is on the Program details tab.
+                  Text: |-
+                    =If(Len(ThisItem.Description) > 45,
+                       Left(ThisItem.Description, 45) & "…",
+                       ThisItem.Description)
+            - lblProgRowState:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =If(ThisItem.State.Value = "Retired",
+                       ColorPalette.WarningText, ColorPalette.SuccessText)
+                  FillPortions: =0.6
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeCaption
+                  Text: =ThisItem.State.Value
+      - btnProgRowSelect:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =RGBA(0, 0, 0, 0)
+            Fill: =RGBA(0, 0, 0, 0)
+            Height: =Parent.TemplateHeight
+            HoverColor: =RGBA(0, 0, 0, 0)
+            # Translucent, not opaque — this sits ON TOP of the row content.
+            HoverFill: =RGBA(0, 0, 0, 0.04)
+            OnSelect: |-
+              =UpdateContext({
+                locProgram: ThisItem, locOption: Blank(),
+                locOptForm: false, locTab: 1, locProgMenu: false
+              })
+            PressedColor: =RGBA(0, 0, 0, 0)
+            PressedFill: =RGBA(0, 0, 0, 0.08)
+            Text: |-
+              ="Select " & ThisItem.ProgramName
+            Width: =Parent.TemplateWidth
+            X: =0
+            Y: =0
+      - recProgRowLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.Gray200
+            Height: =1
+            Width: =Parent.TemplateWidth
+            Y: =Parent.TemplateHeight - 1
+
+- lblProgEmpty:
+    Control: Label@2.5.1
+    Properties:
+      Align: =Align.Center
+      Color: =ColorPalette.TextHelp
+      Font: =Typography.Family
+      Height: =40
+      Size: =Typography.SizeBody
+      Text: ="No programs yet. Use Add program to create the first one."
+      Visible: =CountRows(galPrograms.AllItems) = 0
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =140
+
+# ===========================================================================
+# TAB BAR (PowerLibs tab-bar-v2-1) — underline indicator
+# ===========================================================================
+- conTabBar:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =RGBA(0, 0, 0, 0)
+      Height: =44
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =282
+    Children:
+      - btnTab1:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: |-
+              =If(locTab = 1, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =RGBA(0, 0, 0, 0)
+            Font: =Typography.Family
+            FontWeight: |-
+              =If(locTab = 1, Typography.WeightMedium, Typography.WeightRegular)
+            Height: =40
+            HoverFill: =RGBA(0, 0, 0, 0)
+            OnSelect: |-
+              =UpdateContext({ locTab: 1 })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeBody
+            Text: ="Program details"
+            Width: =170
+            X: =0
+            Y: =0
+      - recTab1Underline:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.Blue600
+            Height: =3
+            Visible: =locTab = 1
+            Width: =170
+            X: =0
+            Y: =40
+      - btnTab2:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: |-
+              =If(locTab = 2, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =RGBA(0, 0, 0, 0)
+            Font: =Typography.Family
+            FontWeight: |-
+              =If(locTab = 2, Typography.WeightMedium, Typography.WeightRegular)
+            Height: =40
+            HoverFill: =RGBA(0, 0, 0, 0)
+            OnSelect: |-
+              =UpdateContext({ locTab: 2, locOptForm: false })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeBody
+            Text: |-
+              ="Program options" &
+              If(IsBlank(locProgram), "",
+                 "  (" & CountRows(Filter(PROGRAM_OPTIONS, ProgramID.Id = locProgram.ID)) & ")")
+            Width: =200
+            X: =178
+            Y: =0
+      - recTab2Underline:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.Blue600
+            Height: =3
+            Visible: =locTab = 2
+            Width: =200
+            X: =178
+            Y: =40
+      - recTabBaseline:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.Gray200
+            Height: =1
+            Width: =Parent.Width
+            X: =0
+            Y: =42
+
+# ===========================================================================
+# TAB 1 — program details
+# ===========================================================================
+- conTab1:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =Parent.Height - 356
+      RadiusBottomLeft: =10
+      RadiusBottomRight: =10
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Visible: =locTab = 1
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =332
+    Children:
+      # Empty state: nothing selected AND not creating. Both cases give the
+      # user a next action rather than a blank panel.
+      - lblTab1Empty:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =60
+            Size: =Typography.SizeBody
+            Text: |-
+              =If(CountRows(galPrograms.AllItems) = 0,
+                 "No programs exist yet. Use Add program above to create one.",
+                 "Select a program above to see and edit its details, or use Add program to create one.")
+            Visible: =IsBlank(locProgram)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =Parent.Height / 2 - 30
+      - lblTab1NameLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="PROGRAM NAME"
+            Visible: =Not(IsBlank(locProgram))
+            Width: =360
+            X: =24
+            Y: =24
+      - lblTab1NameValue:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =26
+            Size: =Typography.SizeSubtitle
+            Text: =locProgram.ProgramName
+            Visible: =Not(IsBlank(locProgram))
+            Width: =360
+            X: =24
+            Y: =44
+      - lblTab1StateLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="STATE"
+            Visible: =Not(IsBlank(locProgram))
+            Width: =200
+            X: =408
+            Y: =24
+      - lblTab1StateValue:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locProgram.State.Value = "Retired",
+                 ColorPalette.WarningText, ColorPalette.SuccessText)
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =26
+            Size: =Typography.SizeSubtitle
+            Text: =locProgram.State.Value
+            Visible: =Not(IsBlank(locProgram))
+            Width: =200
+            X: =408
+            Y: =44
+      - lblTab1DescLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="DESCRIPTION"
+            Visible: =Not(IsBlank(locProgram))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =86
+      # Full text here — the table truncates at 45 characters, this is where the
+      # rest lives.
+      - lblTab1DescValue:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =Parent.Height - 160
+            PaddingTop: =0
+            Size: =Typography.SizeBody
+            # A Label centres its text vertically by default, so in a tall box
+            # the description floated far below its label.
+            VerticalAlign: =VerticalAlign.Top
+            Text: |-
+              =If(IsBlank(locProgram.Description),
+                 "No description recorded.", locProgram.Description)
+            Visible: =Not(IsBlank(locProgram))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =104
+      - btnTab1Edit:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Fill: =ColorPalette.White
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =34
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =UpdateContext({ locProgModal: true })
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            Text: ="Edit details"
+            Visible: =Not(IsBlank(locProgram))
+            Width: =140
+            X: =24
+            Y: =Parent.Height - 54
+
+# ===========================================================================
+# TAB 2 — program options: gallery, or the form when adding/editing
+# ===========================================================================
+- conTab2:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =Parent.Height - 356
+      RadiusBottomLeft: =10
+      RadiusBottomRight: =10
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Visible: =locTab = 2
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =332
+    Children:
+      - lblTab2Empty:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =60
+            Size: =Typography.SizeBody
+            Text: ="Select a program above to manage its options."
+            Visible: =IsBlank(locProgram)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =Parent.Height / 2 - 30
+
+      # ---- option actions menu (gallery view only) ----
+      - btnOptActions:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Fill: =ColorPalette.White
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =UpdateContext({ locOptMenu: Not(locOptMenu), locProgMenu: false })
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            Text: ="Actions  ▾"
+            Visible: |-
+              =And(Not(IsBlank(locProgram)), Not(locOptForm))
+            Width: =150
+            X: =Parent.Width - 174
+            Y: =14
+      # ---- options: sortable header row ----
+      - conOptHead:
+          Control: GroupContainer@1.5.0
+          Variant: AutoLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =ColorPalette.Gray25
+            Height: =34
+            LayoutAlignItems: =LayoutAlignItems.Center
+            LayoutDirection: =LayoutDirection.Horizontal
+            PaddingLeft: =16
+            PaddingRight: =16
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Visible: |-
+              =And(Not(IsBlank(locProgram)), Not(locOptForm))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =56
+          Children:
+            - btnOptHeadName:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Align: =Align.Left
+                  BorderStyle: =BorderStyle.None
+                  Color: =ColorPalette.TextHeading
+                  Fill: =RGBA(0, 0, 0, 0)
+                  FillPortions: =1.8
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  HoverFill: =RGBA(0, 0, 0, 0)
+                  LayoutMinWidth: =0
+                  OnSelect: |-
+                    =UpdateContext({
+                      locOptAsc: If(locOptSort = "OptionName", Not(locOptAsc), true),
+                      locOptSort: "OptionName"
+                    })
+                  PressedFill: =RGBA(0, 0, 0, 0)
+                  Size: =Typography.SizeCaption
+                  Text: |-
+                    ="Option" & If(locOptSort = "OptionName", If(locOptAsc, "  ▲", "  ▼"), "")
+            - btnOptHeadVendor:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Align: =Align.Left
+                  BorderStyle: =BorderStyle.None
+                  Color: =ColorPalette.TextHeading
+                  Fill: =RGBA(0, 0, 0, 0)
+                  FillPortions: =1
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  HoverFill: =RGBA(0, 0, 0, 0)
+                  LayoutMinWidth: =0
+                  OnSelect: |-
+                    =UpdateContext({
+                      locOptAsc: If(locOptSort = "Vendor", Not(locOptAsc), true),
+                      locOptSort: "Vendor"
+                    })
+                  PressedFill: =RGBA(0, 0, 0, 0)
+                  Size: =Typography.SizeCaption
+                  Text: |-
+                    ="Vendor" & If(locOptSort = "Vendor", If(locOptAsc, "  ▲", "  ▼"), "")
+            - lblOptHeadLength:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  FillPortions: =0.7
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeCaption
+                  Text: ="Length"
+            - lblOptHeadGrade:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  FillPortions: =0.7
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeCaption
+                  Text: ="Grade level"
+            - btnOptHeadState:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Align: =Align.Left
+                  BorderStyle: =BorderStyle.None
+                  Color: =ColorPalette.TextHeading
+                  Fill: =RGBA(0, 0, 0, 0)
+                  FillPortions: =0.6
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  HoverFill: =RGBA(0, 0, 0, 0)
+                  LayoutMinWidth: =0
+                  OnSelect: |-
+                    =UpdateContext({
+                      locOptAsc: If(locOptSort = "State", Not(locOptAsc), true),
+                      locOptSort: "State"
+                    })
+                  PressedFill: =RGBA(0, 0, 0, 0)
+                  Size: =Typography.SizeCaption
+                  Text: |-
+                    ="State" & If(locOptSort = "State", If(locOptAsc, "  ▲", "  ▼"), "")
+
+      - galOptions:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            Height: =Parent.Height - 110
+            # ProgramID is indexed and delegates. Retired options stay listed —
+            # this is the admin view; only applicant pickers filter to Active.
+            Items: |-
+              =SortByColumns(
+                Filter(PROGRAM_OPTIONS, ProgramID.Id = locProgram.ID),
+                locOptSort,
+                If(locOptAsc, SortOrder.Ascending, SortOrder.Descending))
+            ShowScrollbar: =true
+            TemplatePadding: =0
+            TemplateSize: =44
+            Visible: |-
+              =And(Not(IsBlank(locProgram)), Not(locOptForm))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =90
+          Children:
+            - conOptRow:
+                Control: GroupContainer@1.5.0
+                Variant: AutoLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Fill: |-
+                    =If(And(Not(IsBlank(locOption)), ThisItem.ID = locOption.ID),
+                       ColorPalette.Blue50, ColorPalette.White)
+                  Height: =Parent.TemplateHeight
+                  LayoutAlignItems: =LayoutAlignItems.Center
+                  LayoutDirection: =LayoutDirection.Horizontal
+                  PaddingLeft: =16
+                  PaddingRight: =16
+                  Width: =Parent.TemplateWidth
+                Children:
+                  - lblOptRowName:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: |-
+                          =If(ThisItem.State.Value = "Retired",
+                             ColorPalette.TextHelp, ColorPalette.TextHeading)
+                        FillPortions: =1.8
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        LayoutMinWidth: =0
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.OptionName
+                  - lblOptRowVendor:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHelp
+                        FillPortions: =1
+                        Font: =Typography.Family
+                        LayoutMinWidth: =0
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.Vendor
+                  - lblOptRowLength:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHelp
+                        FillPortions: =0.7
+                        Font: =Typography.Family
+                        LayoutMinWidth: =0
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.CourseLength
+                  - lblOptRowGrade:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHelp
+                        FillPortions: =0.7
+                        Font: =Typography.Family
+                        LayoutMinWidth: =0
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.GradeLevel
+                  - lblOptRowState:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: |-
+                          =If(ThisItem.State.Value = "Retired",
+                             ColorPalette.WarningText, ColorPalette.SuccessText)
+                        FillPortions: =0.6
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        LayoutMinWidth: =0
+                        Size: =Typography.SizeCaption
+                        Text: =ThisItem.State.Value
+            - btnOptRowSelect:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =RGBA(0, 0, 0, 0)
+                  Height: =Parent.TemplateHeight
+                  HoverColor: =RGBA(0, 0, 0, 0)
+                  HoverFill: =RGBA(0, 0, 0, 0.04)
+                  OnSelect: |-
+                    =UpdateContext({ locOption: ThisItem })
+                  PressedColor: =RGBA(0, 0, 0, 0)
+                  PressedFill: =RGBA(0, 0, 0, 0.08)
+                  Text: |-
+                    ="Select " & ThisItem.OptionName
+                  Width: =Parent.TemplateWidth
+                  X: =0
+                  Y: =0
+            - recOptRowLine:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Fill: =ColorPalette.Gray200
+                  Height: =1
+                  Width: =Parent.TemplateWidth
+                  Y: =Parent.TemplateHeight - 1
+
+      - lblOptEmpty:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =40
+            Size: =Typography.SizeBody
+            Text: ="This program has no options yet. Use Add option to create the first one."
+            Visible: |-
+              =And(Not(IsBlank(locProgram)), Not(locOptForm),
+                   CountRows(galOptions.AllItems) = 0)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =140
+
+      # ---- option form: REPLACES the gallery, same panel ----
+      - lblOptFormTitle:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =26
+            Size: =Typography.SizeSubtitle
+            Text: |-
+              =If(IsBlank(locOption), "New option", "Edit option") & " — " & locProgram.ProgramName
+            Visible: =locOptForm
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =20
+      - lblOptFormName:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeLabel
+            Text: ="Option name (required)"
+            Visible: =locOptForm
+            Width: =420
+            X: =24
+            Y: =56
+      - txtOptFormName:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locOption), "", locOption.OptionName)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeBody
+            Visible: =locOptForm
+            Width: =420
+            X: =24
+            Y: =78
+      - lblOptFormVendor:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeLabel
+            Text: ="Vendor"
+            Visible: =locOptForm
+            Width: =220
+            X: =468
+            Y: =56
+      - txtOptFormVendor:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locOption), "", locOption.Vendor)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeBody
+            Visible: =locOptForm
+            Width: =220
+            X: =468
+            Y: =78
+      - lblOptFormLength:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeLabel
+            Text: ="Course length"
+            Visible: =locOptForm
+            Width: =200
+            X: =712
+            Y: =56
+      - txtOptFormLength:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locOption), "", locOption.CourseLength)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeBody
+            Visible: =locOptForm
+            Width: =200
+            X: =712
+            Y: =78
+      - lblOptFormGrade:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeLabel
+            Text: ="Grade level"
+            Visible: =locOptForm
+            Width: =220
+            X: =24
+            Y: =120
+      - txtOptFormGrade:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locOption), "", locOption.GradeLevel)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeBody
+            Visible: =locOptForm
+            Width: =220
+            X: =24
+            Y: =142
+      - lblOptFormSite:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeLabel
+            Text: ="Website"
+            Visible: =locOptForm
+            Width: =Parent.Width - 316
+            X: =268
+            Y: =120
+      - txtOptFormSite:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locOption), "", locOption.Website)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeBody
+            Visible: =locOptForm
+            Width: =Parent.Width - 316
+            X: =268
+            Y: =142
+      - lblOptFormDesc:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeLabel
+            Text: ="Description"
+            Visible: =locOptForm
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =184
+      - txtOptFormDesc:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locOption), "", locOption.Description)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =52
+            Mode: =TextMode.MultiLine
+            Size: =Typography.SizeBody
+            Visible: =locOptForm
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =206
+      - lblOptFormComp:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeLabel
+            Text: ="Competency"
+            Visible: =locOptForm
+            Width: =(Parent.Width - 64) / 2
+            X: =24
+            Y: =268
+      - txtOptFormComp:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locOption), "", locOption.Competency)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =52
+            Mode: =TextMode.MultiLine
+            Size: =Typography.SizeBody
+            Visible: =locOptForm
+            Width: =(Parent.Width - 64) / 2
+            X: =24
+            Y: =290
+      - lblOptFormReq:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeLabel
+            Text: ="Requirements"
+            Visible: =locOptForm
+            Width: =txtOptFormComp.Width
+            X: =txtOptFormComp.X + txtOptFormComp.Width + 16
+            Y: =268
+      - txtOptFormReq:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locOption), "", locOption.Requirements)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =52
+            Mode: =TextMode.MultiLine
+            Size: =Typography.SizeBody
+            Visible: =locOptForm
+            Width: =txtOptFormComp.Width
+            X: =lblOptFormReq.X
+            Y: =290
+      - lblOptFormValidation:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.DangerText
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeCaption
+            Text: ="Option name is required."
+            Visible: |-
+              =And(locOptForm, IsBlank(Trim(txtOptFormName.Text)))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =352
+      - btnOptFormSave:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextOnDark
+            DisplayMode: |-
+              =If(IsBlank(Trim(txtOptFormName.Text)), DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.Blue600
+            Font: =Typography.Family
+            Height: =36
+            HoverFill: =ColorPalette.Blue700
+            # New options are created Active. The lookup needs the OData
+            # annotation or the parent is silently dropped.
+            OnSelect: |-
+              =UpdateContext({
+                locOption: Patch(PROGRAM_OPTIONS,
+                  If(IsBlank(locOption), Defaults(PROGRAM_OPTIONS), locOption),
+                  {
+                    ProgramID: {
+                      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                      Id: locProgram.ID,
+                      Value: locProgram.ProgramName
+                    },
+                    OptionName: txtOptFormName.Text,
+                    Vendor: txtOptFormVendor.Text,
+                    CourseLength: txtOptFormLength.Text,
+                    GradeLevel: txtOptFormGrade.Text,
+                    Website: txtOptFormSite.Text,
+                    Description: txtOptFormDesc.Text,
+                    Competency: txtOptFormComp.Text,
+                    Requirements: txtOptFormReq.Text,
+                    State: If(IsBlank(locOption), { Value: "Active" }, locOption.State)
+                  })
+              });
+              UpdateContext({ locOptForm: false });
+              Notify("Option saved.", NotificationType.Success)
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            Text: ="Save option"
+            Visible: =locOptForm
+            Width: =150
+            X: =24
+            Y: =384
+      - btnOptFormCancel:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Fill: =ColorPalette.White
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =36
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =UpdateContext({ locOptForm: false })
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            Text: ="Cancel"
+            Visible: =locOptForm
+            Width: =120
+            X: =190
+            Y: =384
+
+      # Before the panel, so the panel paints on top of it.
+      - btnOptMenuScrim:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Fill: =RGBA(0, 0, 0, 0)
+            Height: =Parent.Height
+            HoverFill: =RGBA(0, 0, 0, 0)
+            OnSelect: |-
+              =UpdateContext({ locOptMenu: false })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Text: =""
+            Visible: =locOptMenu
+            Width: =Parent.Width
+            X: =0
+            Y: =0
+      - conOptMenu:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.Regular
+            Fill: =ColorPalette.White
+            Height: =112
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Visible: =locOptMenu
+            Width: =190
+            X: =Parent.Width - 214
+            Y: =50
+          Children:
+            - btnOptAdd:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Align: =Align.Left
+                  BorderStyle: =BorderStyle.None
+                  Color: =ColorPalette.TextBody
+                  Fill: =RGBA(0, 0, 0, 0)
+                  Font: =Typography.Family
+                  Height: =34
+                  HoverFill: =ColorPalette.Blue50
+                  OnSelect: |-
+                    =UpdateContext({ locOption: Blank(), locOptForm: true, locOptMenu: false })
+                  PressedFill: =ColorPalette.Blue50
+                  Size: =Typography.SizeBody
+                  Text: ="Add option"
+                  Width: =Parent.Width
+                  X: =0
+                  Y: =2
+            - btnOptEdit:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Align: =Align.Left
+                  BorderStyle: =BorderStyle.None
+                  Color: =ColorPalette.TextBody
+                  DisplayMode: |-
+                    =If(IsBlank(locOption), DisplayMode.Disabled, DisplayMode.Edit)
+                  Fill: =RGBA(0, 0, 0, 0)
+                  Font: =Typography.Family
+                  Height: =34
+                  HoverFill: =ColorPalette.Blue50
+                  OnSelect: |-
+                    =UpdateContext({ locOptForm: true, locOptMenu: false })
+                  PressedFill: =ColorPalette.Blue50
+                  Size: =Typography.SizeBody
+                  Text: ="Edit option"
+                  Width: =Parent.Width
+                  X: =0
+                  Y: =38
+            - btnOptRetire:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Align: =Align.Left
+                  BorderStyle: =BorderStyle.None
+                  Color: |-
+                    =If(locOption.State.Value = "Retired",
+                       ColorPalette.SuccessText, ColorPalette.WarningText)
+                  DisplayMode: |-
+                    =If(IsBlank(locOption), DisplayMode.Disabled, DisplayMode.Edit)
+                  Fill: =RGBA(0, 0, 0, 0)
+                  Font: =Typography.Family
+                  Height: =34
+                  HoverFill: =ColorPalette.Blue50
+                  OnSelect: |-
+                    =UpdateContext({
+                      locOption: Patch(PROGRAM_OPTIONS, locOption,
+                        {
+                          State: {
+                            Value: If(locOption.State.Value = "Retired", "Active", "Retired")
+                          }
+                        }),
+                      locOptMenu: false
+                    });
+                    Notify("Option state updated.", NotificationType.Success)
+                  PressedFill: =ColorPalette.Blue50
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =If(locOption.State.Value = "Retired", "Reactivate option", "Retire option")
+                  Width: =Parent.Width
+                  X: =0
+                  Y: =74
+
+# ===========================================================================
+# ACTION MENUS — LAST ON PURPOSE
+# ===========================================================================
+# Power Apps paints later controls on top. Declared earlier, these panels
+# rendered UNDERNEATH the galleries and were unclickable. Anything that floats
+# over other content — menu, popover, toast — must be declared last.
+# Within each menu the scrim comes first so the panel paints on top of it.
+- btnProgMenuScrim:
+    Control: Classic/Button@2.2.0
+    Properties:
+      BorderStyle: =BorderStyle.None
+      Fill: =RGBA(0, 0, 0, 0)
+      Height: =Parent.Height
+      HoverFill: =RGBA(0, 0, 0, 0)
+      OnSelect: |-
+        =UpdateContext({ locProgMenu: false })
+      PressedFill: =RGBA(0, 0, 0, 0)
+      Text: =""
+      Visible: =locProgMenu
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+
+- conProgMenu:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Regular
+      Fill: =ColorPalette.White
+      Height: =112
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      Visible: =locProgMenu
+      Width: =190
+      X: =Parent.Width - 214
+      Y: =54
+    Children:
+      - btnProgAdd:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextBody
+            Fill: =RGBA(0, 0, 0, 0)
+            Font: =Typography.Family
+            Height: =34
+            HoverFill: =ColorPalette.Blue50
+            # Blank program + tab 1 = the details form opens empty, ready to create.
+            OnSelect: |-
+              =UpdateContext({
+                locProgram: Blank(), locOption: Blank(), locOptForm: false,
+                locProgMenu: false, locProgModal: true
+              })
+            PressedFill: =ColorPalette.Blue50
+            Size: =Typography.SizeBody
+            Text: ="Add program"
+            Width: =Parent.Width
+            X: =0
+            Y: =2
+      - btnProgEdit:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextBody
+            DisplayMode: |-
+              =If(IsBlank(locProgram), DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =RGBA(0, 0, 0, 0)
+            Font: =Typography.Family
+            Height: =34
+            HoverFill: =ColorPalette.Blue50
+            OnSelect: |-
+              =UpdateContext({ locTab: 1, locProgMenu: false, locProgModal: true })
+            PressedFill: =ColorPalette.Blue50
+            Size: =Typography.SizeBody
+            Text: ="Edit program"
+            Width: =Parent.Width
+            X: =0
+            Y: =38
+      - btnProgRetire:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderStyle: =BorderStyle.None
+            Color: |-
+              =If(locProgram.State.Value = "Retired",
+                 ColorPalette.SuccessText, ColorPalette.WarningText)
+            DisplayMode: |-
+              =If(IsBlank(locProgram), DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =RGBA(0, 0, 0, 0)
+            Font: =Typography.Family
+            Height: =34
+            HoverFill: =ColorPalette.Blue50
+            OnSelect: |-
+              =UpdateContext({
+                locProgram: Patch(PROGRAMS, locProgram,
+                  {
+                    State: {
+                      Value: If(locProgram.State.Value = "Retired", "Active", "Retired")
+                    }
+                  }),
+                locProgMenu: false
+              });
+              Notify("Program state updated.", NotificationType.Success)
+            PressedFill: =ColorPalette.Blue50
+            Size: =Typography.SizeBody
+            Text: |-
+              =If(locProgram.State.Value = "Retired", "Reactivate program", "Retire program")
+            Width: =Parent.Width
+            X: =0
+            Y: =74
+
+# ===========================================================================
+# PROGRAM MODAL — PowerLibs `modal-1`, adapted. DECLARED LAST so it paints
+# above everything, including the action menus above.
+# ===========================================================================
+# Adaptations from the generated component:
+# · conModalItems shipped with NO Width or Height — it would have rendered at
+#   the default control size. Both set here.
+# · `showModal` → locProgModal (project convention: context vars use loc).
+# · hardcoded RGBA / Size → ColorPalette.* / Typography.*.
+# · the generated trigger button is dropped: the Actions menu and the Edit
+#   details button are the triggers.
+- recProgModalScrim:
+    Control: Rectangle@2.3.0
+    Properties:
+      BorderColor: =RGBA(0, 0, 0, 0)
+      Fill: =RGBA(0, 0, 0, 0.3)
+      Height: =Parent.Height
+      Visible: =locProgModal
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+
+- conProgModal:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Bold
+      Fill: =ColorPalette.White
+      Height: =380
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: =locProgModal
+      Width: =620
+      X: =Parent.Width / 2 - Self.Width / 2
+      Y: =Parent.Height / 2 - Self.Height / 2
+    Children:
+      - lblProgModalTitle:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =28
+            Size: =Typography.SizeHeading
+            Text: |-
+              =If(IsBlank(locProgram), "Add program", "Edit program")
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =24
+      - lblProgModalHint:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="State is changed from the Actions menu, not here."
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =54
+      - lblProgModalNameLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeLabel
+            Text: ="Program name (required)"
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =88
+      - txtProgModalName:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locProgram), "", locProgram.ProgramName)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeBody
+            TabIndex: =1
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =110
+      - lblProgModalDescLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeLabel
+            Text: ="Description"
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =154
+      # TAB TRAP: a multi-line TextInput consumes the Tab key as a character
+      # rather than moving focus. Tab order is explicit below, but from this
+      # field the keyboard route onward is Shift+Tab back, or the mouse.
+      - txtProgModalDesc:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locProgram), "", locProgram.Description)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =110
+            Mode: =TextMode.MultiLine
+            Size: =Typography.SizeBody
+            TabIndex: =2
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =176
+      - lblProgModalValidation:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.DangerText
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeCaption
+            Text: ="Program name is required."
+            Visible: =IsBlank(Trim(txtProgModalName.Text))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =294
+      - btnProgModalSave:
+          Control: Classic/Button@2.2.0
+          Properties:
+            # Solid + BorderThickness 0, NOT BorderStyle.None. None suppresses the
+            # border in every state including focus, so FocusedBorderColor and
+            # FocusedBorderThickness have nothing to draw and the ring never
+            # appears. Thickness 0 keeps the resting button borderless.
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            DisplayMode: |-
+              =If(IsBlank(Trim(txtProgModalName.Text)), DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.Blue600
+            # Focus ring (WCAG 2.4.7). Blue50, not a mid blue: Blue700 and
+            # Blue400 sit at the same luminance as this fill (1.37:1 / 1.45:1)
+            # and vanish. Blue50 is 4.64:1 on it. See theme.md A11y rule 4.
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.Blue700
+            # Patch returns the saved record, so locProgram is set either way —
+            # a new program becomes the selection and the details tab fills in.
+            OnSelect: |-
+              =UpdateContext({
+                locProgram: Patch(PROGRAMS,
+                  If(IsBlank(locProgram), Defaults(PROGRAMS), locProgram),
+                  {
+                    ProgramName: txtProgModalName.Text,
+                    Description: txtProgModalDesc.Text,
+                    State: If(IsBlank(locProgram), { Value: "Active" }, locProgram.State)
+                  }),
+                locProgModal: false,
+                locTab: 1
+              });
+              Notify("Program saved.", NotificationType.Success)
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =3
+            Text: ="Save program"
+            Width: =150
+            X: =24
+            Y: =320
+      - btnProgModalCancel:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Fill: =ColorPalette.White
+            # Resting border is Gray300; the focus ring is Blue600 at 3px so it
+            # is a change, not just a slightly darker line.
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =UpdateContext({ locProgModal: false })
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =4
+            Text: ="Cancel"
+            Width: =120
+            X: =190
+            Y: =320

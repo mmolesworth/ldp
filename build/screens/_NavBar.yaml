@@ -1,0 +1,807 @@
+# Global Navigation Bar — cmpNavBar
+# Source: PowerLibs `minimal-mega-menu-navbar` (Pro), generated 2026-07-25 via
+# generate_yaml with yaml_mode "classic" and primaryColor #246FAE, then adapted
+# to project convention. Constitution VIII — library component, not primitives.
+#
+# ---------------------------------------------------------------------------
+# THIS IS A SHARED PASTE BLOCK
+# ---------------------------------------------------------------------------
+# Paste it at the TOP of every screen, before that screen's own controls. It is
+# not a canvas component, so each screen holds its own copy — if you change this
+# file, re-paste it everywhere. (Converting it to a real canvas component is a
+# later refactor; see T083.)
+#
+# Because every screen gets a copy, the control names here would collide app-wide.
+# Studio auto-suffixes duplicates (conNavBar_1, _2 …) and that is FINE for this
+# block specifically — nothing references these controls by name across screens.
+# The only cross-screen state is the gblActiveNav / gblAnim* globals, which are
+# deliberately shared so the menu behaves identically everywhere.
+#
+# ---------------------------------------------------------------------------
+# ADAPTATIONS FROM THE GENERATED OUTPUT
+# ---------------------------------------------------------------------------
+#   · every hardcoded RGBA replaced with ColorPalette.* (Constitution VIII)
+#   · every hardcoded font/size replaced with Typography.*
+#   · nav label size raised 10 -> Typography.SizeBody (11) for 508 legibility
+#   · descriptive text uses TextHelp, never TextMuted (theme.md A11y rule 2)
+#   · GroupContainer@1.4.0 -> @1.5.0 (this environment's current version)
+#   · controls renamed to the 3-char prefix convention; the generated
+#     "UnderlineApply" etc. had no prefix and became recUnderline*
+#   · dropdown items wired to Navigate() via Switch on ThisItem.label — a
+#     gallery cannot Navigate dynamically, so each destination is a literal
+#     branch. Screens that do not exist yet fall through to a Notify.
+#   · logo width widened 120 -> 260 to fit the real programme name
+#
+# The SVG arrow glyphs keep their hex colours: they are inside a data URI string,
+# where Power Fx tokens cannot reach. They are decorative chevrons, not text.
+
+- conNavBar:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Group: NavBar
+    Properties:
+      BorderColor: =ColorPalette.Gray200
+      BorderThickness: =1
+      Fill: =ColorPalette.White
+      Height: =64
+      Width: =Parent.Width
+    Children:
+      - conNavLogo:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Height: =64
+            Width: =260
+            X: =24
+          Children:
+            - lblNavTitle:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =32
+                  Size: =Typography.SizeHeading
+                  Text: ="Leader Development Program"
+                  Width: =260
+                  Y: =Parent.Height/2 - Self.Height/2
+      - conNavItems:
+          Control: GroupContainer@1.5.0
+          Variant: AutoLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Height: =64
+            LayoutAlignItems: =LayoutAlignItems.Center
+            LayoutDirection: =LayoutDirection.Horizontal
+            Width: =568
+            X: =Parent.Width/2 - Self.Width/2
+          Children:
+            - conNavApply:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Height: =Parent.Height
+                  LayoutMinHeight: =0
+                  LayoutMinWidth: =100
+                  Width: =100
+                Children:
+                  - btnNavApply:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderStyle: =BorderStyle.None
+                        BorderThickness: =0
+                        Color: |-
+                          =If(gblActiveNav = "Apply", ColorPalette.TextHeading, ColorPalette.TextHelp)
+                        Fill: =RGBA(0, 0, 0, 0)
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightRegular
+                        Height: =64
+                        HoverColor: =ColorPalette.TextHeading
+                        HoverFill: =RGBA(0, 0, 0, 0)
+                        OnSelect: |-
+                          =Set(gblActiveNav, If(gblActiveNav = "Apply", "", "Apply"));
+                          Set(gblAnimApply, Text(Now(), "yyyymmddhhmmssfff"))
+                        PressedColor: =ColorPalette.TextHeading
+                        PressedFill: =RGBA(0, 0, 0, 0)
+                        Size: =Typography.SizeBody
+                        Text: ="Apply"
+                        Width: =Parent.Width
+                  - imgArrowApply:
+                      Control: Image@2.2.3
+                      Properties:
+                        Height: =10
+                        Image: |-
+                          ="data:image/svg+xml," & EncodeUrl(
+                              "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>
+                                <style>
+                                  .arrowApply_" & gblAnimApply & " {
+                                    stroke: " & If(gblActiveNav = "Apply", "#213455", "#5D6B7D") & ";
+                                    stroke-width: 1.5;
+                                    stroke-linecap: round;
+                                    stroke-linejoin: round;
+                                    fill: none;
+                                    transform-origin: center;
+                                    animation-name: rotateArrowApply_" & gblAnimApply & ";
+                                    animation-duration: " & If(IsBlank(gblAnimApply), "0ms", "200ms") & ";
+                                    animation-fill-mode: both;
+                                    animation-timing-function: ease-out;
+                                  }
+                                  @keyframes rotateArrowApply_" & gblAnimApply & " {
+                                    " & If(gblActiveNav = "Apply", "0%", "100%") & " {
+                                      transform: rotate(0deg);
+                                    }
+                                    " & If(gblActiveNav = "Apply", "100%", "0%") & " {
+                                      transform: rotate(180deg);
+                                    }
+                                  }
+                                </style>
+                                <path class='arrowApply_" & gblAnimApply & "' d='m6 9 6 6 6-6' />
+                              </svg>"
+                          )
+                        Width: =10
+                        X: =Parent.Width - Self.Width - 18
+                        Y: =Parent.Height/2 - Self.Height/2
+                  - recUnderlineApply:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        Fill: =ColorPalette.Blue600
+                        Height: =2
+                        Visible: =gblActiveNav = "Apply"
+                        Width: =40
+                        X: =Parent.Width/2 - Self.Width/2
+                        Y: =Parent.Height - Self.Height
+            - conNavReview:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Height: =Parent.Height
+                  LayoutMinHeight: =0
+                  LayoutMinWidth: =108
+                  Width: =108
+                Children:
+                  - btnNavReview:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderStyle: =BorderStyle.None
+                        BorderThickness: =0
+                        Color: |-
+                          =If(gblActiveNav = "Review", ColorPalette.TextHeading, ColorPalette.TextHelp)
+                        Fill: =RGBA(0, 0, 0, 0)
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightRegular
+                        Height: =64
+                        HoverColor: =ColorPalette.TextHeading
+                        HoverFill: =RGBA(0, 0, 0, 0)
+                        OnSelect: |-
+                          =Set(gblActiveNav, If(gblActiveNav = "Review", "", "Review"));
+                          Set(gblAnimReview, Text(Now(), "yyyymmddhhmmssfff"))
+                        PressedColor: =ColorPalette.TextHeading
+                        PressedFill: =RGBA(0, 0, 0, 0)
+                        Size: =Typography.SizeBody
+                        Text: ="Review"
+                        Width: =Parent.Width
+                  - imgArrowReview:
+                      Control: Image@2.2.3
+                      Properties:
+                        Height: =10
+                        Image: |-
+                          ="data:image/svg+xml," & EncodeUrl(
+                              "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>
+                                <style>
+                                  .arrowReview_" & gblAnimReview & " {
+                                    stroke: " & If(gblActiveNav = "Review", "#213455", "#5D6B7D") & ";
+                                    stroke-width: 1.5;
+                                    stroke-linecap: round;
+                                    stroke-linejoin: round;
+                                    fill: none;
+                                    transform-origin: center;
+                                    animation-name: rotateArrowReview_" & gblAnimReview & ";
+                                    animation-duration: " & If(IsBlank(gblAnimReview), "0ms", "200ms") & ";
+                                    animation-fill-mode: both;
+                                    animation-timing-function: ease-out;
+                                  }
+                                  @keyframes rotateArrowReview_" & gblAnimReview & " {
+                                    " & If(gblActiveNav = "Review", "0%", "100%") & " {
+                                      transform: rotate(0deg);
+                                    }
+                                    " & If(gblActiveNav = "Review", "100%", "0%") & " {
+                                      transform: rotate(180deg);
+                                    }
+                                  }
+                                </style>
+                                <path class='arrowReview_" & gblAnimReview & "' d='m6 9 6 6 6-6' />
+                              </svg>"
+                          )
+                        Width: =10
+                        X: =Parent.Width - Self.Width - 18
+                        Y: =Parent.Height/2 - Self.Height/2
+                  - recUnderlineReview:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        Fill: =ColorPalette.Blue600
+                        Height: =2
+                        Visible: =gblActiveNav = "Review"
+                        Width: =48
+                        X: =Parent.Width/2 - Self.Width/2
+                        Y: =Parent.Height - Self.Height
+            - conNavAdmin:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Height: =Parent.Height
+                  LayoutMinHeight: =0
+                  LayoutMinWidth: =172
+                  Width: =172
+                Children:
+                  - btnNavAdmin:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderStyle: =BorderStyle.None
+                        BorderThickness: =0
+                        Color: |-
+                          =If(gblActiveNav = "Administration", ColorPalette.TextHeading, ColorPalette.TextHelp)
+                        Fill: =RGBA(0, 0, 0, 0)
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightRegular
+                        Height: =64
+                        HoverColor: =ColorPalette.TextHeading
+                        HoverFill: =RGBA(0, 0, 0, 0)
+                        OnSelect: |-
+                          =Set(gblActiveNav, If(gblActiveNav = "Administration", "", "Administration"));
+                          Set(gblAnimAdmin, Text(Now(), "yyyymmddhhmmssfff"))
+                        PressedColor: =ColorPalette.TextHeading
+                        PressedFill: =RGBA(0, 0, 0, 0)
+                        Size: =Typography.SizeBody
+                        Text: ="Administration"
+                        Width: =Parent.Width
+                  - imgArrowAdmin:
+                      Control: Image@2.2.3
+                      Properties:
+                        Height: =10
+                        Image: |-
+                          ="data:image/svg+xml," & EncodeUrl(
+                              "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>
+                                <style>
+                                  .arrowAdmin_" & gblAnimAdmin & " {
+                                    stroke: " & If(gblActiveNav = "Administration", "#213455", "#5D6B7D") & ";
+                                    stroke-width: 1.5;
+                                    stroke-linecap: round;
+                                    stroke-linejoin: round;
+                                    fill: none;
+                                    transform-origin: center;
+                                    animation-name: rotateArrowAdmin_" & gblAnimAdmin & ";
+                                    animation-duration: " & If(IsBlank(gblAnimAdmin), "0ms", "200ms") & ";
+                                    animation-fill-mode: both;
+                                    animation-timing-function: ease-out;
+                                  }
+                                  @keyframes rotateArrowAdmin_" & gblAnimAdmin & " {
+                                    " & If(gblActiveNav = "Administration", "0%", "100%") & " {
+                                      transform: rotate(0deg);
+                                    }
+                                    " & If(gblActiveNav = "Administration", "100%", "0%") & " {
+                                      transform: rotate(180deg);
+                                    }
+                                  }
+                                </style>
+                                <path class='arrowAdmin_" & gblAnimAdmin & "' d='m6 9 6 6 6-6' />
+                              </svg>"
+                          )
+                        Width: =10
+                        X: =Parent.Width - Self.Width - 18
+                        Y: =Parent.Height/2 - Self.Height/2
+                  - recUnderlineAdmin:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        Fill: =ColorPalette.Blue600
+                        Height: =2
+                        Visible: =gblActiveNav = "Administration"
+                        Width: =112
+                        X: =Parent.Width/2 - Self.Width/2
+                        Y: =Parent.Height - Self.Height
+            - conNavOps:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Height: =Parent.Height
+                  LayoutMinHeight: =0
+                  LayoutMinWidth: =188
+                  Width: =188
+                Children:
+                  - btnNavOps:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderStyle: =BorderStyle.None
+                        BorderThickness: =0
+                        Color: |-
+                          =If(gblActiveNav = "Operations", ColorPalette.TextHeading, ColorPalette.TextHelp)
+                        Fill: =RGBA(0, 0, 0, 0)
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightRegular
+                        Height: =64
+                        HoverColor: =ColorPalette.TextHeading
+                        HoverFill: =RGBA(0, 0, 0, 0)
+                        OnSelect: |-
+                          =Set(gblActiveNav, If(gblActiveNav = "Operations", "", "Operations"));
+                          Set(gblAnimOps, Text(Now(), "yyyymmddhhmmssfff"))
+                        PressedColor: =ColorPalette.TextHeading
+                        PressedFill: =RGBA(0, 0, 0, 0)
+                        Size: =Typography.SizeBody
+                        Text: ="Cycle Operations"
+                        Width: =Parent.Width
+                  - imgArrowOps:
+                      Control: Image@2.2.3
+                      Properties:
+                        Height: =10
+                        Image: |-
+                          ="data:image/svg+xml," & EncodeUrl(
+                              "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>
+                                <style>
+                                  .arrowOps_" & gblAnimOps & " {
+                                    stroke: " & If(gblActiveNav = "Operations", "#213455", "#5D6B7D") & ";
+                                    stroke-width: 1.5;
+                                    stroke-linecap: round;
+                                    stroke-linejoin: round;
+                                    fill: none;
+                                    transform-origin: center;
+                                    animation-name: rotateArrowOps_" & gblAnimOps & ";
+                                    animation-duration: " & If(IsBlank(gblAnimOps), "0ms", "200ms") & ";
+                                    animation-fill-mode: both;
+                                    animation-timing-function: ease-out;
+                                  }
+                                  @keyframes rotateArrowOps_" & gblAnimOps & " {
+                                    " & If(gblActiveNav = "Operations", "0%", "100%") & " {
+                                      transform: rotate(0deg);
+                                    }
+                                    " & If(gblActiveNav = "Operations", "100%", "0%") & " {
+                                      transform: rotate(180deg);
+                                    }
+                                  }
+                                </style>
+                                <path class='arrowOps_" & gblAnimOps & "' d='m6 9 6 6 6-6' />
+                              </svg>"
+                          )
+                        Width: =10
+                        X: =Parent.Width - Self.Width - 18
+                        Y: =Parent.Height/2 - Self.Height/2
+                  - recUnderlineOps:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        Fill: =ColorPalette.Blue600
+                        Height: =2
+                        Visible: =gblActiveNav = "Operations"
+                        Width: =128
+                        X: =Parent.Width/2 - Self.Width/2
+                        Y: =Parent.Height - Self.Height
+      # Right-hand CTA. Disabled until the Application Screen is transcribed —
+      # Navigate() to a screen that does not exist is a paste-time error.
+      - btnNavCta:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextHeading
+            DisplayMode: =DisplayMode.Disabled
+            Fill: =RGBA(0, 0, 0, 0)
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            HoverBorderColor: =ColorFade(Self.BorderColor, -10%)
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: =false
+            PressedBorderColor: =ColorFade(Self.BorderColor, -20%)
+            PressedColor: =ColorPalette.TextHeading
+            PressedFill: =ColorPalette.Gray50
+            RadiusBottomLeft: =5
+            RadiusBottomRight: =5
+            RadiusTopLeft: =5
+            RadiusTopRight: =5
+            Size: =Typography.SizeBody
+            Text: ="My Application"
+            Width: =130
+            X: =Parent.Width - Self.Width - 24
+            Y: =Parent.Height/2 - Self.Height/2
+
+# Click-away closer for the open dropdown.
+- btnNavScrim:
+    Control: Classic/Button@2.2.0
+    Group: NavBar
+    Properties:
+      BorderStyle: =BorderStyle.None
+      Fill: =RGBA(0, 0, 0, 0)
+      Height: =Parent.Height
+      HoverBorderColor: =Self.Fill
+      HoverFill: =Self.Fill
+      OnSelect: =Set(gblActiveNav, "")
+      PressedBorderColor: =Self.Fill
+      PressedFill: =Self.Fill
+      Text: =""
+      Visible: =Not(IsBlank(gblActiveNav))
+      Width: =Parent.Width
+
+- conNavDropApply:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Group: NavBar
+    Properties:
+      BorderColor: =ColorPalette.Gray200
+      BorderThickness: =1
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =180
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+      Visible: =gblActiveNav = "Apply"
+      Width: =Parent.Width
+      Y: =64
+    Children:
+      - galNavApply:
+          Control: Gallery@2.15.0
+          Variant: Horizontal
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Height: =140
+            Items: |-
+              =[
+                {label: "My Application", desc: "Start or continue your application"},
+                {label: "Program Information", desc: "Programs, dates and eligibility"}
+              ]
+            ShowScrollbar: =false
+            TemplatePadding: =12
+            TemplateSize: =220
+            Width: =Parent.Width - 120
+            X: =60
+            Y: =20
+          Children:
+            - btnNavApplyCard:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorPalette.Gray200
+                  BorderThickness: =1
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =ColorPalette.White
+                  Height: =Parent.TemplateHeight
+                  HoverBorderColor: =ColorPalette.Gray300
+                  HoverFill: =ColorPalette.Gray25
+                  PressedFill: =ColorPalette.Gray50
+                  RadiusBottomLeft: =8
+                  RadiusBottomRight: =8
+                  RadiusTopLeft: =8
+                  RadiusTopRight: =8
+                  Text: =""
+                  Width: =Parent.TemplateWidth
+            - lblNavApplyLabel:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =24
+                  PaddingLeft: =16
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.label
+                  Width: =200
+                  Y: =40
+            - lblNavApplyDesc:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =20
+                  PaddingLeft: =16
+                  Size: =Typography.SizeCaption
+                  Text: =ThisItem.desc
+                  Width: =200
+                  Y: =64
+            # A gallery cannot Navigate dynamically, so each destination is a
+            # literal branch. Unbuilt screens fall through to the Notify.
+            - btnNavApplyGo:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =RGBA(0, 0, 0, 0)
+                  Height: =Parent.TemplateHeight
+                  HoverColor: =RGBA(0, 0, 0, 0)
+                  HoverFill: =RGBA(0, 0, 0, 0)
+                  OnSelect: |-
+                    =Set(gblActiveNav, "");
+                    Switch(ThisItem.label,
+                      "Program Information", Navigate('Landing Screen'),
+                      Notify("That screen has not been built yet.", NotificationType.Information)
+                    )
+                  PressedColor: =RGBA(0, 0, 0, 0)
+                  PressedFill: =RGBA(0, 0, 0, 0)
+                  Text: |-
+                    =ThisItem.label & ". " & ThisItem.desc
+                  Width: =Parent.TemplateWidth
+
+- conNavDropReview:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Group: NavBar
+    Properties:
+      BorderColor: =ColorPalette.Gray200
+      BorderThickness: =1
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =180
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+      Visible: =gblActiveNav = "Review"
+      Width: =Parent.Width
+      Y: =64
+    Children:
+      - galNavReview:
+          Control: Gallery@2.15.0
+          Variant: Horizontal
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Height: =140
+            Items: |-
+              =[
+                {label: "Supervisor Queue", desc: "Endorse applications routed to you"},
+                {label: "Committee Scoring", desc: "Score applicants against a published sheet"}
+              ]
+            ShowScrollbar: =false
+            TemplatePadding: =12
+            TemplateSize: =220
+            Width: =Parent.Width - 120
+            X: =60
+            Y: =20
+          Children:
+            - btnNavReviewCard:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorPalette.Gray200
+                  BorderThickness: =1
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =ColorPalette.White
+                  Height: =Parent.TemplateHeight
+                  HoverBorderColor: =ColorPalette.Gray300
+                  HoverFill: =ColorPalette.Gray25
+                  PressedFill: =ColorPalette.Gray50
+                  RadiusBottomLeft: =8
+                  RadiusBottomRight: =8
+                  RadiusTopLeft: =8
+                  RadiusTopRight: =8
+                  Text: =""
+                  Width: =Parent.TemplateWidth
+            - lblNavReviewLabel:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =24
+                  PaddingLeft: =16
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.label
+                  Width: =200
+                  Y: =40
+            - lblNavReviewDesc:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =20
+                  PaddingLeft: =16
+                  Size: =Typography.SizeCaption
+                  Text: =ThisItem.desc
+                  Width: =200
+                  Y: =64
+            - btnNavReviewGo:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =RGBA(0, 0, 0, 0)
+                  Height: =Parent.TemplateHeight
+                  HoverColor: =RGBA(0, 0, 0, 0)
+                  HoverFill: =RGBA(0, 0, 0, 0)
+                  OnSelect: |-
+                    =Set(gblActiveNav, "");
+                    Notify("That screen has not been built yet.", NotificationType.Information)
+                  PressedColor: =RGBA(0, 0, 0, 0)
+                  PressedFill: =RGBA(0, 0, 0, 0)
+                  Text: |-
+                    =ThisItem.label & ". " & ThisItem.desc
+                  Width: =Parent.TemplateWidth
+
+- conNavDropAdmin:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Group: NavBar
+    Properties:
+      BorderColor: =ColorPalette.Gray200
+      BorderThickness: =1
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =180
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+      Visible: =gblActiveNav = "Administration"
+      Width: =Parent.Width
+      Y: =64
+    Children:
+      - galNavAdmin:
+          Control: Gallery@2.15.0
+          Variant: Horizontal
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Height: =140
+            Items: |-
+              =[
+                {label: "Application Cycles", desc: "Create cycles and move them through states"},
+                {label: "Program Options", desc: "Maintain selectable options per program"},
+                {label: "Criterion Catalog", desc: "Define criteria and their four anchors"},
+                {label: "Rating Sheets", desc: "Assemble per-cycle, per-program sheets"}
+              ]
+            ShowScrollbar: =false
+            TemplatePadding: =12
+            TemplateSize: =220
+            Width: =Parent.Width - 120
+            X: =60
+            Y: =20
+          Children:
+            - btnNavAdminCard:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorPalette.Gray200
+                  BorderThickness: =1
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =ColorPalette.White
+                  Height: =Parent.TemplateHeight
+                  HoverBorderColor: =ColorPalette.Gray300
+                  HoverFill: =ColorPalette.Gray25
+                  PressedFill: =ColorPalette.Gray50
+                  RadiusBottomLeft: =8
+                  RadiusBottomRight: =8
+                  RadiusTopLeft: =8
+                  RadiusTopRight: =8
+                  Text: =""
+                  Width: =Parent.TemplateWidth
+            - lblNavAdminLabel:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =24
+                  PaddingLeft: =16
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.label
+                  Width: =200
+                  Y: =40
+            - lblNavAdminDesc:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =20
+                  PaddingLeft: =16
+                  Size: =Typography.SizeCaption
+                  Text: =ThisItem.desc
+                  Width: =200
+                  Y: =64
+            - btnNavAdminGo:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =RGBA(0, 0, 0, 0)
+                  Height: =Parent.TemplateHeight
+                  HoverColor: =RGBA(0, 0, 0, 0)
+                  HoverFill: =RGBA(0, 0, 0, 0)
+                  OnSelect: |-
+                    =Set(gblActiveNav, "");
+                    Switch(ThisItem.label,
+                      "Application Cycles", Navigate('Application Cycles Screen'),
+                      "Program Options", Navigate('Program Options Screen'),
+                      "Criterion Catalog", Navigate('Criterion Catalog Screen'),
+                      "Rating Sheets", Navigate('Rating Sheets Screen'),
+                      Notify("That screen has not been built yet.", NotificationType.Information)
+                    )
+                  PressedColor: =RGBA(0, 0, 0, 0)
+                  PressedFill: =RGBA(0, 0, 0, 0)
+                  Text: |-
+                    =ThisItem.label & ". " & ThisItem.desc
+                  Width: =Parent.TemplateWidth
+
+- conNavDropOps:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Group: NavBar
+    Properties:
+      BorderColor: =ColorPalette.Gray200
+      BorderThickness: =1
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =180
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+      Visible: =gblActiveNav = "Operations"
+      Width: =Parent.Width
+      Y: =64
+    Children:
+      - galNavOps:
+          Control: Gallery@2.15.0
+          Variant: Horizontal
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Height: =140
+            Items: |-
+              =[
+                {label: "DTD Validation", desc: "Completeness review and re-validation"},
+                {label: "Selection and Placement", desc: "Place applicants and finalize the cohort"},
+                {label: "Cohort Disposition", desc: "Notify applicants once finalized"}
+              ]
+            ShowScrollbar: =false
+            TemplatePadding: =12
+            TemplateSize: =220
+            Width: =Parent.Width - 120
+            X: =60
+            Y: =20
+          Children:
+            - btnNavOpsCard:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorPalette.Gray200
+                  BorderThickness: =1
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =ColorPalette.White
+                  Height: =Parent.TemplateHeight
+                  HoverBorderColor: =ColorPalette.Gray300
+                  HoverFill: =ColorPalette.Gray25
+                  PressedFill: =ColorPalette.Gray50
+                  RadiusBottomLeft: =8
+                  RadiusBottomRight: =8
+                  RadiusTopLeft: =8
+                  RadiusTopRight: =8
+                  Text: =""
+                  Width: =Parent.TemplateWidth
+            - lblNavOpsLabel:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =24
+                  PaddingLeft: =16
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.label
+                  Width: =200
+                  Y: =40
+            - lblNavOpsDesc:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =20
+                  PaddingLeft: =16
+                  Size: =Typography.SizeCaption
+                  Text: =ThisItem.desc
+                  Width: =200
+                  Y: =64
+            - btnNavOpsGo:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =RGBA(0, 0, 0, 0)
+                  Height: =Parent.TemplateHeight
+                  HoverColor: =RGBA(0, 0, 0, 0)
+                  HoverFill: =RGBA(0, 0, 0, 0)
+                  OnSelect: |-
+                    =Set(gblActiveNav, "");
+                    Notify("That screen has not been built yet.", NotificationType.Information)
+                  PressedColor: =RGBA(0, 0, 0, 0)
+                  PressedFill: =RGBA(0, 0, 0, 0)
+                  Text: |-
+                    =ThisItem.label & ". " & ThisItem.desc
+                  Width: =Parent.TemplateWidth

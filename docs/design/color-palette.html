@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCUA – Color Palette & Power Platform Theme</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #f0f2f5;
+    padding: 40px;
+    color: #1a1a2e;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #213455;
+  }
+
+  .subtitle {
+    font-size: 15px;
+    color: #6b7280;
+    margin-bottom: 40px;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #9ca3af;
+    margin-bottom: 16px;
+    margin-top: 36px;
+  }
+
+  .palette-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .swatch {
+    width: 180px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .swatch:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  }
+
+  .swatch-color {
+    height: 100px;
+    position: relative;
+  }
+
+  .swatch-info {
+    padding: 12px 14px;
+  }
+
+  .swatch-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin-bottom: 2px;
+  }
+
+  .swatch-hex {
+    font-size: 12px;
+    color: #9ca3af;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .swatch-rgba {
+    font-size: 11px;
+    color: #b0b7c3;
+    margin-top: 2px;
+    font-family: monospace;
+  }
+
+  .swatch-usage {
+    font-size: 11px;
+    color: #6b7280;
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+
+  /* App Preview */
+  .preview-container {
+    margin-top: 48px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    max-width: 900px;
+  }
+
+  .preview-header {
+    background: #213455;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 16px;
+  }
+
+  .preview-hamburger {
+    color: white;
+    font-size: 20px;
+    opacity: 0.9;
+  }
+
+  .preview-title {
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .preview-help {
+    color: white;
+    font-size: 16px;
+    opacity: 0.7;
+    background: rgba(255,255,255,0.1);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .preview-body {
+    display: flex;
+    height: 360px;
+  }
+
+  .preview-sidebar {
+    width: 220px;
+    background: #1B2D52;
+    padding: 12px 0;
+    flex-shrink: 0;
+  }
+
+  .preview-menu-item {
+    padding: 11px 20px;
+    color: rgba(255,255,255,0.65);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-left: 3px solid transparent;
+  }
+
+  .preview-menu-item.active {
+    background: rgba(255,255,255,0.08);
+    color: #ffffff;
+    border-left: 3px solid #246FAE;
+  }
+
+  .preview-menu-item:hover:not(.active) {
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.85);
+  }
+
+  .preview-center {
+    flex: 1;
+    background: #F0F4F8;
+    padding: 24px;
+  }
+
+  .preview-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+
+  .preview-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #213455;
+    margin-bottom: 4px;
+  }
+
+  .preview-card-sub {
+    font-size: 13px;
+    color: #9ca3af;
+    margin-bottom: 20px;
+  }
+
+  .preview-table-row {
+    display: flex;
+    padding: 10px 0;
+    border-bottom: 1px solid #E8ECF1;
+    font-size: 13px;
+    color: #4b5563;
+    align-items: center;
+  }
+
+  .preview-table-row:last-child {
+    border-bottom: none;
+  }
+
+  .preview-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+
+  .preview-dot.green { background: #10b981; }
+  .preview-dot.blue { background: #246FAE; }
+  .preview-dot.amber { background: #f59e0b; }
+
+  .preview-badge {
+    margin-left: auto;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .preview-badge.success { background: #ecfdf5; color: #059669; }
+  .preview-badge.info { background: #E8F1FA; color: #1B5A8E; }
+  .preview-badge.warning { background: #fffbeb; color: #d97706; }
+
+  .preview-btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .preview-btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+  }
+
+  .preview-btn.primary {
+    background: #246FAE;
+    color: white;
+  }
+
+  .preview-btn.secondary {
+    background: white;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+  }
+
+  .preview-btn.danger {
+    background: white;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+  }
+
+  .preview-right {
+    width: 240px;
+    background: #F7F9FB;
+    border-left: 1px solid #E2E7ED;
+    padding: 20px;
+    flex-shrink: 0;
+  }
+
+  .preview-right-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #213455;
+    margin-bottom: 12px;
+  }
+
+  .preview-right-text {
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.6;
+  }
+
+  /* Mapping Tables */
+  .mapping-table {
+    margin-top: 48px;
+    max-width: 960px;
+  }
+
+  .mapping-table h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #213455;
+    margin-bottom: 16px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    font-size: 13px;
+    margin-bottom: 32px;
+  }
+
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    background: #f8f9fb;
+    font-weight: 600;
+    color: #4b5563;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid #f0f2f5;
+    color: #1a1a2e;
+  }
+
+  td code {
+    background: #f0f2f5;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #4b5563;
+  }
+
+  .color-dot {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    vertical-align: middle;
+    margin-right: 8px;
+    border: 1px solid rgba(0,0,0,0.1);
+  }
+
+  /* Brand Ramp */
+  .brand-ramp {
+    display: flex;
+    gap: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    max-width: 960px;
+  }
+
+  .brand-ramp-slot {
+    flex: 1;
+    padding: 20px 6px 12px;
+    text-align: center;
+    min-width: 56px;
+    position: relative;
+  }
+
+  .brand-ramp-slot .slot-label {
+    font-size: 10px;
+    font-weight: 600;
+    opacity: 0.85;
+    margin-bottom: 4px;
+  }
+
+  .brand-ramp-slot .slot-hex {
+    font-size: 9px;
+    font-family: monospace;
+    opacity: 0.7;
+  }
+
+  .brand-ramp-slot.light-text { color: white; }
+  .brand-ramp-slot.dark-text { color: #213455; }
+
+  /* Code Block */
+  .code-block {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-radius: 10px;
+    padding: 24px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    overflow-x: auto;
+    max-width: 960px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    position: relative;
+  }
+
+  .code-block .comment { color: #6b7f99; }
+  .code-block .keyword { color: #7dd3fc; }
+  .code-block .string { color: #86efac; }
+  .code-block .prop { color: #fbbf24; }
+
+  .copy-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(255,255,255,0.1);
+    color: #94a3b8;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+
+  .copy-btn:hover {
+    background: rgba(255,255,255,0.2);
+    color: #e2e8f0;
+  }
+
+  .note-box {
+    background: #E8F1FA;
+    border-left: 4px solid #246FAE;
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    font-size: 13px;
+    color: #1B3A5C;
+    line-height: 1.6;
+    max-width: 960px;
+    margin-bottom: 24px;
+  }
+
+  .note-box strong { color: #213455; }
+</style>
+</head>
+<body>
+
+<h1>NCUA — Color Palette</h1>
+<p class="subtitle">Color palette & Power Platform theme reference — derived from NCUA brand identity</p>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- PRIMARY — DARK NAVY                        -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-title">Primary — Dark Navy</div>
+<div class="palette-row">
+  <div class="swatch">
+    <div class="swatch-color" style="background: #162740;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Navy 950 — Darkest</div>
+      <div class="swatch-hex">#162740</div>
+      <div class="swatch-rgba">RGBA(22, 39, 64, 1)</div>
+      <div class="swatch-usage">Deepest backgrounds, footer</div>
+    </div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: #213455;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Navy 900 — Primary</div>
+      <div class="swatch-hex">#213455</div>
+      <div class="swatch-rgba">RGBA(33, 52, 85, 1)</div>
+      <div class="swatch-usage">Header, hero background, headings</div>
+    </div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: #1B2D52;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Navy 850</div>
+      <div class="swatch-hex">#1B2D52</div>
+      <div class="swatch-rgba">RGBA(27, 45, 82, 1)</div>
+      <div class="swatch-usage">Left menu sidebar</div>
+    </div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: #2A4470;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Navy 700</div>
+      <div class="swatch-hex">#2A4470</div>
+      <div class="swatch-rgba">RGBA(42, 68, 112, 1)</div>
+      <div class="swatch-usage">Menu hover / active highlight</div>
+    </div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: #3A5A8A;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Navy 600</div>
+      <div class="swatch-hex">#3A5A8A</div>
+      <div class="swatch-rgba">RGBA(58, 90, 138, 1)</div>
+      <div class="swatch-usage">Selected states, borders on dark</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- ACCENT — BLUE                              -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-title">Accent — Blue</div>
+<div class="palette-row">
+  <div class="swatch">
+    <div class="swatch-color" style="background: #246FAE;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Blue 600 — Accent</div>
+      <div class="swatch-hex">#246FAE</div>
+      <div class="swatch-rgba">RGBA(36, 111, 174, 1)</div>
+      <div class="swatch-usage">Primary buttons, active indicators, links, nav bar</div>
+    </div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: #1B5A8E;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Blue 700</div>
+      <div class="swatch-hex">#1B5A8E</div>
+      <div class="swatch-rgba">RGBA(27, 90, 142, 1)</div>
+      <div class="swatch-usage">Button hover / pressed state</div>
+    </div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: #3D8BCB;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Blue 400</div>
+      <div class="swatch-hex">#3D8BCB</div>
+      <div class="swatch-rgba">RGBA(61, 139, 203, 1)</div>
+      <div class="swatch-usage">Links on dark backgrounds</div>
+    </div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: #E8F1FA;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Blue 50</div>
+      <div class="swatch-hex">#E8F1FA</div>
+      <div class="swatch-rgba">RGBA(232, 241, 250, 1)</div>
+      <div class="swatch-usage">Info badges, light accent backgrounds</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- NEUTRALS — GRAYS                           -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-title">Neutrals — Grays</div>
+<div class="palette-row">
+  <div class="swatch">
+    <div class="swatch-color" style="background: #F0F4F8;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Gray 50 — Page BG</div>
+      <div class="swatch-hex">#F0F4F8</div>
+      <div class="swatch-rgba">RGBA(240, 244, 248, 1)</div>
+      <div class="swatch-usage">Center content background</div>
+    </div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: #F7F9FB;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Gray 25 — Panel BG</div>
+      <div class="swatch-hex">#F7F9FB</div>
+      <div class="swatch-rgba">RGBA(247, 249, 251, 1)</div>
+      <div class="swatch-usage">Right help panel</div>
+    </div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: #ffffff;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">White — Card BG</div>
+      <div class="swatch-hex">#FFFFFF</div>
+      <div class="swatch-rgba">RGBA(255, 255, 255, 1)</div>
+      <div class="swatch-usage">Cards, forms, content areas</div>
+    </div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: #E2E7ED;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Gray 200 — Borders</div>
+      <div class="swatch-hex">#E2E7ED</div>
+      <div class="swatch-rgba">RGBA(226, 231, 237, 1)</div>
+      <div class="swatch-usage">Dividers, card borders</div>
+    </div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: #C5CDD6;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Gray 300</div>
+      <div class="swatch-hex">#C5CDD6</div>
+      <div class="swatch-rgba">RGBA(197, 205, 214, 1)</div>
+      <div class="swatch-usage">Disabled borders, subtle separators</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TEXT COLORS                                 -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-title">Text Colors</div>
+<div class="palette-row">
+  <div class="swatch">
+    <div class="swatch-color" style="background: #213455;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Headings</div>
+      <div class="swatch-hex">#213455</div>
+      <div class="swatch-rgba">RGBA(33, 52, 85, 1)</div>
+      <div class="swatch-usage">Page titles, card headings</div>
+    </div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: #3B4F6B;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Body Text</div>
+      <div class="swatch-hex">#3B4F6B</div>
+      <div class="swatch-rgba">RGBA(59, 79, 107, 1)</div>
+      <div class="swatch-usage">Body text, table content</div>
+    </div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: #7A8BA0;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Secondary Text</div>
+      <div class="swatch-hex">#7A8BA0</div>
+      <div class="swatch-rgba">RGBA(122, 139, 160, 1)</div>
+      <div class="swatch-usage">Subtitles, secondary labels</div>
+    </div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: #9CAAB9;"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Muted Text</div>
+      <div class="swatch-hex">#9CAAB9</div>
+      <div class="swatch-rgba">RGBA(156, 170, 185, 1)</div>
+      <div class="swatch-usage">Placeholders, help text, disabled</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- STATUS COLORS                              -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-title">Status Colors</div>
+<div class="palette-row">
+  <div class="swatch">
+    <div class="swatch-color" style="background: linear-gradient(135deg, #ecfdf5, #10b981);"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Success / Active</div>
+      <div class="swatch-hex">#10B981 / #ECFDF5</div>
+      <div class="swatch-rgba">RGBA(16, 185, 129, 1)</div>
+      <div class="swatch-usage">Active status, success badges</div>
+    </div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: linear-gradient(135deg, #fffbeb, #f59e0b);"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Warning / Pending</div>
+      <div class="swatch-hex">#F59E0B / #FFFBEB</div>
+      <div class="swatch-rgba">RGBA(245, 158, 11, 1)</div>
+      <div class="swatch-usage">Warning states, pending items</div>
+    </div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: linear-gradient(135deg, #fef2f2, #dc2626);"></div>
+    <div class="swatch-info">
+      <div class="swatch-name">Danger / Error</div>
+      <div class="swatch-hex">#DC2626 / #FEF2F2</div>
+      <div class="swatch-rgba">RGBA(220, 38, 38, 1)</div>
+      <div class="swatch-usage">Delete buttons, errors, alerts</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- MODERN THEME BRAND RAMP (16-slot)          -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-title">Modern Theme — 16-Slot Brand Ramp</div>
+<div class="note-box">
+  <strong>Seed color:</strong> <code>#246FAE</code> — the NCUA nav-bar blue. Use this as your <strong>Primary (seed) color</strong> when creating a modern theme in Power Apps via <em>Themes → Add a theme</em>. The brand ramp below shows the generated 16-slot palette.
+</div>
+
+<div class="brand-ramp">
+  <div class="brand-ramp-slot light-text" style="background:#001322;"><div class="slot-label">10</div><div class="slot-hex">#001322</div></div>
+  <div class="brand-ramp-slot light-text" style="background:#00213A;"><div class="slot-label">20</div><div class="slot-hex">#00213A</div></div>
+  <div class="brand-ramp-slot light-text" style="background:#002F52;"><div class="slot-label">30</div><div class="slot-hex">#002F52</div></div>
+  <div class="brand-ramp-slot light-text" style="background:#003E6B;"><div class="slot-label">40</div><div class="slot-hex">#003E6B</div></div>
+  <div class="brand-ramp-slot light-text" style="background:#0B4D80;"><div class="slot-label">50</div><div class="slot-hex">#0B4D80</div></div>
+  <div class="brand-ramp-slot light-text" style="background:#165D97;"><div class="slot-label">60</div><div class="slot-hex">#165D97</div></div>
+  <div class="brand-ramp-slot light-text" style="background:#246FAE;"><div class="slot-label">70</div><div class="slot-hex">#246FAE</div></div>
+  <div class="brand-ramp-slot light-text" style="background:#2E7FBF;"><div class="slot-label">80</div><div class="slot-hex">#2E7FBF</div></div>
+  <div class="brand-ramp-slot dark-text" style="background:#4A95CC;"><div class="slot-label">90</div><div class="slot-hex">#4A95CC</div></div>
+  <div class="brand-ramp-slot dark-text" style="background:#68AAD8;"><div class="slot-label">100</div><div class="slot-hex">#68AAD8</div></div>
+  <div class="brand-ramp-slot dark-text" style="background:#88BFE3;"><div class="slot-label">110</div><div class="slot-hex">#88BFE3</div></div>
+  <div class="brand-ramp-slot dark-text" style="background:#A8D3ED;"><div class="slot-label">120</div><div class="slot-hex">#A8D3ED</div></div>
+  <div class="brand-ramp-slot dark-text" style="background:#C6E4F4;"><div class="slot-label">130</div><div class="slot-hex">#C6E4F4</div></div>
+  <div class="brand-ramp-slot dark-text" style="background:#DEF0F9;"><div class="slot-label">140</div><div class="slot-hex">#DEF0F9</div></div>
+  <div class="brand-ramp-slot dark-text" style="background:#EEF7FC;"><div class="slot-label">150</div><div class="slot-hex">#EEF7FC</div></div>
+  <div class="brand-ramp-slot dark-text" style="background:#F7FBFE;"><div class="slot-label">160</div><div class="slot-hex">#F7FBFE</div></div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- APP PREVIEW                                -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-title">Application Preview</div>
+<div class="preview-container">
+  <div class="preview-header">
+    <div class="preview-hamburger">☰</div>
+    <div class="preview-title">Agency Document Manager</div>
+    <div class="preview-help">?</div>
+  </div>
+  <div class="preview-body">
+    <div class="preview-sidebar">
+      <div class="preview-menu-item active">▪ &nbsp; Agencies</div>
+      <div class="preview-menu-item">▪ &nbsp; Documents</div>
+      <div class="preview-menu-item">▪ &nbsp; Mappings</div>
+      <div class="preview-menu-item">▪ &nbsp; Settings</div>
+    </div>
+    <div class="preview-center">
+      <div class="preview-card">
+        <div class="preview-card-title">Agencies</div>
+        <div class="preview-card-sub">4 agencies · Last updated today</div>
+        <div class="preview-table-row">
+          <div class="preview-dot green"></div>
+          Department of Transportation
+          <span class="preview-badge success">Active</span>
+        </div>
+        <div class="preview-table-row">
+          <div class="preview-dot blue"></div>
+          Environmental Protection Agency
+          <span class="preview-badge info">3 docs</span>
+        </div>
+        <div class="preview-table-row">
+          <div class="preview-dot amber"></div>
+          Housing Authority
+          <span class="preview-badge warning">Pending</span>
+        </div>
+        <div class="preview-btn-row">
+          <button class="preview-btn primary">+ Add Agency</button>
+          <button class="preview-btn secondary">Export</button>
+          <button class="preview-btn danger">Delete Selected</button>
+        </div>
+      </div>
+    </div>
+    <div class="preview-right">
+      <div class="preview-right-title">Help</div>
+      <div class="preview-right-text">
+        Use this screen to manage your agencies. Click an agency to view its details and assigned documents.<br><br>
+        Use the <strong>+ Add Agency</strong> button to create a new entry. Agencies can be mapped to documents from the Mappings screen.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- CREATOR KIT / FLUENT THEME OBJECT          -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-title">Creator Kit / Fluent Theme Object</div>
+<div class="note-box">
+  Paste this into your <strong>App.OnStart</strong> to define an <code>AppTheme</code> variable compatible with the <a href="https://learn.microsoft.com/en-us/power-platform/guidance/creator-kit/theme" target="_blank">Creator Kit theme components</a>. Reference individual slots with <code>ColorValue(AppTheme.palette.themePrimary)</code>.
+</div>
+
+<div class="code-block" id="creatorKitTheme">
+  <button class="copy-btn" onclick="copyCode('creatorKitTheme')">Copy</button>
+<span class="keyword">Set</span>(<br>
+&nbsp;&nbsp;AppTheme,<br>
+&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;palette: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">themePrimary</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"#246FAE"</span>,&nbsp;&nbsp;<span class="comment">// Accent blue — buttons, links</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">themeLighterAlt</span>:&nbsp;<span class="string">"#F7FBFE"</span>,&nbsp;&nbsp;<span class="comment">// Lightest accent tint</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">themeLighter</span>:&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"#DEF0F9"</span>,&nbsp;&nbsp;<span class="comment">// Very light accent</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">themeLight</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"#A8D3ED"</span>,&nbsp;&nbsp;<span class="comment">// Light accent</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">themeTertiary</span>:&nbsp;&nbsp;&nbsp;<span class="string">"#68AAD8"</span>,&nbsp;&nbsp;<span class="comment">// Medium accent</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">themeSecondary</span>:&nbsp;&nbsp;<span class="string">"#3D8BCB"</span>,&nbsp;&nbsp;<span class="comment">// Secondary accent</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">themeDarkAlt</span>:&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"#1B5A8E"</span>,&nbsp;&nbsp;<span class="comment">// Button hover</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">themeDark</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"#003E6B"</span>,&nbsp;&nbsp;<span class="comment">// Dark accent</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">themeDarker</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"#00213A"</span>,&nbsp;&nbsp;<span class="comment">// Darkest accent</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">neutralLighterAlt</span>:<span class="string">"#F7F9FB"</span>,&nbsp;&nbsp;<span class="comment">// Panel background</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">neutralLighter</span>:&nbsp;&nbsp;<span class="string">"#F0F4F8"</span>,&nbsp;&nbsp;<span class="comment">// Page background</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">neutralLight</span>:&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"#E8ECF1"</span>,&nbsp;&nbsp;<span class="comment">// Row hover, subtle bg</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">neutralQuaternaryAlt</span>:<span class="string">"#E2E7ED"</span>,<span class="comment">// Borders, dividers</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">neutralQuaternary</span>:<span class="string">"#C5CDD6"</span>,&nbsp;&nbsp;<span class="comment">// Disabled borders</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">neutralTertiaryAlt</span>:<span class="string">"#B0BAC5"</span>,&nbsp;<span class="comment">// Scrollbar, toggle tracks</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">neutralTertiary</span>:&nbsp;<span class="string">"#9CAAB9"</span>,&nbsp;&nbsp;<span class="comment">// Placeholder text</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">neutralSecondary</span>:&nbsp;<span class="string">"#7A8BA0"</span>,&nbsp;<span class="comment">// Secondary text</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">neutralPrimaryAlt</span>:<span class="string">"#4D6480"</span>,&nbsp;&nbsp;<span class="comment">// Icon color</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">neutralPrimary</span>:&nbsp;&nbsp;<span class="string">"#3B4F6B"</span>,&nbsp;&nbsp;<span class="comment">// Body text</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">neutralDark</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"#213455"</span>,&nbsp;&nbsp;<span class="comment">// Headings, primary text</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">black</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"#162740"</span>,&nbsp;&nbsp;<span class="comment">// Strongest emphasis</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">white</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"#FFFFFF"</span>&nbsp;&nbsp;&nbsp;<span class="comment">// Cards, content areas</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;}<br>
+);<br>
+<span class="keyword">Set</span>(AppThemeJson, <span class="keyword">JSON</span>(AppTheme, JSONFormat.IndentFour));
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- COLORPALETTE VARIABLE (existing pattern)   -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-title">Canvas App ColorPalette Variable</div>
+<div class="note-box">
+  This follows your existing <strong>ColorPalette</strong> dot-notation pattern. Paste into <strong>App.OnStart</strong> alongside or instead of the Creator Kit theme above.
+</div>
+
+<div class="code-block" id="colorPaletteVar">
+  <button class="copy-btn" onclick="copyCode('colorPaletteVar')">Copy</button>
+<span class="keyword">Set</span>(<br>
+&nbsp;&nbsp;ColorPalette,<br>
+&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// ── Primary Navy ──</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">Navy950</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(22, 39, 64, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">Navy900</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(33, 52, 85, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">Navy850</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(27, 45, 82, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">Navy700</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(42, 68, 112, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">Navy600</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(58, 90, 138, 1),<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// ── Accent Blue ──</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">Blue600</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(36, 111, 174, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">Blue700</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(27, 90, 142, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">Blue400</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(61, 139, 203, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">Blue50</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(232, 241, 250, 1),<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// ── Neutrals ──</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">Gray50</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(240, 244, 248, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">Gray25</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(247, 249, 251, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">White</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(255, 255, 255, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">Gray200</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(226, 231, 237, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">Gray300</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(197, 205, 214, 1),<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// ── Text ──</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">TextHeading</span>:&nbsp;&nbsp;&nbsp;&nbsp;RGBA(33, 52, 85, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">TextBody</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(59, 79, 107, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">TextSecondary</span>:&nbsp;&nbsp;RGBA(122, 139, 160, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">TextMuted</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(156, 170, 185, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">TextOnDark</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(255, 255, 255, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">TextOnDarkMuted</span>:RGBA(255, 255, 255, 0.65),<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// ── Status ──</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">Success</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(16, 185, 129, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">SuccessLight</span>:&nbsp;&nbsp;&nbsp;RGBA(236, 253, 245, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">Warning</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(245, 158, 11, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">WarningLight</span>:&nbsp;&nbsp;&nbsp;RGBA(255, 251, 235, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">Danger</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RGBA(220, 38, 38, 1),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">DangerLight</span>:&nbsp;&nbsp;&nbsp;&nbsp;RGBA(254, 242, 242, 1)<br>
+&nbsp;&nbsp;}<br>
+);
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- RGBA QUICK REFERENCE                       -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="mapping-table">
+  <h3>Power Apps RGBA Quick Reference</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Element</th>
+        <th>Color Name</th>
+        <th>Power Apps Formula</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="color-dot" style="background:#213455;"></span>Header</td>
+        <td>Navy 900</td>
+        <td><code>RGBA(33, 52, 85, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#1B2D52;"></span>Left Menu</td>
+        <td>Navy 850</td>
+        <td><code>RGBA(27, 45, 82, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#2A4470;"></span>Menu Active BG</td>
+        <td>Navy 700</td>
+        <td><code>RGBA(42, 68, 112, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#fff; border: 2px solid #ccc;"></span>Menu Text</td>
+        <td>White @ 65%</td>
+        <td><code>RGBA(255, 255, 255, 0.65)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#fff; border: 2px solid #ccc;"></span>Menu Active Text</td>
+        <td>White</td>
+        <td><code>RGBA(255, 255, 255, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#246FAE;"></span>Active Indicator Bar</td>
+        <td>Blue 600</td>
+        <td><code>RGBA(36, 111, 174, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#246FAE;"></span>Primary Button</td>
+        <td>Blue 600</td>
+        <td><code>RGBA(36, 111, 174, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#1B5A8E;"></span>Button Hover</td>
+        <td>Blue 700</td>
+        <td><code>RGBA(27, 90, 142, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#F0F4F8;"></span>Center BG</td>
+        <td>Gray 50</td>
+        <td><code>RGBA(240, 244, 248, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#F7F9FB;"></span>Right Help BG</td>
+        <td>Gray 25</td>
+        <td><code>RGBA(247, 249, 251, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#ffffff; border: 1px solid #ddd;"></span>Card BG</td>
+        <td>White</td>
+        <td><code>RGBA(255, 255, 255, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#E2E7ED;"></span>Borders / Dividers</td>
+        <td>Gray 200</td>
+        <td><code>RGBA(226, 231, 237, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#213455;"></span>Heading Text</td>
+        <td>Navy 900</td>
+        <td><code>RGBA(33, 52, 85, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#3B4F6B;"></span>Body Text</td>
+        <td>Blue-Gray 700</td>
+        <td><code>RGBA(59, 79, 107, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#7A8BA0;"></span>Secondary Text</td>
+        <td>Blue-Gray 500</td>
+        <td><code>RGBA(122, 139, 160, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#9CAAB9;"></span>Muted Text</td>
+        <td>Blue-Gray 400</td>
+        <td><code>RGBA(156, 170, 185, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#10b981;"></span>Success</td>
+        <td>Green 500</td>
+        <td><code>RGBA(16, 185, 129, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#f59e0b;"></span>Warning</td>
+        <td>Amber 500</td>
+        <td><code>RGBA(245, 158, 11, 1)</code></td>
+      </tr>
+      <tr>
+        <td><span class="color-dot" style="background:#dc2626;"></span>Danger</td>
+        <td>Red 600</td>
+        <td><code>RGBA(220, 38, 38, 1)</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- THEME SLOT MAPPING                         -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="mapping-table">
+  <h3>Creator Kit Theme Slot → UI Mapping</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Slot</th>
+        <th>Hex</th>
+        <th>Used For</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>themePrimary</code></td><td><span class="color-dot" style="background:#246FAE;"></span>#246FAE</td><td>Primary buttons, links, active tab indicators</td></tr>
+      <tr><td><code>themeDarkAlt</code></td><td><span class="color-dot" style="background:#1B5A8E;"></span>#1B5A8E</td><td>Button hover state</td></tr>
+      <tr><td><code>themeDark</code></td><td><span class="color-dot" style="background:#003E6B;"></span>#003E6B</td><td>Button pressed, strong emphasis</td></tr>
+      <tr><td><code>themeDarker</code></td><td><span class="color-dot" style="background:#00213A;"></span>#00213A</td><td>Deepest accent (rarely used)</td></tr>
+      <tr><td><code>themeSecondary</code></td><td><span class="color-dot" style="background:#3D8BCB;"></span>#3D8BCB</td><td>Secondary buttons, icon accents</td></tr>
+      <tr><td><code>themeTertiary</code></td><td><span class="color-dot" style="background:#68AAD8;"></span>#68AAD8</td><td>Focus rings, progress bars</td></tr>
+      <tr><td><code>themeLight</code></td><td><span class="color-dot" style="background:#A8D3ED;"></span>#A8D3ED</td><td>Selected row highlight</td></tr>
+      <tr><td><code>themeLighter</code></td><td><span class="color-dot" style="background:#DEF0F9;"></span>#DEF0F9</td><td>Hover row background</td></tr>
+      <tr><td><code>themeLighterAlt</code></td><td><span class="color-dot" style="background:#F7FBFE;"></span>#F7FBFE</td><td>Lightest tint (barely visible)</td></tr>
+      <tr><td><code>neutralPrimary</code></td><td><span class="color-dot" style="background:#3B4F6B;"></span>#3B4F6B</td><td>Body text</td></tr>
+      <tr><td><code>neutralDark</code></td><td><span class="color-dot" style="background:#213455;"></span>#213455</td><td>Headings, strong labels</td></tr>
+      <tr><td><code>neutralSecondary</code></td><td><span class="color-dot" style="background:#7A8BA0;"></span>#7A8BA0</td><td>Secondary / muted text</td></tr>
+      <tr><td><code>neutralLight</code></td><td><span class="color-dot" style="background:#E8ECF1;"></span>#E8ECF1</td><td>Row dividers, subtle bg</td></tr>
+      <tr><td><code>neutralLighter</code></td><td><span class="color-dot" style="background:#F0F4F8;"></span>#F0F4F8</td><td>Page background</td></tr>
+      <tr><td><code>white</code></td><td><span class="color-dot" style="background:#fff; border:1px solid #ddd;"></span>#FFFFFF</td><td>Card / form background</td></tr>
+      <tr><td><code>black</code></td><td><span class="color-dot" style="background:#162740;"></span>#162740</td><td>Maximum emphasis text</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- MODERN THEME INSTRUCTIONS                  -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="mapping-table">
+  <h3>How to Apply</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Approach</th>
+        <th>Steps</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Modern Theme</strong><br>(Fluent v9)</td>
+        <td>
+          1. Enable <em>Modern controls and themes</em> in Settings → Updates → New<br>
+          2. Click <strong>Themes → Add a theme</strong><br>
+          3. Set primary seed color to <code>#246FAE</code><br>
+          4. Reference via <code>App.Theme.Colors.Primary</code> etc.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Creator Kit</strong><br>(Fluent UI)</td>
+        <td>
+          1. Import the Creator Kit solution<br>
+          2. Paste the <code>Set(AppTheme, ...)</code> block into <code>App.OnStart</code><br>
+          3. Pass <code>AppTheme</code> to component Theme properties<br>
+          4. Pass <code>AppThemeJson</code> to code components
+        </td>
+      </tr>
+      <tr>
+        <td><strong>ColorPalette Variable</strong><br>(Classic controls)</td>
+        <td>
+          1. Paste <code>Set(ColorPalette, ...)</code> into <code>App.OnStart</code><br>
+          2. Reference via <code>ColorPalette.Navy900</code>, <code>ColorPalette.Blue600</code>, etc.<br>
+          3. Applies to all classic and custom controls
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+function copyCode(id) {
+  const block = document.getElementById(id);
+  // Get text content, stripping HTML
+  const temp = document.createElement('div');
+  temp.innerHTML = block.innerHTML;
+  // Remove the copy button text
+  const btn = temp.querySelector('.copy-btn');
+  if (btn) btn.remove();
+  let text = temp.textContent || temp.innerText;
+  // Clean up extra whitespace
+  text = text.replace(/\n{3,}/g, '\n\n').trim();
+  navigator.clipboard.writeText(text).then(() => {
+    const copyBtn = block.querySelector('.copy-btn');
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => copyBtn.textContent = 'Copy', 2000);
+  });
+}
+</script>
+
+</body>
+</html>

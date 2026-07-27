@@ -1,0 +1,72 @@
+// ============================================================================
+// App.OnStart — LDP Application Phase I
+// Paste this whole block into the App object's OnStart property, then run it
+// (App ⋯ menu → "Run OnStart"). Defines ColorPalette + Typography used by every
+// screen. Classic ColorPalette path only — no modern/Creator Kit theme (Constitution II).
+// Source of truth: build/theme/theme.md.
+// ============================================================================
+
+Set(
+    ColorPalette,
+    {
+        // Primary Navy
+        Navy950: RGBA(22, 39, 64, 1),
+        Navy900: RGBA(33, 52, 85, 1),
+        Navy850: RGBA(27, 45, 82, 1),
+        Navy700: RGBA(42, 68, 112, 1),
+        Navy600: RGBA(58, 90, 138, 1),
+        // Accent Blue
+        Blue600: RGBA(36, 111, 174, 1),
+        Blue700: RGBA(27, 90, 142, 1),
+        Blue400: RGBA(61, 139, 203, 1),
+        Blue50:  RGBA(232, 241, 250, 1),
+        // Neutrals
+        Gray50:  RGBA(240, 244, 248, 1),
+        Gray25:  RGBA(247, 249, 251, 1),
+        White:   RGBA(255, 255, 255, 1),
+        Gray200: RGBA(226, 231, 237, 1),
+        Gray300: RGBA(197, 205, 214, 1),
+        // Text
+        TextHeading:     RGBA(33, 52, 85, 1),
+        TextBody:        RGBA(59, 79, 107, 1),
+        TextSecondary:   RGBA(122, 139, 160, 1),
+        TextHelp:        RGBA(93, 107, 125, 1),
+        TextMuted:       RGBA(156, 170, 185, 1),
+        TextOnDark:      RGBA(255, 255, 255, 1),
+        TextOnDarkMuted: RGBA(255, 255, 255, 0.65),
+        // Status — fills / badge backgrounds
+        Success:      RGBA(16, 185, 129, 1),
+        SuccessLight: RGBA(236, 253, 245, 1),
+        Warning:      RGBA(245, 158, 11, 1),
+        WarningLight: RGBA(255, 251, 235, 1),
+        Danger:       RGBA(220, 38, 38, 1),
+        DangerLight:  RGBA(254, 242, 242, 1),
+        // Status — accessible text/icon on light
+        SuccessText:  RGBA(4, 120, 87, 1),
+        WarningText:  RGBA(180, 83, 9, 1),
+        DangerText:   RGBA(220, 38, 38, 1),
+        // Keyboard focus rings (WCAG 2.4.7) — pick by the fill underneath,
+        // not by brand preference. See theme.md A11y rule 4.
+        FocusOnDark:  RGBA(232, 241, 250, 1),
+        FocusOnLight: RGBA(36, 111, 174, 1)
+    }
+);
+Set(
+    Typography,
+    {
+        Family:        "Lato",        // built-in canvas font; "Open Sans" is the fallback swap
+        // Hero headline ONLY (the landing page). The 14 ceiling below comes
+        // from PowerLibs guidance for dense app UI, not from Power Apps —
+        // a full-width marketing hero is the one place it does not apply.
+        SizeHero:      20,
+        SizeTitle:     14,
+        SizeHeading:   14,
+        SizeSubtitle:  12,
+        SizeBody:      11,
+        SizeLabel:     11,
+        SizeCaption:   9,
+        WeightRegular: FontWeight.Normal,
+        WeightMedium:  FontWeight.Semibold,
+        WeightBold:    FontWeight.Bold
+    }
+);

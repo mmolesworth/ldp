@@ -1,0 +1,1496 @@
+# Application Cycles Screen — US6 (RQ075–081, FR-039–041) — ADMIN
+# Rebuilt 2026-07-26. Classic controls only (Constitution II).
+# Colours = ColorPalette.*, sizes = Typography.*
+#
+# Composition (Constitution VIII):
+#   · PowerLibs `gallery-filter-header` — sortable headers (cycles list)
+#   · PowerLibs `calendar-1` — the date picker, ONE shared instance
+#   · PowerLibs `warning-modal-v2-1` — the FR-040 explanation
+#
+# NO TAB BAR, deliberately. Programs earned one because it has a child
+# collection (options) to switch to. CYCLES is six columns with no children —
+# a single detail panel is the whole subject.
+#
+# NO MODAL. The detail panel is the editor, so a modal carrying the same four
+# fields would be a second editing surface for one record. "Add cycle" puts the
+# panel into new-cycle mode instead. One record, one place to edit it.
+#
+# ---------------------------------------------------------------------------
+# LOCKED BY DEFAULT — locEdit
+# ---------------------------------------------------------------------------
+# The panel opens read-only. The Edit button at its top right switches to edit
+# mode and becomes Cancel; Save appears beside it. Save writes and returns to
+# read-only, Cancel reverts and returns to read-only.
+#
+# There is no separate Discard: Cancel already reverts the buffer, and two
+# controls doing the same thing at opposite ends of the panel is one too many.
+#
+# Read-only is the SAME controls with DisplayMode.Disabled, not a parallel set
+# of labels. Two sets would be two places to keep a field's text in sync, and
+# they drift. Each control therefore sets DisabledFill / DisabledColor /
+# DisabledBorderColor explicitly so the locked state reads as plain text rather
+# than as a greyed-out input.
+#
+# The button reads Cancel while editing because that is what it does — it
+# reverts the buffer. A control that silently kept pending edits behind a
+# locked panel would be the worse reading of the same gesture.
+#
+# ---------------------------------------------------------------------------
+# HOW TO TRANSCRIBE (Constitution IV)
+# ---------------------------------------------------------------------------
+#   1. Open "Application Cycles Screen". Delete any existing content —
+#      this is a full rebuild, not a patch of the 2026-07-25 version.
+#   2. Paste build/screens/_AdminShell.yaml FIRST.
+#   3. Select conMainArea, then paste EVERYTHING BELOW INSIDE IT.
+#      Every Parent.* below means conMainArea, not the screen.
+#   4. Data source: CYCLES.
+#   5. OnVisible — transcribe by hand (no # prefixes, no leading =):
+#
+#      UpdateContext({
+#          locCycle: Blank(),
+#          locNew: false,
+#          locEdit: false,
+#          locState: "Scheduled",
+#          locWarn: false,
+#          locWarnTitle: "",
+#          locWarnMsg: "",
+#          locOpenDate: Today(),
+#          locCloseDate: Today(),
+#          locDecisionDate: Today(),
+#          locCycSort: "OpenDate",
+#          locCycAsc: false,
+#          locCalTarget: "",
+#          locCalMonth: DateAdd(Today(), 1 - Day(Today()), TimeUnit.Days),
+#          locCalFirstInView: DateAdd(Today(), 1 - Day(Today()), TimeUnit.Days),
+#          locCalLastOfMonth: Today()
+#      })
+#
+#      Default sort is OpenDate DESCENDING — the cycle an admin wants is
+#      almost always the most recent, not the alphabetically first.
+#
+#   6. Preview (F5) — OnVisible does not run on the design surface.
+#
+# VERIFIED AGAINST STUDIO (2026-07-25): Classic/Button has NO AccessibleLabel
+# (PA2108) — a button's accessible name IS its Text; row overlays carry the
+# name in Text painted transparent. This environment is on
+# GroupContainer@1.5.0 (guide emits 1.4.0/1.3.0).
+#
+# ---------------------------------------------------------------------------
+# EDIT BUFFER — why the dates live in variables
+# ---------------------------------------------------------------------------
+# The panel edits a buffer, not the record: locOpenDate / locCloseDate /
+# locDecisionDate are seeded when a row is selected and only written back on
+# Save. That is what makes Discard possible and what stops a half-entered
+# date range from reaching SharePoint. The name field is the exception — a
+# TextInput is its own buffer, so txtCycName.Text is compared directly.
+#
+# ---------------------------------------------------------------------------
+# THE CALENDAR IS ONE INSTANCE, NOT THREE
+# ---------------------------------------------------------------------------
+# PowerLibs `calendar-1` drives a single date through shared variables. Three
+# instances on one screen would share month state and selection — clicking a
+# day in one would move all three. So there is ONE calendar, shown as a
+# popover, and locCalTarget records which of the three fields it is currently
+# setting ("Open" | "Close" | "Decision"; "" = closed).
+#
+# Adaptations from the generated component:
+# · the `Screens:` wrapper is stripped — Studio pastes controls, not screens.
+# · GroupContainer@1.3.0 → 1.5.0 (PA2105 in this environment).
+# · Set() globals → UpdateContext screen variables, renamed loc*.
+# · DROPPED two lines referencing _minDate / _maxDate. The component reads and
+#   writes them but never defines them; they are leftovers from a range
+#   variant and would silently create junk globals.
+# · Variant: WeekdayGallery / MonthDayGallery → Vertical + WrapCount: =7.
+#   Those variant names come from the built-in calendar template, not the
+#   documented gallery variants; WrapCount is the supported way to get a
+#   7-across grid.
+# · Font.'Segoe UI' and hardcoded Size → Typography.*; RGBA → ColorPalette.*.
+# · day OnSelect writes to whichever field locCalTarget names, then closes.
+# · a header caption names the field being set — the popover is anchored above
+#   its field, not adjacent to it, so the connection needs stating.
+#
+# ---------------------------------------------------------------------------
+# STATE IS A LIFECYCLE, NOT ACTIVE/RETIRED
+# ---------------------------------------------------------------------------
+#   Scheduled → Open → Closed → In Review
+#
+# So there is no Retire action here (contrast PROGRAMS / PROGRAM_OPTIONS).
+# State is edited in the panel like any other field, from a dropdown whose
+# Items come from Choices(CYCLES.State) — the options cannot drift from the
+# SharePoint column definition.
+#
+# ---------------------------------------------------------------------------
+# FR-040 — AT MOST ONE OPEN CYCLE. ENFORCED AT THE POINT OF CHOICE.
+# ---------------------------------------------------------------------------
+# State is chosen from drpCycState in the panel. Picking "Open" while another
+# cycle holds the slot does not silently fail and does not disable anything:
+# the choice is refused, locState keeps its previous value, and the Warning
+# Modal V2 names the cycle in the way.
+#
+# The dropdown deliberately keeps showing the rejected "Open" until the modal's
+# OK fires Reset(drpCycState). The explanation and the thing it refers to are
+# then on screen together; snapping the dropdown back first would leave the
+# modal talking about something the user can no longer see.
+#
+# This replaced an earlier design that disabled the transition and printed a
+# banner in the panel. Disabling gave no way to ask the question, so the rule
+# had to be stated permanently in the layout whether or not it was relevant.
+#
+# Two further lines of defence behind the modal, because a modal is UI and UI
+# is not a constraint:
+#   · a cycle created here is always born Scheduled — nothing creates an Open
+#     cycle directly;
+#   · Save re-tests the rule, so a cycle opened in another session between the
+#     dropdown choice and the Save still cannot produce a second open cycle.
+#
+# DELEGATION: the test is Not(IsEmpty(Filter(CYCLES, State.Value = "Open")))
+# with First(...).ID <> locCycle.ID to exclude this record. Filter on the
+# indexed State column delegates; CountRows does NOT delegate to SharePoint
+# (same rule as the PROGRAMS delete guard, FR-038b).
+#
+# ---------------------------------------------------------------------------
+# FR-041 AND NON-OVERLAP — ALL VALIDATION GOES THROUGH THE MODAL
+# ---------------------------------------------------------------------------
+# Rules checked on Save, in this order — the FIRST failure is the one reported,
+# so the message names the thing to fix next rather than listing everything:
+#
+#   1. a name is present
+#   2. all three dates are present
+#   3. OpenDate ≤ CloseDate                                        (FR-041)
+#   4. CloseDate ≤ ExpectedDecisionDate                            (FR-041)
+#   5. the open/close window does not overlap another cycle's
+#   6. no other cycle is already Open, if this one is being opened (FR-040)
+#
+# Rule 2 must precede 3-5: a new cycle starts with BLANK dates, and every
+# comparison below it is meaningless — and quietly wrong — against a blank.
+#
+# Rule 5 is a true interval-overlap test, not "after the latest cycle":
+#   locOpenDate <= other.CloseDate And locCloseDate >= other.OpenDate
+# ID <> locCycle.ID excludes the record being edited. Editing an existing
+# cycle is checked the same way as creating one.
+#
+# Save is NOT disabled when a rule fails — only when there is nothing to save.
+# A disabled button cannot say why it is disabled, and that was the whole
+# problem with the small inline warning this replaced.
+#
+# DELEGATION CAVEAT: rule 5 filters on OpenDate/CloseDate, which are NOT
+# indexed (only State is), so this Filter does not delegate. It is safe only
+# because CYCLES is a handful of rows per year — the bounded-list exception
+# under Constitution III / R6. Do NOT copy this shape to APPLICATIONS.
+#
+# ---------------------------------------------------------------------------
+# ALIGNMENT
+# ---------------------------------------------------------------------------
+# Every caption and every field carries PaddingLeft: =8, and it is CONSTANT.
+# An earlier version varied the fields' padding by mode, which made the values
+# shift sideways on every toggle. Text inset must not depend on edit state.
+#
+# ---------------------------------------------------------------------------
+# FOCUS RINGS
+# ---------------------------------------------------------------------------
+# Every focusable control here follows theme.md A11y rule 4, including filled
+# buttons, which need BorderStyle.Solid + BorderThickness 0 — BorderStyle.None
+# suppresses the border in every state, focus included. This screen is written
+# to the convention; the rest of the app catches up in T081.
+# ===========================================================================
+
+- lblCycTitle:
+    Control: Label@2.5.1
+    Properties:
+      Color: =ColorPalette.TextHeading
+      Font: =Typography.Family
+      FontWeight: =Typography.WeightBold
+      Height: =30
+      Size: =Typography.SizeHeading
+      Text: ="Application Cycles"
+      Width: =400
+      X: =24
+      Y: =18
+
+# The Actions menu is gone. Once state moved into the panel dropdown, the menu
+# held one item, and a one-item dropdown is a button wearing a costume.
+- btnCycAdd:
+    Control: Classic/Button@2.2.0
+    Properties:
+      BorderColor: =ColorPalette.Blue600
+      BorderStyle: =BorderStyle.Solid
+      BorderThickness: =0
+      Color: =ColorPalette.TextOnDark
+      Fill: =ColorPalette.Blue600
+      FocusedBorderColor: =ColorPalette.FocusOnDark
+      FocusedBorderThickness: =3
+      Font: =Typography.Family
+      Height: =32
+      HoverFill: =ColorPalette.Blue700
+      # Blank record + locNew puts the panel into new-cycle mode, unlocked.
+      # The three dates start BLANK, not on a default window — a prefilled
+      # date is a date somebody did not choose, and it looks identical to one
+      # they did.
+      OnSelect: |-
+        =UpdateContext({
+          locCycle: Blank(),
+          locNew: true,
+          locEdit: true,
+          locState: "Scheduled",
+          locOpenDate: Blank(),
+          locCloseDate: Blank(),
+          locDecisionDate: Blank(),
+          locCalTarget: ""
+        });
+        Reset(txtCycName)
+      PressedFill: =ColorPalette.Blue700
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      Size: =Typography.SizeBody
+      Text: ="Add cycle"
+      Width: =130
+      X: =Parent.Width - 154
+      Y: =18
+
+# ---- sortable header row ----
+# Header buttons set locCycSort to a COLUMN NAME STRING and toggle direction.
+# SortByColumns takes the column name as text, which is the only reason a
+# clickable-header gallery is possible at all in Power Fx.
+- conCycHead:
+    Control: GroupContainer@1.5.0
+    Variant: AutoLayout
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =ColorPalette.Gray25
+      Height: =36
+      LayoutAlignItems: =LayoutAlignItems.Center
+      LayoutDirection: =LayoutDirection.Horizontal
+      PaddingLeft: =16
+      PaddingRight: =16
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =62
+    Children:
+      - btnCycHeadName:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =1.8
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverFill: =RGBA(0, 0, 0, 0)
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locCycAsc: If(locCycSort = "CycleName", Not(locCycAsc), true),
+                locCycSort: "CycleName"
+              })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Cycle" & If(locCycSort = "CycleName", If(locCycAsc, "  ▲", "  ▼"), "")
+      - btnCycHeadState:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =0.9
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverFill: =RGBA(0, 0, 0, 0)
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locCycAsc: If(locCycSort = "State", Not(locCycAsc), true),
+                locCycSort: "State"
+              })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="State" & If(locCycSort = "State", If(locCycAsc, "  ▲", "  ▼"), "")
+      - btnCycHeadOpen:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =0.9
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverFill: =RGBA(0, 0, 0, 0)
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locCycAsc: If(locCycSort = "OpenDate", Not(locCycAsc), true),
+                locCycSort: "OpenDate"
+              })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Opens" & If(locCycSort = "OpenDate", If(locCycAsc, "  ▲", "  ▼"), "")
+      - btnCycHeadClose:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =0.9
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverFill: =RGBA(0, 0, 0, 0)
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locCycAsc: If(locCycSort = "CloseDate", Not(locCycAsc), true),
+                locCycSort: "CloseDate"
+              })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Closes" & If(locCycSort = "CloseDate", If(locCycAsc, "  ▲", "  ▼"), "")
+      - btnCycHeadDecision:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =0.9
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverFill: =RGBA(0, 0, 0, 0)
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locCycAsc: If(locCycSort = "ExpectedDecisionDate", Not(locCycAsc), true),
+                locCycSort: "ExpectedDecisionDate"
+              })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Decisions" & If(locCycSort = "ExpectedDecisionDate", If(locCycAsc, "  ▲", "  ▼"), "")
+
+- galCycles:
+    Control: Gallery@2.15.0
+    Variant: Vertical
+    Properties:
+      BorderColor: =ColorPalette.Gray200
+      Height: =168
+      Items: |-
+        =SortByColumns(CYCLES, locCycSort,
+          If(locCycAsc, SortOrder.Ascending, SortOrder.Descending))
+      ShowScrollbar: =true
+      TemplatePadding: =0
+      TemplateSize: =44
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =98
+    Children:
+      - conCycRow:
+          Control: GroupContainer@1.5.0
+          Variant: AutoLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            # Selected row is tinted so the panel below has an obvious subject.
+            Fill: |-
+              =If(And(Not(IsBlank(locCycle)), ThisItem.ID = locCycle.ID),
+                 ColorPalette.Blue50, ColorPalette.White)
+            Height: =Parent.TemplateHeight
+            LayoutAlignItems: =LayoutAlignItems.Center
+            LayoutDirection: =LayoutDirection.Horizontal
+            PaddingLeft: =16
+            PaddingRight: =16
+            Width: =Parent.TemplateWidth
+          Children:
+            - lblCycRowName:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  FillPortions: =1.8
+                  Font: =Typography.Family
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.CycleName
+            # The one cell carrying colour. Open is the state that matters
+            # operationally, so it is the only one in success green.
+            - lblCycRowState:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =Switch(ThisItem.State.Value,
+                       "Open", ColorPalette.SuccessText,
+                       "Scheduled", ColorPalette.Blue700,
+                       "In Review", ColorPalette.WarningText,
+                       ColorPalette.TextHelp)
+                  FillPortions: =0.9
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeCaption
+                  Text: =ThisItem.State.Value
+            - lblCycRowOpen:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  FillPortions: =0.9
+                  Font: =Typography.Family
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =Text(ThisItem.OpenDate, "mm/dd/yyyy")
+            - lblCycRowClose:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  FillPortions: =0.9
+                  Font: =Typography.Family
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =Text(ThisItem.CloseDate, "mm/dd/yyyy")
+            - lblCycRowDecision:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  FillPortions: =0.9
+                  Font: =Typography.Family
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =Text(ThisItem.ExpectedDecisionDate, "mm/dd/yyyy")
+      # Selecting a row seeds the edit buffer. Every field the panel edits is
+      # copied here; nothing reads through to the record while editing.
+      - btnCycRowSelect:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            # Accessible name lives in Text (Classic/Button has no
+            # AccessibleLabel — PA2108), painted fully transparent.
+            Color: =RGBA(0, 0, 0, 0)
+            Fill: =RGBA(0, 0, 0, 0)
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Height: =Parent.TemplateHeight
+            HoverColor: =RGBA(0, 0, 0, 0)
+            # Translucent, not opaque — this sits ON TOP of the row content.
+            HoverFill: =RGBA(0, 0, 0, 0.04)
+            OnSelect: |-
+              =UpdateContext({
+                locCycle: ThisItem,
+                locNew: false,
+                locEdit: false,
+                locState: ThisItem.State.Value,
+                locOpenDate: ThisItem.OpenDate,
+                locCloseDate: ThisItem.CloseDate,
+                locDecisionDate: ThisItem.ExpectedDecisionDate,
+                locCalTarget: ""
+              });
+              Reset(txtCycName)
+            PressedColor: =RGBA(0, 0, 0, 0)
+            PressedFill: =RGBA(0, 0, 0, 0.08)
+            Text: |-
+              ="Select " & ThisItem.CycleName
+            Width: =Parent.TemplateWidth
+            X: =0
+            Y: =0
+      - recCycRowLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.Gray200
+            Height: =1
+            Width: =Parent.TemplateWidth
+            Y: =Parent.TemplateHeight - 1
+
+- lblCycEmpty:
+    Control: Label@2.5.1
+    Properties:
+      Align: =Align.Center
+      Color: =ColorPalette.TextHelp
+      Font: =Typography.Family
+      Height: =40
+      Size: =Typography.SizeBody
+      Text: ="No cycles yet. Use Add cycle to create the first one."
+      Visible: =CountRows(galCycles.AllItems) = 0
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =140
+
+# ===========================================================================
+# DETAIL PANEL — editable by default. Edits a buffer; Save writes it back.
+# Height floors at 300 so the button row can never collide with the banner
+# above it on a short viewport.
+# ===========================================================================
+- conCycDetail:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =Max(300, Parent.Height - 306)
+      RadiusBottomLeft: =10
+      RadiusBottomRight: =10
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =282
+    Children:
+      # Empty state gives a next action rather than a blank panel.
+      - lblCycDetailEmpty:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =60
+            Size: =Typography.SizeBody
+            Text: |-
+              =If(CountRows(galCycles.AllItems) = 0,
+                 "No cycles exist yet. Use Add cycle above to create one.",
+                 "Select a cycle above to edit it, or use Add cycle to create one.")
+            Visible: =And(IsBlank(locCycle), Not(locNew))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =Parent.Height / 2 - 30
+
+      # ---- edit toggle (top right of the panel) ----
+      - btnCycEditToggle:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            HoverFill: =ColorPalette.Gray50
+            # Toggling OFF reverts the buffer — this is a cancel, not a silent
+            # drop of pending edits. Toggling ON just unlocks.
+            # Flat, not If(cond, A; B, C): semicolon-chained statements inside
+            # an If branch are the shape that parses inconsistently. Every
+            # field reads the PRE-update locEdit, so `If(locEdit, ...)` here
+            # means "we are leaving edit mode". Reset is harmless on the way
+            # in — Default already equals the record.
+            OnSelect: |-
+              =Reset(txtCycName);
+              UpdateContext({
+                locEdit: Not(locEdit),
+                locCalTarget: "",
+                locNew: If(locEdit, false, locNew),
+                locState:
+                  If(locEdit, Coalesce(locCycle.State.Value, "Scheduled"), locState),
+                locOpenDate:
+                  If(locEdit, Coalesce(locCycle.OpenDate, Today()), locOpenDate),
+                locCloseDate:
+                  If(locEdit, Coalesce(locCycle.CloseDate, Today()), locCloseDate),
+                locDecisionDate:
+                  If(locEdit, Coalesce(locCycle.ExpectedDecisionDate, Today()), locDecisionDate)
+              })
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            TabIndex: =1
+            Text: |-
+              =If(locEdit, "Cancel", "Edit")
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =100
+            X: =Parent.Width - 124
+            Y: =18
+
+      # ---- name (editable) ----
+      - lblCycNameLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            PaddingLeft: =8
+            Size: =Typography.SizeCaption
+            Text: ="CYCLE NAME"
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =320
+            X: =24
+            Y: =20
+      - txtCycName:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(locNew, "", locCycle.CycleName)
+            # Locked state is styled to read as plain text, not as a greyed-out
+            # input: no border, white fill, full-strength heading colour.
+            DisabledBorderColor: =RGBA(0, 0, 0, 0)
+            DisabledColor: =ColorPalette.TextHeading
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEdit, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            PaddingLeft: =8
+            Size: =Typography.SizeBody
+            TabIndex: =3
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =320
+            X: =24
+            Y: =40
+
+      # ---- state (read-only here; changed from the Actions menu) ----
+      - lblCycStateLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            PaddingLeft: =8
+            Size: =Typography.SizeCaption
+            Text: ="STATE"
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =220
+            X: =372
+            Y: =20
+      # State is edited here, not from a menu. Choices() reads the SharePoint
+      # choice column, so the options cannot drift from the list definition.
+      #
+      # FR-040 is enforced at the moment "Open" is chosen: locState only
+      # advances when the choice is legal, and locWarn raises the modal when it
+      # is not. The dropdown keeps showing "Open" until the modal's OK resets
+      # it — deliberately, so the rejected choice is still on screen while the
+      # explanation is being read.
+      - drpCycState:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            Color: |-
+              =Switch(locState,
+                 "Open", ColorPalette.SuccessText,
+                 "Scheduled", ColorPalette.Blue700,
+                 "In Review", ColorPalette.WarningText,
+                 ColorPalette.TextHelp)
+            Default: =locState
+            DisabledBorderColor: =RGBA(0, 0, 0, 0)
+            DisabledColor: |-
+              =Switch(locState,
+                 "Open", ColorPalette.SuccessText,
+                 "Scheduled", ColorPalette.Blue700,
+                 "In Review", ColorPalette.WarningText,
+                 ColorPalette.TextHelp)
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEdit, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =32
+            Items: =Choices(CYCLES.State)
+            # locWarn is OR-ed, never cleared here — only the modal's OK clears
+            # it. Clearing it on a later OnChange would flash the modal away.
+            OnChange: |-
+              =UpdateContext({
+                locWarn:
+                  Or(locWarn,
+                     And(drpCycState.Selected.Value = "Open",
+                         Not(IsEmpty(Filter(CYCLES, State.Value = "Open"))),
+                         First(Filter(CYCLES, State.Value = "Open")).ID <> locCycle.ID)),
+                locWarnTitle: "Another cycle is already open",
+                locWarnMsg:
+                  First(Filter(CYCLES, State.Value = "Open")).CycleName &
+                  " is currently open. Only one cycle can be open at a time. Close " &
+                  First(Filter(CYCLES, State.Value = "Open")).CycleName &
+                  " before opening this one.",
+                locState:
+                  If(And(drpCycState.Selected.Value = "Open",
+                         Not(IsEmpty(Filter(CYCLES, State.Value = "Open"))),
+                         First(Filter(CYCLES, State.Value = "Open")).ID <> locCycle.ID),
+                     locState,
+                     drpCycState.Selected.Value)
+              })
+            Size: =Typography.SizeBody
+            TabIndex: =4
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =220
+            X: =372
+            Y: =40
+
+      # ---- the three dates (editable, via the shared calendar) ----
+      - lblCycOpenLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            PaddingLeft: =8
+            Size: =Typography.SizeCaption
+            Text: ="OPENS"
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =150
+            X: =24
+            Y: =96
+      # Styled as an input, not a button: white fill, 1px Gray300, left-aligned.
+      # Opening it seeds the calendar's month view from this field's value, so
+      # the calendar lands on the right month rather than on today.
+      - btnCycOpenDate:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: |-
+              =If(locCalTarget = "Open", ColorPalette.Blue600, ColorPalette.Gray300)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            # TextMuted is the palette's placeholder-only colour, so an
+            # unchosen date never reads as a real value.
+            Color: |-
+              =If(IsBlank(locOpenDate), ColorPalette.TextMuted, ColorPalette.TextBody)
+            DisabledBorderColor: =RGBA(0, 0, 0, 0)
+            DisabledColor: |-
+              =If(IsBlank(locOpenDate), ColorPalette.TextHelp, ColorPalette.TextBody)
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEdit, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            HoverFill: =ColorPalette.Gray50
+            # Coalesce, because the calendar cannot open on a blank month.
+            # An empty field lands on the current month.
+            OnSelect: |-
+              =UpdateContext({
+                locCalTarget: If(locCalTarget = "Open", "", "Open"),
+                locCalMonth:
+                  DateAdd(Coalesce(locOpenDate, Today()),
+                          1 - Day(Coalesce(locOpenDate, Today())), TimeUnit.Days)
+              });
+              UpdateContext({
+                locCalFirstInView:
+                  DateAdd(locCalMonth, -(Weekday(locCalMonth) - 1), TimeUnit.Days),
+                locCalLastOfMonth:
+                  DateAdd(DateAdd(locCalMonth, 1, TimeUnit.Months), -1, TimeUnit.Days)
+              })
+            PaddingLeft: =8
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            TabIndex: =5
+            Text: |-
+              =If(IsBlank(locOpenDate),
+                 If(locEdit, "Select a date", "—"),
+                 Text(locOpenDate, "mm/dd/yyyy"))
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =150
+            X: =24
+            Y: =116
+      - lblCycCloseLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            PaddingLeft: =8
+            Size: =Typography.SizeCaption
+            Text: ="CLOSES"
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =150
+            X: =190
+            Y: =96
+      - btnCycCloseDate:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: |-
+              =If(locCalTarget = "Close", ColorPalette.Blue600, ColorPalette.Gray300)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            # TextMuted is the palette's placeholder-only colour, so an
+            # unchosen date never reads as a real value.
+            Color: |-
+              =If(IsBlank(locCloseDate), ColorPalette.TextMuted, ColorPalette.TextBody)
+            DisabledBorderColor: =RGBA(0, 0, 0, 0)
+            DisabledColor: |-
+              =If(IsBlank(locCloseDate), ColorPalette.TextHelp, ColorPalette.TextBody)
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEdit, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            HoverFill: =ColorPalette.Gray50
+            # Coalesce, because the calendar cannot open on a blank month.
+            # An empty field lands on the current month.
+            OnSelect: |-
+              =UpdateContext({
+                locCalTarget: If(locCalTarget = "Close", "", "Close"),
+                locCalMonth:
+                  DateAdd(Coalesce(locCloseDate, Today()),
+                          1 - Day(Coalesce(locCloseDate, Today())), TimeUnit.Days)
+              });
+              UpdateContext({
+                locCalFirstInView:
+                  DateAdd(locCalMonth, -(Weekday(locCalMonth) - 1), TimeUnit.Days),
+                locCalLastOfMonth:
+                  DateAdd(DateAdd(locCalMonth, 1, TimeUnit.Months), -1, TimeUnit.Days)
+              })
+            PaddingLeft: =8
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            TabIndex: =6
+            Text: |-
+              =If(IsBlank(locCloseDate),
+                 If(locEdit, "Select a date", "—"),
+                 Text(locCloseDate, "mm/dd/yyyy"))
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =150
+            X: =190
+            Y: =116
+      - lblCycDecisionLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            PaddingLeft: =8
+            Size: =Typography.SizeCaption
+            Text: ="DECISIONS EXPECTED"
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =180
+            X: =356
+            Y: =96
+      - btnCycDecisionDate:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: |-
+              =If(locCalTarget = "Decision", ColorPalette.Blue600, ColorPalette.Gray300)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            # TextMuted is the palette's placeholder-only colour, so an
+            # unchosen date never reads as a real value.
+            Color: |-
+              =If(IsBlank(locDecisionDate), ColorPalette.TextMuted, ColorPalette.TextBody)
+            DisabledBorderColor: =RGBA(0, 0, 0, 0)
+            DisabledColor: |-
+              =If(IsBlank(locDecisionDate), ColorPalette.TextHelp, ColorPalette.TextBody)
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEdit, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            HoverFill: =ColorPalette.Gray50
+            # Coalesce, because the calendar cannot open on a blank month.
+            # An empty field lands on the current month.
+            OnSelect: |-
+              =UpdateContext({
+                locCalTarget: If(locCalTarget = "Decision", "", "Decision"),
+                locCalMonth:
+                  DateAdd(Coalesce(locDecisionDate, Today()),
+                          1 - Day(Coalesce(locDecisionDate, Today())), TimeUnit.Days)
+              });
+              UpdateContext({
+                locCalFirstInView:
+                  DateAdd(locCalMonth, -(Weekday(locCalMonth) - 1), TimeUnit.Days),
+                locCalLastOfMonth:
+                  DateAdd(DateAdd(locCalMonth, 1, TimeUnit.Months), -1, TimeUnit.Days)
+              })
+            PaddingLeft: =8
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            TabIndex: =7
+            Text: |-
+              =If(IsBlank(locDecisionDate),
+                 If(locEdit, "Select a date", "—"),
+                 Text(locDecisionDate, "mm/dd/yyyy"))
+            Visible: =Or(Not(IsBlank(locCycle)), locNew)
+            Width: =150
+            X: =356
+            Y: =116
+
+      # Derived from the BUFFER, so the spans update live as dates are picked.
+      - lblCycSpans:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Applications accepted for " &
+                DateDiff(locOpenDate, locCloseDate, TimeUnit.Days) &
+                " days · decisions " &
+                DateDiff(locCloseDate, locDecisionDate, TimeUnit.Days) &
+                " days after close"
+            # Hidden until all three dates exist — a span computed from a blank
+            # reads as a real number and is not one.
+            Visible: |-
+              =And(Or(Not(IsBlank(locCycle)), locNew),
+                 Not(IsBlank(locOpenDate)),
+                 Not(IsBlank(locCloseDate)),
+                 Not(IsBlank(locDecisionDate)))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =158
+
+      - btnCycSave:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            # Only "nothing to save" disables this. Every rule is checked in
+            # OnSelect and reported through the modal — a disabled button
+            # cannot explain why it is disabled.
+            DisplayMode: |-
+              =If(lblCycDirty.Visible, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.Blue600
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.Blue700
+            # Validate, then act on the result. Order matters: the first rule
+            # that fails is the one reported, so the message is about the thing
+            # to fix next rather than a list of everything wrong.
+            #
+            # Three sequential UpdateContexts rather than If(cond, A; B, C) —
+            # semicolon-chained statements inside an If branch are the shape
+            # that parses inconsistently. Each statement sees the previous
+            # one's values.
+            OnSelect: |-
+              =UpdateContext({
+                locWarnTitle: If(
+                  IsBlank(Trim(txtCycName.Text)),
+                  "Cycle name is required",
+                  Or(IsBlank(locOpenDate), IsBlank(locCloseDate),
+                     IsBlank(locDecisionDate)),
+                  "All three dates are required",
+                  locCloseDate < locOpenDate,
+                  "Check the cycle dates",
+                  locDecisionDate < locCloseDate,
+                  "Check the cycle dates",
+                  Not(IsEmpty(Filter(CYCLES, ID <> locCycle.ID,
+                      locOpenDate <= CloseDate, locCloseDate >= OpenDate))),
+                  "These dates overlap another cycle",
+                  And(locState = "Open",
+                  Not(IsEmpty(Filter(CYCLES, State.Value = "Open"))),
+                  First(Filter(CYCLES, State.Value = "Open")).ID <> locCycle.ID),
+                  "Another cycle is already open",
+                  ""),
+                locWarnMsg: If(
+                  IsBlank(Trim(txtCycName.Text)),
+                  "Give the cycle a name before saving it.",
+                  Or(IsBlank(locOpenDate), IsBlank(locCloseDate),
+                     IsBlank(locDecisionDate)),
+                  "Choose the open, close and decision dates before saving this cycle.",
+                  locCloseDate < locOpenDate,
+                  "This cycle is set to close on " & Text(locCloseDate, "mm/dd/yyyy") &
+                    ", before it opens on " & Text(locOpenDate, "mm/dd/yyyy") &
+                    ". The close date must be on or after the open date.",
+                  locDecisionDate < locCloseDate,
+                  "This cycle expects decisions on " & Text(locDecisionDate, "mm/dd/yyyy") &
+                    ", before it closes on " & Text(locCloseDate, "mm/dd/yyyy") &
+                    ". The decision date must be on or after the close date.",
+                  Not(IsEmpty(Filter(CYCLES, ID <> locCycle.ID,
+                      locOpenDate <= CloseDate, locCloseDate >= OpenDate))),
+                  First(Filter(CYCLES, ID <> locCycle.ID,
+                       locOpenDate <= CloseDate, locCloseDate >= OpenDate)).CycleName & " runs from " &
+                    Text(First(Filter(CYCLES, ID <> locCycle.ID,
+                       locOpenDate <= CloseDate, locCloseDate >= OpenDate)).OpenDate, "mm/dd/yyyy") & " to " &
+                    Text(First(Filter(CYCLES, ID <> locCycle.ID,
+                       locOpenDate <= CloseDate, locCloseDate >= OpenDate)).CloseDate, "mm/dd/yyyy") &
+                    ". Cycles cannot overlap, so this one cannot open before " &
+                    Text(DateAdd(First(Filter(CYCLES, ID <> locCycle.ID,
+                       locOpenDate <= CloseDate, locCloseDate >= OpenDate)).CloseDate, 1, TimeUnit.Days), "mm/dd/yyyy") & ".",
+                  And(locState = "Open",
+                  Not(IsEmpty(Filter(CYCLES, State.Value = "Open"))),
+                  First(Filter(CYCLES, State.Value = "Open")).ID <> locCycle.ID),
+                  First(Filter(CYCLES, State.Value = "Open")).CycleName &
+                    " is currently open. Only one cycle can be open at a time. Close " &
+                    First(Filter(CYCLES, State.Value = "Open")).CycleName &
+                    " before opening this one.",
+                  "")
+              });
+              UpdateContext({ locWarn: locWarnMsg <> "" });
+              UpdateContext({
+                locCycle:
+                  If(locWarnMsg = "",
+                     Patch(CYCLES,
+                       If(locNew, Defaults(CYCLES), locCycle),
+                       {
+                         CycleName: txtCycName.Text,
+                         OpenDate: locOpenDate,
+                         CloseDate: locCloseDate,
+                         ExpectedDecisionDate: locDecisionDate,
+                         State: { Value: locState }
+                       }),
+                     locCycle),
+                locNew: If(locWarnMsg = "", false, locNew),
+                locEdit: If(locWarnMsg = "", false, locEdit),
+                locCalTarget: If(locWarnMsg = "", "", locCalTarget)
+              });
+              If(Not(locWarn), Notify("Cycle saved.", NotificationType.Success))
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =2
+            Text: ="Save"
+            # Present for the whole of edit mode so there is always a visible
+            # way out; enablement, not visibility, carries "nothing to save".
+            Visible: =locEdit
+            Width: =100
+            X: =Parent.Width - 232
+            Y: =18
+      # Both a status line for the user and the single definition of "dirty" —
+      # btnCycSave.DisplayMode reads this control's Visible rather than
+      # restating the four comparisons and risking the two drifting apart.
+      - lblCycDirty:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.WarningText
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeCaption
+            Align: =Align.Right
+            Text: ="Unsaved changes"
+            Visible: |-
+              =And(locEdit,
+                 Or(locNew,
+                   And(Not(IsBlank(locCycle)),
+                     Or(txtCycName.Text <> locCycle.CycleName,
+                        locState <> locCycle.State.Value,
+                        locOpenDate <> locCycle.OpenDate,
+                        locCloseDate <> locCycle.CloseDate,
+                        locDecisionDate <> locCycle.ExpectedDecisionDate))))
+            Width: =150
+            X: =Parent.Width - 392
+            Y: =18
+
+# ===========================================================================
+# CALENDAR POPOVER — PowerLibs `calendar-1`, ONE instance shared by all three
+# date fields. DECLARED LAST so it paints above everything.
+# ===========================================================================
+# Anchored horizontally to whichever field opened it and pinned near the top,
+# because the panel sits low and a 380px calendar dropped below its field
+# would run off the bottom of the viewport.
+- btnCalScrim:
+    Control: Classic/Button@2.2.0
+    Properties:
+      BorderStyle: =BorderStyle.None
+      Fill: =RGBA(0, 0, 0, 0)
+      Height: =Parent.Height
+      HoverFill: =RGBA(0, 0, 0, 0)
+      OnSelect: |-
+        =UpdateContext({ locCalTarget: "" })
+      PressedFill: =RGBA(0, 0, 0, 0)
+      Text: =""
+      Visible: =locCalTarget <> ""
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+
+- conCalendar:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Bold
+      Fill: =ColorPalette.White
+      Height: =380
+      RadiusBottomLeft: =10
+      RadiusBottomRight: =10
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Visible: =locCalTarget <> ""
+      Width: =294
+      # X tracks the field that opened it; the panel is inset 24 from the
+      # main area, and the fields sit at 24 / 190 / 356 inside that.
+      X: |-
+        =24 + Switch(locCalTarget, "Open", 24, "Close", 190, "Decision", 356, 24)
+      Y: =8
+    Children:
+      # Names the field being set. The popover is not adjacent to its field,
+      # so without this the connection is guesswork.
+      - lblCalTarget:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            PaddingLeft: =16
+            Size: =Typography.SizeCaption
+            Text: |-
+              =Switch(locCalTarget,
+                 "Open", "SETTING: OPENS",
+                 "Close", "SETTING: CLOSES",
+                 "Decision", "SETTING: DECISIONS EXPECTED",
+                 "")
+            Width: =Parent.Width
+            X: =0
+            Y: =8
+      - lblCalMonthYear:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =28
+            PaddingLeft: =16
+            Size: =Typography.SizeSubtitle
+            Text: |-
+              =Text(locCalMonth, "mmmm yyyy")
+            Width: =Parent.Width * 0.6
+            X: =0
+            Y: =26
+      # DROPPED from the component here: If(_minDate > _firstDayOfMonth, ...)
+      # and its _maxDate twin. Neither variable is ever defined — they are
+      # leftovers from a date-range variant of this calendar.
+      - icoCalPrev:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextHelp
+            Height: =28
+            HoverColor: =ColorPalette.TextHeading
+            Icon: =Icon.ChevronLeft
+            OnSelect: |-
+              =UpdateContext({
+                locCalMonth: DateAdd(locCalMonth, -1, TimeUnit.Months)
+              });
+              UpdateContext({
+                locCalFirstInView:
+                  DateAdd(locCalMonth, -(Weekday(locCalMonth) - 1), TimeUnit.Days),
+                locCalLastOfMonth:
+                  DateAdd(DateAdd(locCalMonth, 1, TimeUnit.Months), -1, TimeUnit.Days)
+              })
+            PaddingBottom: =6
+            PaddingLeft: =6
+            PaddingRight: =6
+            PaddingTop: =6
+            TabIndex: =0
+            Tooltip: ="Previous month"
+            Width: =28
+            X: =Parent.Width - 72
+            Y: =26
+      - icoCalNext:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextHelp
+            Height: =28
+            HoverColor: =ColorPalette.TextHeading
+            Icon: =Icon.ChevronRight
+            OnSelect: |-
+              =UpdateContext({
+                locCalMonth: DateAdd(locCalMonth, 1, TimeUnit.Months)
+              });
+              UpdateContext({
+                locCalFirstInView:
+                  DateAdd(locCalMonth, -(Weekday(locCalMonth) - 1), TimeUnit.Days),
+                locCalLastOfMonth:
+                  DateAdd(DateAdd(locCalMonth, 1, TimeUnit.Months), -1, TimeUnit.Days)
+              })
+            PaddingBottom: =6
+            PaddingLeft: =6
+            PaddingRight: =6
+            PaddingTop: =6
+            TabIndex: =0
+            Tooltip: ="Next month"
+            Width: =28
+            X: =Parent.Width - 40
+            Y: =26
+      - galCalWeekday:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Height: =Parent.Width / 7
+            Items: =Calendar.WeekdaysShort()
+            ShowScrollbar: =false
+            TemplatePadding: =0
+            TemplateSize: =Parent.Width / 7
+            Width: =Parent.Width
+            # WrapCount 7 is what lays the seven weekday names out as a row.
+            # The component shipped Variant: WeekdayGallery with no WrapCount,
+            # which is a built-in calendar-template variant, not a documented
+            # one — Vertical + WrapCount is the supported equivalent.
+            WrapCount: =7
+            X: =0
+            Y: =62
+          Children:
+            - lblCalWeekday:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Center
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =galCalWeekday.TemplateHeight
+                  Size: =Typography.SizeCaption
+                  Text: =Lower(Left(ThisItem.Value, 2))
+                  Width: =galCalWeekday.TemplateWidth
+                  Wrap: =false
+      - galCalDay:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Height: =(Parent.Width / 7) * 6
+            Items: |-
+              =[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,
+                24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41]
+            ShowScrollbar: =false
+            TemplatePadding: =0
+            TemplateSize: =Parent.Width / 7
+            Width: =Parent.Width
+            WrapCount: =7
+            X: =0
+            Y: =62 + (Parent.Width / 7)
+          Children:
+            # Selection compares against whichever buffer locCalTarget names —
+            # this is the whole reason one calendar can serve three fields.
+            - shpCalSelected:
+                Control: Circle@2.3.0
+                Properties:
+                  Fill: =ColorPalette.Blue600
+                  Height: =galCalDay.TemplateWidth * 0.72
+                  Visible: |-
+                    =And(
+                      DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days) =
+                        Switch(locCalTarget,
+                          "Open", locOpenDate,
+                          "Close", locCloseDate,
+                          "Decision", locDecisionDate),
+                      Month(DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days)) =
+                        Month(locCalMonth))
+                  Width: =galCalDay.TemplateWidth * 0.72
+                  X: =galCalDay.TemplateWidth / 2 - Self.Width / 2
+                  Y: =galCalDay.TemplateHeight / 2 - Self.Height / 2
+            - shpCalToday:
+                Control: Circle@2.3.0
+                Properties:
+                  Fill: =ColorPalette.Blue600
+                  Height: =4
+                  Visible: |-
+                    =And(
+                      DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days) = Today(),
+                      Month(DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days)) =
+                        Month(locCalMonth))
+                  Width: =4
+                  X: =galCalDay.TemplateWidth / 2 - Self.Width / 2
+                  Y: =galCalDay.TemplateHeight / 2 + (galCalDay.TemplateHeight * 0.28)
+            - lblCalDay:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Center
+                  Color: |-
+                    =If(
+                      And(
+                        DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days) =
+                          Switch(locCalTarget,
+                            "Open", locOpenDate,
+                            "Close", locCloseDate,
+                            "Decision", locDecisionDate),
+                        Month(DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days)) =
+                          Month(locCalMonth)),
+                      ColorPalette.TextOnDark,
+                      Month(DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days)) <>
+                        Month(locCalMonth),
+                      ColorPalette.Gray300,
+                      ColorPalette.TextBody)
+                  Font: =Typography.Family
+                  Height: =galCalDay.TemplateHeight
+                  # Writes to the field locCalTarget names and closes. The two
+                  # untargeted buffers are written back to themselves, which is
+                  # how one UpdateContext can service three fields.
+                  OnSelect: |-
+                    =UpdateContext({
+                      locOpenDate:
+                        If(locCalTarget = "Open",
+                           DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days),
+                           locOpenDate),
+                      locCloseDate:
+                        If(locCalTarget = "Close",
+                           DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days),
+                           locCloseDate),
+                      locDecisionDate:
+                        If(locCalTarget = "Decision",
+                           DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days),
+                           locDecisionDate),
+                      locCalTarget: ""
+                    })
+                  Size: =Typography.SizeBody
+                  TabIndex: =0
+                  Text: |-
+                    =Day(DateAdd(locCalFirstInView, ThisItem.Value, TimeUnit.Days))
+                  Width: =galCalDay.TemplateWidth
+                  Wrap: =false
+
+# ===========================================================================
+# FR-040 WARNING — PowerLibs `warning-modal-v2-1`, adapted.
+# DECLARED LAST so it paints above the calendar popover as well as the panel.
+# ===========================================================================
+# Adaptations from the generated component:
+# · GroupContainer@1.3.0 → 1.5.0; `varPopUp` → locWarn.
+# · the generated trigger button is dropped — drpCycState.OnChange raises this.
+# · btnNo dropped: there is nothing to confirm. This modal explains a rule and
+#   the only action is to acknowledge it.
+# · pure red RGBA(255,0,0,1) → DangerText, and the icon halo → DangerLight.
+#   Pure red is not in the palette and fails on white at small sizes.
+# · the body names the offending cycle twice — once as the thing in the way,
+#   once as the thing to close. The generated body was static text, and
+#   "another cycle" is not actionable where a name is.
+- recCycWarnScrim:
+    Control: Rectangle@2.3.0
+    Properties:
+      BorderColor: =RGBA(0, 0, 0, 0)
+      Fill: =RGBA(0, 0, 0, 0.3)
+      Height: =Parent.Height
+      Visible: =locWarn
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+
+- conCycWarn:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Bold
+      Fill: =ColorPalette.White
+      Height: =256
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: =locWarn
+      Width: =520
+      X: =Parent.Width / 2 - Self.Width / 2
+      Y: =Parent.Height / 2 - Self.Height / 2
+    Children:
+      - shpCycWarnHalo:
+          Control: Circle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.DangerLight
+            Height: =56
+            Width: =56
+            X: =24
+            Y: =28
+      - icoCycWarn:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.DangerText
+            Height: =30
+            Icon: =Icon.Warning
+            Width: =30
+            X: =37
+            Y: =41
+      - lblCycWarnTitle:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =26
+            Size: =Typography.SizeHeading
+            Text: =locWarnTitle
+            Width: =380
+            X: =96
+            Y: =42
+      - lblCycWarnBody:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =76
+            Size: =Typography.SizeBody
+            Text: =locWarnMsg
+            VerticalAlign: =VerticalAlign.Top
+            Width: =400
+            X: =96
+            Y: =72
+      - btnCycWarnOk:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            Fill: =ColorPalette.Blue600
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.Blue700
+            # Reset is what puts the dropdown back to locState — the rejected
+            # "Open" stays on screen until here, so the explanation and the
+            # thing it refers to are visible at the same time.
+            OnSelect: |-
+              =UpdateContext({ locWarn: false });
+              Reset(drpCycState)
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =8
+            Text: ="OK"
+            Width: =110
+            X: =Parent.Width - 134
+            Y: =Parent.Height - 62

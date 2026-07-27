@@ -1,0 +1,796 @@
+# Rating Sheets Screen — US9 (RQ082–092, RQ117–118, FR-042–045, research R3)
+# Classic controls only (Constitution II). Colours = ColorPalette.*, fonts/sizes = Typography.*
+#
+# ---------------------------------------------------------------------------
+# HOW TO TRANSCRIBE (Constitution IV)
+# ---------------------------------------------------------------------------
+#   1. New screen → Blank. Rename it "Rating Sheets Screen".
+#   2. Set these screen properties by hand:
+#        Fill:      =ColorPalette.Gray50
+#        OnVisible: =UpdateContext({
+#                     locVersion: Blank(),
+#                     locIsDirty: false
+#                   });
+#                   Clear(colSheetCriteria)
+#   3. Select the screen and paste everything below.
+#   4. Data sources (six): RATING_SHEETS, RATING_CRITERIA, CRITERION_CATALOG,
+#      COMMITTEE_SCORES, CYCLES, PROGRAMS.
+#   5. REQUIRED — set the dropdown display columns in Studio's property panel:
+#        drpCycle   → Value = CycleName
+#        drpProgram → Value = ProgramName
+#      Value is an output in the YAML schema (PA2108) but IS settable in the
+#      panel. Skip this and both dropdowns render the right number of BLANK
+#      rows — Power Apps falls back to the Title column, which every list in
+#      this project leaves empty by design.
+#   6. Preview (F5) — OnVisible does not run on the design surface.
+#
+# ---------------------------------------------------------------------------
+# THE VERSIONING MODEL (research R3 — read this before changing anything)
+# ---------------------------------------------------------------------------
+# A rating sheet is NOT a row that gets edited. Each save INSERTS a new
+# RATING_SHEETS row with Version n+1 and IsCurrent = Yes, and flips the prior
+# current row to No. Prior rows are never touched except for that flag. The
+# selected criteria are child RATING_CRITERIA rows keyed to the version's ID, so
+# every version keeps its own frozen criterion set.
+#
+# Consequently btnSaveVersion is labelled "Save as New Version", not "Save" —
+# calling it Save would imply an in-place edit, which is exactly what RQ087/088
+# forbid. There is no way to amend a version. That is the requirement, not a gap.
+#
+# ---------------------------------------------------------------------------
+# THE WORKING SET
+# ---------------------------------------------------------------------------
+# colSheetCriteria is an in-memory collection holding the criteria for the sheet
+# being assembled. Selecting a version ClearCollects it from that version's stored
+# rows, joining CRITERION_CATALOG so the end-date flag (FR-045) is available
+# without a second query per row. Add/Remove touch only the collection; nothing
+# reaches SharePoint until Save as New Version.
+#
+# NOTE: CountRows against colSheetCriteria is safe — delegation limits apply to
+# data sources, not local collections. CountRows against a LIST is still banned
+# (it does not delegate); the guards below use IsEmpty(Filter(...)) for those.
+#
+# ---------------------------------------------------------------------------
+# DELEGATION (Constitution III)
+# ---------------------------------------------------------------------------
+# Delegable, indexed: RATING_SHEETS.CycleID/ProgramID/IsCurrent,
+# RATING_CRITERIA.RatingSheetID, COMMITTEE_SCORES.RatingSheetID,
+# CRITERION_CATALOG.State.
+# Bounded, evaluated client-side after the indexed filter narrows the set —
+# both acceptable because the sets are tiny, both flagged so nobody copies them
+# to APPLICATIONS scale:
+#   · the in-window test on CRITERION_CATALOG (IsBlank/date compare do not delegate)
+#   · Max(...) for the next version number (a handful of rows per cycle+program)
+
+# ---------- Header ----------
+- conHeaderRS:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =ColorPalette.Navy900
+      Height: =64
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+    Children:
+      - lblSheetsTitle:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextOnDark
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =32
+            Size: =Typography.SizeTitle
+            Text: ="Rating Sheets"
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =Parent.Height / 2 - Self.Height / 2
+
+# ---------- Cycle + program selector (a sheet is per-cycle, per-program) ----------
+- conSelectorRS:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =RGBA(0, 0, 0, 0)
+      Height: =52
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =76
+    Children:
+      - lblCycleSelectLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="Cycle"
+            Width: =220
+            X: =0
+            Y: =0
+      - drpCycle:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            Items: =Sort(CYCLES, OpenDate, SortOrder.Descending)
+            OnChange: |-
+              =UpdateContext({ locVersion: Blank() });
+              Clear(colSheetCriteria)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            # Value is an OUTPUT on Classic/DropDown, not a settable input — it
+            # cannot pick the display column from YAML. Set the display column in
+            # Studio's property panel (choose CycleName). Every formula below uses
+            # drpCycle.Selected.<field>, which works whatever column is displayed.
+            Width: =220
+            X: =0
+            Y: =20
+      - lblProgramSelectLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="Program"
+            Width: =220
+            X: =236
+            Y: =0
+      - drpProgram:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            Items: =PROGRAMS
+            OnChange: |-
+              =UpdateContext({ locVersion: Blank() });
+              Clear(colSheetCriteria)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            # See drpCycle — set the display column (ProgramName) in Studio.
+            Width: =220
+            X: =236
+            Y: =20
+      - lblSheetContext:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="Each save creates a new immutable version. Prior versions stay viewable and are never altered."
+            Width: =Parent.Width - 490
+            X: =472
+            Y: =28
+
+# ---------- Column 1: version history (RQ089 — prior versions viewable) ----------
+- conVersionsRS:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =Parent.Height - 160
+      RadiusBottomLeft: =10
+      RadiusBottomRight: =10
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Width: =288
+      X: =24
+      Y: =136
+    Children:
+      - lblVersionsHeader:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =22
+            Size: =Typography.SizeSubtitle
+            Text: ="Versions"
+            Width: =Parent.Width - 32
+            X: =16
+            Y: =16
+      - btnNewSheet:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Fill: =ColorPalette.White
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            HoverFill: =ColorPalette.Gray50
+            # Start an empty working set — does not touch SharePoint until saved.
+            # Notify because the reset is otherwise invisible when nothing was
+            # selected, making the button look dead.
+            OnSelect: |-
+              =UpdateContext({ locVersion: Blank() });
+              Clear(colSheetCriteria);
+              Notify("Started a new sheet. Add criteria from the catalog, then save it as a version.", NotificationType.Information)
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeCaption
+            Text: ="Start a new sheet"
+            Width: =Parent.Width - 32
+            X: =16
+            Y: =44
+      - galVersions:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            Height: =Parent.Height - 100
+            # Both predicates delegate — CycleID and ProgramID are indexed.
+            Items: |-
+              =Sort(
+                Filter(RATING_SHEETS,
+                  And(CycleID.Id = drpCycle.Selected.ID,
+                      ProgramID.Id = drpProgram.Selected.ID)),
+                SheetVersion, SortOrder.Descending
+              )
+            TemplatePadding: =0
+            TemplateSize: =60
+            Width: =Parent.Width - 32
+            X: =16
+            Y: =84
+          Children:
+            - lblVerItemNumber:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =20
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    ="Version " & ThisItem.SheetVersion
+                  Width: =140
+                  X: =12
+                  Y: =9
+            - lblVerItemState:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =If(ThisItem.State.Value = "Published",
+                       ColorPalette.SuccessText, ColorPalette.TextHelp)
+                  Font: =Typography.Family
+                  Height: =18
+                  Size: =Typography.SizeCaption
+                  Text: =ThisItem.State.Value
+                  Width: =120
+                  X: =12
+                  Y: =31
+            - lblVerItemCurrent:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Right
+                  Color: =ColorPalette.Blue700
+                  Font: =Typography.Family
+                  Height: =18
+                  Size: =Typography.SizeCaption
+                  Text: ="current"
+                  Visible: |-
+                    =ThisItem.IsCurrent.Value = "Yes"
+                  Width: =80
+                  X: =Parent.TemplateWidth - 92
+                  Y: =31
+            # Loading a version rebuilds the working set from its stored rows,
+            # joining the catalog so the end-date flag is available per row.
+            - btnVerItemSelect:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =RGBA(0, 0, 0, 0)
+                  Height: =Parent.TemplateHeight
+                  HoverColor: =RGBA(0, 0, 0, 0)
+                  HoverFill: =ColorPalette.Blue50
+                  OnSelect: |-
+                    =UpdateContext({ locVersion: ThisItem });
+                    ClearCollect(colSheetCriteria,
+                      ForAll(
+                        Filter(RATING_CRITERIA, RatingSheetID.Id = ThisItem.ID) As rc,
+                        {
+                          CriterionID: rc.CatalogCriterionID.Id,
+                          CriterionCode: LookUp(CRITERION_CATALOG, ID = rc.CatalogCriterionID.Id).CriterionCode,
+                          CriterionName: LookUp(CRITERION_CATALOG, ID = rc.CatalogCriterionID.Id).CriterionName,
+                          CriterionEnd: LookUp(CRITERION_CATALOG, ID = rc.CatalogCriterionID.Id).EndDate,
+                          SortOrder: rc.DisplayOrder
+                        }
+                      )
+                    )
+                  PressedColor: =RGBA(0, 0, 0, 0)
+                  PressedFill: =ColorPalette.Blue50
+                  Text: |-
+                    ="Open version " & ThisItem.SheetVersion
+                  Width: =Parent.TemplateWidth
+                  X: =0
+                  Y: =0
+
+# ---------- Column 2: catalog picker (FR-048 — Published + in-window only) ----------
+- conAvailableRS:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =Parent.Height - 160
+      RadiusBottomLeft: =10
+      RadiusBottomRight: =10
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Width: =340
+      X: =328
+      Y: =136
+    Children:
+      - lblAvailableHeader:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =22
+            Size: =Typography.SizeSubtitle
+            Text: ="Catalog criteria"
+            Width: =Parent.Width - 32
+            X: =16
+            Y: =16
+      - lblAvailableHint:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeCaption
+            Text: ="Only Published criteria inside their availability window can be selected (FR-048)."
+            Width: =Parent.Width - 32
+            X: =16
+            Y: =40
+      # Empty state — without this the column is simply blank and the screen
+      # reads as broken when the real cause is that nothing is Published yet.
+      - lblAvailableEmpty:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.WarningText
+            Font: =Typography.Family
+            Height: =80
+            Size: =Typography.SizeCaption
+            Text: ="No criteria are available to add. A criterion appears here only once it is Published on the Criterion Catalog screen and its end date has not passed. Saving a Draft is not enough."
+            Visible: =CountRows(galAvailableCriteria.AllItems) = 0
+            Width: =Parent.Width - 32
+            X: =16
+            Y: =96
+      - galAvailableCriteria:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            Height: =Parent.Height - 104
+            # State is indexed and delegates. The in-window test and the
+            # already-selected test run client-side on that narrowed set —
+            # bounded reference list, see the delegation note in the header.
+            Items: |-
+              =Sort(
+                Filter(CRITERION_CATALOG,
+                  State.Value = "Published",
+                  Or(IsBlank(EndDate), EndDate >= Today())
+                ),
+                CriterionCode
+              )
+            TemplatePadding: =0
+            TemplateSize: =56
+            Width: =Parent.Width - 32
+            X: =16
+            Y: =88
+          Children:
+            - lblAvailItemName:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  Height: =20
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =ThisItem.CriterionCode & " — " & ThisItem.CriterionName
+                  Width: =Parent.TemplateWidth - 92
+                  X: =12
+                  Y: =8
+            - lblAvailItemAdded:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =16
+                  Size: =Typography.SizeCaption
+                  Text: ="already on this sheet"
+                  Visible: |-
+                    =Not(IsEmpty(Filter(colSheetCriteria, CriterionID = ThisItem.ID)))
+                  Width: =Parent.TemplateWidth - 92
+                  X: =12
+                  Y: =30
+            - btnAddCriterion:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderStyle: =BorderStyle.Solid
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  # No duplicates, and nothing may be added to a published version.
+                  DisplayMode: |-
+                    =If(
+                      Or(
+                        Not(IsEmpty(Filter(colSheetCriteria, CriterionID = ThisItem.ID))),
+                        And(Not(IsBlank(locVersion)), locVersion.State.Value = "Published")
+                      ),
+                      DisplayMode.Disabled, DisplayMode.Edit
+                    )
+                  Fill: =ColorPalette.White
+                  FocusedBorderThickness: =1
+                  Font: =Typography.Family
+                  Height: =28
+                  HoverFill: =ColorPalette.Blue50
+                  OnSelect: |-
+                    =Collect(colSheetCriteria,
+                      {
+                        CriterionID: ThisItem.ID,
+                        CriterionCode: ThisItem.CriterionCode,
+                        CriterionName: ThisItem.CriterionName,
+                        CriterionEnd: ThisItem.EndDate,
+                        SortOrder: CountRows(colSheetCriteria) + 1
+                      }
+                    );
+                    UpdateContext({ locIsDirty: true })
+                  PressedFill: =ColorPalette.White
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  Size: =Typography.SizeCaption
+                  Text: ="Add"
+                  Width: =64
+                  X: =Parent.TemplateWidth - 76
+                  Y: =14
+
+# ---------- Column 3: the sheet being assembled + actions ----------
+- conSelectedRS:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =Parent.Height - 160
+      RadiusBottomLeft: =10
+      RadiusBottomRight: =10
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Width: =Parent.Width - 708
+      X: =684
+      Y: =136
+    Children:
+      - lblSelectedHeader:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =26
+            Size: =Typography.SizeHeading
+            Text: |-
+              =If(IsBlank(locVersion),
+                 "New sheet (unsaved)",
+                 "Version " & locVersion.SheetVersion & " — " & locVersion.State.Value)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =16
+
+      # RQ091 — published versions are frozen.
+      - lblSheetPublishedBanner:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.WarningText
+            Font: =Typography.Family
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="Published — frozen. Saving creates a new version rather than changing this one."
+            Visible: |-
+              =And(Not(IsBlank(locVersion)), locVersion.State.Value = "Published")
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =46
+
+      # Empty state — distinguishes "nothing added yet" from "screen is broken".
+      - lblSelectedEmpty:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =60
+            Size: =Typography.SizeCaption
+            Text: ="This sheet has no criteria yet. Add them from the catalog in the middle column, then use Save as New Version. Nothing is written to SharePoint until you save."
+            Visible: =CountRows(colSheetCriteria) = 0
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =76
+      - galSelectedCriteria:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            Height: =Parent.Height - 216
+            Items: =Sort(colSheetCriteria, SortOrder)
+            TemplatePadding: =0
+            TemplateSize: =52
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =72
+          Children:
+            - lblSelItemName:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  Height: =20
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =ThisItem.CriterionCode & " — " & ThisItem.CriterionName
+                  Width: =Parent.TemplateWidth - 260
+                  X: =12
+                  Y: =6
+            # FR-045 / RQ117 — flag a criterion whose end date has passed.
+            - lblSelItemExpired:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.WarningText
+                  Font: =Typography.Family
+                  Height: =16
+                  Size: =Typography.SizeCaption
+                  Text: ="end date passed — blocks publishing"
+                  Visible: |-
+                    =And(Not(IsBlank(ThisItem.CriterionEnd)), ThisItem.CriterionEnd < Today())
+                  Width: =Parent.TemplateWidth - 260
+                  X: =12
+                  Y: =28
+            - btnRemoveCriterion:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderStyle: =BorderStyle.Solid
+                  BorderThickness: =1
+                  Color: =ColorPalette.DangerText
+                  DisplayMode: |-
+                    =If(
+                      And(Not(IsBlank(locVersion)), locVersion.State.Value = "Published"),
+                      DisplayMode.Disabled, DisplayMode.Edit
+                    )
+                  Fill: =ColorPalette.White
+                  FocusedBorderThickness: =1
+                  Font: =Typography.Family
+                  Height: =28
+                  HoverFill: =ColorPalette.DangerLight
+                  OnSelect: |-
+                    =Remove(colSheetCriteria, ThisItem);
+                    UpdateContext({ locIsDirty: true })
+                  PressedFill: =ColorPalette.White
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  Size: =Typography.SizeCaption
+                  Text: ="Remove"
+                  Width: =84
+                  X: =Parent.TemplateWidth - 96
+                  Y: =12
+
+      # RQ086 / FR-042 — no sheet without at least one criterion.
+      - lblSheetValidation:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.DangerText
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeCaption
+            Text: ="Select at least one criterion before saving this sheet."
+            Visible: =CountRows(colSheetCriteria) = 0
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =Parent.Height - 134
+
+      # R3 — insert a new row, flip the prior current, copy the criteria across.
+      - btnSaveVersion:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextOnDark
+            DisplayMode: |-
+              =If(
+                Or(
+                  CountRows(colSheetCriteria) = 0,
+                  IsBlank(drpCycle.Selected),
+                  IsBlank(drpProgram.Selected)
+                ),
+                DisplayMode.Disabled, DisplayMode.Edit
+              )
+            Fill: =ColorPalette.Blue600
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.Blue700
+            OnSelect: |-
+              =UpdateContext({
+                locPriorCurrent: LookUp(RATING_SHEETS,
+                  And(CycleID.Id = drpCycle.Selected.ID,
+                      ProgramID.Id = drpProgram.Selected.ID,
+                      IsCurrent.Value = "Yes"))
+              });
+              UpdateContext({
+                locNewVersion: Patch(RATING_SHEETS, Defaults(RATING_SHEETS),
+                  {
+                    CycleID: {
+                      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                      Id: drpCycle.Selected.ID,
+                      Value: drpCycle.Selected.CycleName
+                    },
+                    ProgramID: {
+                      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                      Id: drpProgram.Selected.ID,
+                      Value: drpProgram.Selected.ProgramName
+                    },
+                    SheetVersion: Max(
+                      Filter(RATING_SHEETS,
+                        And(CycleID.Id = drpCycle.Selected.ID,
+                            ProgramID.Id = drpProgram.Selected.ID)),
+                      SheetVersion) + 1,
+                    State: { Value: "Draft" },
+                    IsCurrent: { Value: "Yes" },
+                    CreatedBy: User().Email,
+                    CreatedDate: Today()
+                  }
+                )
+              });
+              If(Not(IsBlank(locPriorCurrent)),
+                Patch(RATING_SHEETS, locPriorCurrent, { IsCurrent: { Value: "No" } })
+              );
+              ForAll(colSheetCriteria As sc,
+                Patch(RATING_CRITERIA, Defaults(RATING_CRITERIA),
+                  {
+                    RatingSheetID: {
+                      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                      Id: locNewVersion.ID,
+                      Value: locNewVersion.ID
+                    },
+                    CatalogCriterionID: {
+                      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                      Id: sc.CriterionID,
+                      Value: sc.CriterionCode
+                    },
+                    DisplayOrder: sc.SortOrder
+                  }
+                )
+              );
+              UpdateContext({ locVersion: locNewVersion, locIsDirty: false });
+              Notify("Saved as version " & locNewVersion.SheetVersion & ".", NotificationType.Success)
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            Text: ="Save as New Version"
+            Width: =190
+            X: =24
+            Y: =Parent.Height - 106
+
+      # FR-045 / RQ118 — no publish while a passed-end-date criterion is on the sheet.
+      - btnPublishSheet:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextOnDark
+            DisplayMode: |-
+              =If(
+                Or(
+                  IsBlank(locVersion),
+                  locVersion.State.Value = "Published",
+                  locIsDirty
+                ),
+                DisplayMode.Disabled, DisplayMode.Edit
+              )
+            Fill: =ColorPalette.SuccessText
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.SuccessText
+            OnSelect: |-
+              =If(
+                Not(IsEmpty(Filter(colSheetCriteria,
+                  And(Not(IsBlank(CriterionEnd)), CriterionEnd < Today())))),
+                Notify(
+                  "Cannot publish — this sheet carries a criterion whose end date has passed. Remove it and save a new version.",
+                  NotificationType.Error
+                ),
+                Patch(RATING_SHEETS, locVersion, { State: { Value: "Published" } });
+                UpdateContext({ locVersion: LookUp(RATING_SHEETS, ID = locVersion.ID) });
+                Notify("Version published.", NotificationType.Success)
+              )
+            PressedFill: =ColorPalette.SuccessText
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            Text: ="Publish"
+            Width: =140
+            X: =230
+            Y: =Parent.Height - 106
+
+      # RQ092 / FR-044 — unpublish only while zero scores reference this version.
+      # IsEmpty(Filter(...)) on the indexed RatingSheetID; CountRows would not delegate.
+      - btnUnpublishSheet:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            DisplayMode: |-
+              =If(
+                Or(IsBlank(locVersion), locVersion.State.Value <> "Published"),
+                DisplayMode.Disabled, DisplayMode.Edit
+              )
+            Fill: =ColorPalette.White
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =If(
+                Not(IsEmpty(Filter(COMMITTEE_SCORES, RatingSheetID.Id = locVersion.ID))),
+                Notify(
+                  "Cannot unpublish — the committee has already recorded scores against this version.",
+                  NotificationType.Error
+                ),
+                Patch(RATING_SHEETS, locVersion, { State: { Value: "Draft" } });
+                UpdateContext({ locVersion: LookUp(RATING_SHEETS, ID = locVersion.ID) });
+                Notify("Version returned to Draft.", NotificationType.Success)
+              )
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            Text: ="Unpublish"
+            Width: =140
+            X: =382
+            Y: =Parent.Height - 106
+      - lblDirtyHint:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="Unsaved changes — save a new version before publishing."
+            Visible: =locIsDirty
+            Width: =Parent.Width - 570
+            X: =540
+            Y: =Parent.Height - 96
