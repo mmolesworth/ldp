@@ -640,7 +640,7 @@
                 {label: "Application Cycles", desc: "Create cycles and move them through states"},
                 {label: "Program Options", desc: "Maintain selectable options per program"},
                 {label: "Criterion Catalog", desc: "Define criteria and their four anchors"},
-                {label: "Rating Sheets", desc: "Assemble per-cycle, per-program sheets"}
+                {label: "Scoring Rubrics", desc: "Assemble per-program scoring rubrics"}
               ]
             ShowScrollbar: =false
             TemplatePadding: =12
@@ -704,7 +704,7 @@
                       "Application Cycles", Navigate('Application Cycles Screen'),
                       "Program Options", Navigate('Program Options Screen'),
                       "Criterion Catalog", Navigate('Criterion Catalog Screen'),
-                      "Rating Sheets", Navigate('Rating Sheets Screen'),
+                      "Scoring Rubrics", Navigate('Scoring Rubrics Screen'),
                       Notify("That screen has not been built yet.", NotificationType.Information)
                     )
                   PressedColor: =RGBA(0, 0, 0, 0)

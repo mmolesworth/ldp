@@ -36,7 +36,7 @@
 # and do it in this file, then re-paste everywhere — otherwise the copies drift.
 #
 # Screens that still carry their own navy header (Application Cycles, Program
-# Options, Criterion Catalog, Rating Sheets) need that header deleted and their
+# Options, Criterion Catalog, Scoring Rubrics) need that header deleted and their
 # content shifted down before this bar fits. That is part of T083; do not mix it
 # into an unrelated change.
 

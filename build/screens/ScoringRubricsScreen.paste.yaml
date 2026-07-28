@@ -1,61 +1,3 @@
-# Scoring Rubrics Screen — US9 (RQ082–092, RQ117–118, FR-042–045, research R3) — ADMIN
-# Rebuilt 2026-07-28 against the per-PROGRAM model. Classic controls only.
-# Colours = ColorPalette.*, sizes = Typography.*
-#
-# Composition (Constitution VIII):
-#   · PowerLibs `gallery-filter-header` — version strip and both criterion lists
-#   · PowerLibs `warning-modal-v2-1`    — FR-042 / FR-045 refusals
-#
-# ---------------------------------------------------------------------------
-# THE MODEL — a rubric belongs to a PROGRAM, not to a cycle
-# ---------------------------------------------------------------------------
-# A rubric is defined once for a program and reused across every cycle until DTD
-# publishes a replacement. Versions are rows. At most ONE version per program
-# is Published — that is the rubric in use, and publishing a new one moves the
-# old to Superseded.
-#
-# COMMITTEE SCORING IS BLOCKED until a program has a Published rubric. The
-# status band says so, on the program, rather than letting it be discovered
-# later at scoring time.
-#
-# ---------------------------------------------------------------------------
-# DRAFTS ARE EDITABLE; PUBLISHED VERSIONS ARE NOT
-# ---------------------------------------------------------------------------
-# A refinement of R3, which was written when a rubric was edited directly and
-# every save had to insert a row to preserve history. With an explicit Draft
-# state there is nothing to preserve until publication: a Draft has never
-# scored anyone. So a Draft is edited in place and only publication freezes it.
-#
-# The alternative — a new row per save — produces a version trail of keystrokes
-# rather than of decisions, which is the opposite of what R3 wanted.
-#
-# At most one Draft per program at a time. btnRSNewVersion is disabled while
-# one exists; finish or delete it first.
-#
-# ---------------------------------------------------------------------------
-# THE WORKING SET
-# ---------------------------------------------------------------------------
-# colSheetCrit holds the criteria being assembled. Selecting a version loads it;
-# New version seeds it from the current Published rubric, so the common case is
-# "last year's rubric with one change". Add/Remove/reorder touch only the
-# collection — nothing reaches SharePoint until Save.
-#
-# Save REPLACES the version's RATING_CRITERIA rows (RemoveIf then re-insert)
-# rather than diffing them. A rubric has a handful of criteria and the rows carry
-# no data of their own beyond DisplayOrder, so a diff would be more code and
-# more failure modes for no gain.
-#
-# ---------------------------------------------------------------------------
-# READ FROM COLLECTIONS, WRITE TO SHAREPOINT
-# ---------------------------------------------------------------------------
-# Same pattern as the Competencies and Criterion Catalog screens. Writes target
-# the list and re-ClearCollect after; Patch re-fetches the source record with
-# LookUp(SOURCE, ID = ...) because a collected row is a copy.
-#
-# Bounded-list exception (Constitution III): programs, catalogue and rubrics are
-# all curated sets. Do NOT copy this to APPLICATIONS.
-# ===========================================================================
-
 - lblRSTitle:
     Control: Label@2.5.1
     Properties:
@@ -69,8 +11,6 @@
       X: =24
       Y: =18
 
-# Single-column text table: a Classic/DropDown renders that shape without its
-# Value property, which YAML cannot set (PA2108).
 - drpRSProgram:
     Control: Classic/DropDown@2.3.1
     Properties:
@@ -79,18 +19,11 @@
       Fill: =ColorPalette.White
       Font: =Typography.Family
       Height: =32
-      # Default must name the SAME program OnVisible seeds into locProgram, or
-      # the dropdown shows one program while the page describes another. A
-      # Classic/DropDown with no Default silently selects its first item, which
-      # is exactly how that mismatch happened.
       Default: |-
         =First(Sort(Filter(colPrograms, State.Value = "Active"), ProgramName)).ProgramName
       Items: |-
         =ForAll(Sort(Filter(colPrograms, State.Value = "Active"), ProgramName),
           ProgramName)
-      # Changing program lands on that program's rubric in use, the same as
-      # arriving on the screen does. Sequential UpdateContexts because the
-      # second reads locProgram set by the first.
       OnChange: |-
         =UpdateContext({
           locProgram: LookUp(colPrograms, ProgramName = drpRSProgram.Selected.Value),
@@ -119,7 +52,6 @@
       X: =24
       Y: =62
 
-# The FR-042 precondition, stated on the program rather than discovered later.
 - lblRSStatus:
     Control: Label@2.5.1
     Properties:
@@ -143,9 +75,6 @@
                 First(Filter(colSheets, ProgramID.Id = locProgram.ID,
                   State.Value = "Published")).SheetVersion &
                 " is in use."))
-      # 440 = dropdown X (24) + its width (400) + a 16 gutter. The width then
-      # runs to 16 short of btnRSNewVersion at Parent.Width - 174, so widening
-      # the dropdown again means changing BOTH numbers or the two overlap.
       Width: =Parent.Width - 630
       X: =440
       Y: =62
@@ -157,8 +86,6 @@
       BorderStyle: =BorderStyle.Solid
       BorderThickness: =0
       Color: =ColorPalette.TextOnDark
-      # One Draft at a time. A second would make "the draft" ambiguous and
-      # give publish two candidates.
       DisplayMode: |-
         =If(
           Or(IsBlank(locProgram),
@@ -171,8 +98,6 @@
       Font: =Typography.Family
       Height: =32
       HoverFill: =ColorPalette.Blue700
-      # Seeds from the rubric currently in use, so the common case is "last
-      # year's rubric with one change" rather than starting from nothing.
       OnSelect: |-
         =UpdateContext({ locVersion: Blank(), locNewDraft: true, locDirty: true });
         ClearCollect(colSheetCrit,
@@ -205,9 +130,6 @@
       X: =Parent.Width - 174
       Y: =62
 
-# ===========================================================================
-# VERSION STRIP
-# ===========================================================================
 - lblRSVersionsHead:
     Control: Label@2.5.1
     Properties:
@@ -316,8 +238,6 @@
             Height: =Parent.TemplateHeight
             HoverColor: =RGBA(0, 0, 0, 0)
             HoverFill: =RGBA(0, 0, 0, 0.04)
-            # Loads this version's criteria into the working set. locDirty
-            # resets: what is on screen now matches what is stored.
             OnSelect: |-
               =UpdateContext({
                 locVersion: ThisItem, locNewDraft: false, locDirty: false
@@ -363,11 +283,6 @@
       X: =24
       Y: =150
 
-# ===========================================================================
-# ASSIGNMENT — two lists. This is the task, and it is the one place the
-# table + detail pattern does not fit: moving items between two sets is not
-# a record being inspected.
-# ===========================================================================
 - lblRSEditingWhat:
     Control: Label@2.5.1
     Properties:
@@ -403,7 +318,6 @@
       X: =24
       Y: =300
 
-# ---------- left: published catalogue criteria ----------
 - conRSAvailHead:
     Control: GroupContainer@1.5.0
     Variant: AutoLayout
@@ -450,9 +364,6 @@
     Properties:
       BorderColor: =ColorPalette.Gray200
       Height: =Parent.Height - 380
-      # FR-048 — only Published criteria are selectable. Retired ones drop out
-      # here automatically because this filters on Published, not on "not
-      # retired".
       Items: |-
         =Sort(Filter(colCatalog, State.Value = "Published"), CriterionName)
       ShowScrollbar: =true
@@ -479,8 +390,6 @@
             - lblRSAvailName:
                 Control: Label@2.5.1
                 Properties:
-                  # Already-added criteria stay listed but muted — hiding them
-                  # would make the list jump as items are moved.
                   Color: |-
                     =If(IsBlank(LookUp(colSheetCrit, CritID = ThisItem.ID)),
                        ColorPalette.TextHeading, ColorPalette.TextMuted)
@@ -497,8 +406,6 @@
                   BorderStyle: =BorderStyle.Solid
                   BorderThickness: =0
                   Color: =ColorPalette.Blue600
-                  # Nothing to add to a published version, and nothing to add
-                  # twice.
                   DisplayMode: |-
                     =If(
                       Or(Not(IsBlank(LookUp(colSheetCrit, CritID = ThisItem.ID))),
@@ -536,7 +443,6 @@
             Width: =Parent.TemplateWidth
             Y: =Parent.TemplateHeight - 1
 
-# ---------- right: criteria on this sheet ----------
 - conRSOnSheetHead:
     Control: GroupContainer@1.5.0
     Variant: AutoLayout
@@ -609,8 +515,6 @@
             - lblRSOnSheetName:
                 Control: Label@2.5.1
                 Properties:
-                  # FR-045 / RQ117 — a criterion whose end date has passed is
-                  # flagged here, because it blocks publishing.
                   Color: |-
                     =If(And(Not(IsBlank(ThisItem.CritEnd)),
                             ThisItem.CritEnd < Today()),
@@ -645,8 +549,6 @@
                   Height: =30
                   HoverFill: =ColorPalette.Blue50
                   LayoutMinWidth: =0
-                  # Swap with the row above: give that row this SortOrder, then
-                  # take its own. Two Patches, no renumbering pass.
                   OnSelect: |-
                     =Patch(colSheetCrit,
                       LookUp(colSheetCrit, SortOrder = ThisItem.SortOrder - 1),
@@ -713,8 +615,6 @@
                   Height: =30
                   HoverFill: =ColorPalette.Blue50
                   LayoutMinWidth: =0
-                  # Renumber after removing, or the gap breaks the up/down swap
-                  # above, which finds its neighbour by SortOrder.
                   OnSelect: |-
                     =Remove(colSheetCrit,
                       LookUp(colSheetCrit, CritID = ThisItem.CritID));
@@ -754,9 +654,6 @@
       X: =Parent.Width / 2 + 8
       Y: =360
 
-# ===========================================================================
-# FOOTER
-# ===========================================================================
 - lblRSDirty:
     Control: Label@2.5.1
     Properties:
@@ -773,9 +670,6 @@
       X: =Parent.Width - 640
       Y: =Parent.Height - 54
 
-# Discard (nothing saved yet) or Delete (a stored Draft). One button, because
-# from the user's side it is the same intent — abandon this draft — and the
-# difference is only whether a row exists to remove.
 - btnRSDeleteDraft:
     Control: Classic/Button@2.2.0
     Properties:
@@ -789,9 +683,6 @@
       Font: =Typography.Family
       Height: =38
       HoverFill: =ColorPalette.Gray50
-      # Flat, not If(cond, A; B, C) — semicolon chains inside an If branch
-      # parse inconsistently. An unsaved draft is cleared outright; a stored
-      # one raises the confirm, because that write cannot be undone.
       OnSelect: |-
         =UpdateContext({ locConfirmDel: Not(locNewDraft) });
         If(locNewDraft, Clear(colSheetCrit));
@@ -806,9 +697,6 @@
       TabIndex: =3
       Text: |-
         =If(locNewDraft, "Discard", "Delete draft")
-      # ONLY ever a Draft. A Published or Superseded version may be referenced
-      # by COMMITTEE_SCORES, and deleting one would strand those scores against
-      # a rubric that no longer exists.
       Visible: |-
         =Or(locNewDraft,
            And(Not(IsBlank(locVersion)), locVersion.State.Value = "Draft"))
@@ -829,11 +717,6 @@
       Font: =Typography.Family
       Height: =38
       HoverFill: =ColorPalette.Blue700
-      # FR-042 is checked here rather than by disabling the button, so the
-      # refusal can explain itself.
-      #
-      # Three sequential UpdateContexts, not If(cond, A; B, C) — semicolon
-      # chains inside an If branch parse inconsistently.
       OnSelect: |-
         =UpdateContext({
           locWarnTitle: If(CountRows(colSheetCrit) = 0,
@@ -917,9 +800,6 @@
       Font: =Typography.Family
       Height: =38
       HoverFill: =ColorPalette.Gray50
-      # FR-042 and FR-045, both reported through the modal. Publishing also
-      # supersedes whatever was in use — done FIRST, while the LookUp for
-      # "Published" can still only match the old one.
       OnSelect: |-
         =UpdateContext({
           locWarnTitle: If(
@@ -973,9 +853,6 @@
       X: =Parent.Width - 164
       Y: =Parent.Height - 54
 
-# ===========================================================================
-# REFUSAL MODAL — PowerLibs warning-modal-v2-1. DECLARED LAST.
-# ===========================================================================
 - recRSWarnScrim:
     Control: Rectangle@2.3.0
     Properties:
@@ -1073,9 +950,6 @@
             X: =Parent.Width - 134
             Y: =Parent.Height - 62
 
-# ===========================================================================
-# DELETE CONFIRMATION. DECLARED LAST so it paints above the refusal modal.
-# ===========================================================================
 - recRSDelScrim:
     Control: Rectangle@2.3.0
     Properties:
@@ -1135,8 +1009,6 @@
             Width: =Parent.Width - 48
             X: =24
             Y: =92
-      # Says "cannot be undone" because it genuinely cannot. Retiring elsewhere
-      # in this app is reversible; this is a Remove.
       - lblRSDelBody:
           Control: Label@2.5.1
           Properties:
@@ -1166,9 +1038,6 @@
             Font: =Typography.Family
             Height: =38
             HoverFill: =ColorPalette.Blue700
-            # Children FIRST. Removing the sheet row first would leave the
-            # RATING_CRITERIA rows with a lookup pointing at nothing, and the
-            # RemoveIf that would have cleaned them up can no longer find them.
             OnSelect: |-
               =RemoveIf(RATING_CRITERIA, RatingSheetID.Id = locVersion.ID);
               Remove(RATING_SHEETS, LookUp(RATING_SHEETS, ID = locVersion.ID));

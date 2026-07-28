@@ -1,0 +1,1315 @@
+# Competencies Screen — D-2 / Appendix B — ADMIN
+# Built 2026-07-28. Classic controls only (Constitution II).
+# Colours = ColorPalette.*, sizes = Typography.*
+#
+# Composition (Constitution VIII):
+#   · PowerLibs `tab-bar-v2-1`        — the type strip, made data-driven
+#   · PowerLibs `gallery-filter-header` — sortable competency table
+#   · PowerLibs `modal-1`             — add/edit competency, and manage types
+#
+# ---------------------------------------------------------------------------
+# THE TAB BAR IS DATA-DRIVEN
+# ---------------------------------------------------------------------------
+# Tab Bar V2 ships as a Horizontal Gallery with a static Table() for Items and
+# a Rectangle underneath each item as the underline indicator. That means it is
+# already row-driven — only the source was hardcoded. Items now reads
+# COMPETENCY_TYPES, so adding a type adds a tab with no YAML change, which is
+# the entire reason COMPETENCY_TYPES is a list and not a Choice column.
+#
+# Adaptations from the generated component:
+# · GroupContainer@1.3.0 -> 1.5.0 (PA2105 in this environment).
+# · Items: static Table() -> Filter(COMPETENCY_TYPES, State.Value = "Active"),
+#   sorted by SortOrder so DTD controls the tab order.
+# · ThisItem.id / ThisItem.label -> ThisItem.ID / ThisItem.TypeName.
+# · `selectedTab` -> locTypeID (project convention: context vars use loc).
+# · TemplateSize was Parent.Width / AllItemsCount — equal division, so three
+#   tabs stretched across the whole page and got thinner as types were added.
+#   Now each tab is a fixed 150px and the gallery is only as wide as its tabs,
+#   capped at the available space so a long list scrolls.
+# · `&&` -> And(); Color.Transparent -> RGBA(0,0,0,0); hardcoded RGBA and Size
+#   -> ColorPalette.* / Typography.*.
+# · focus rings added (theme.md A11y rule 4) — the component has none.
+#
+# ---------------------------------------------------------------------------
+# WHY TYPES ARE MANAGED IN A MODAL, NOT ON THE STRIP
+# ---------------------------------------------------------------------------
+# A tab strip is a selector. Hanging add and retire off it means either a "+"
+# pseudo-tab that is not a tab, or a right-click affordance that does not exist
+# in canvas. "Manage types" opens a modal listing every type — including the
+# retired ones the strip deliberately hides — with one control per row.
+#
+# ---------------------------------------------------------------------------
+# RETIRE, DO NOT DELETE (both lists)
+# ---------------------------------------------------------------------------
+# Retiring a type hides its tab but keeps its competencies resolvable, and is
+# reversible — so there is no guard on retiring a type that still has
+# competencies under it. Deletion would need one; retirement does not.
+#
+# ---------------------------------------------------------------------------
+# READ FROM COLLECTIONS, WRITE TO SHAREPOINT
+# ---------------------------------------------------------------------------
+# Every gallery, dropdown and count on this screen reads colComps / colTypes,
+# collected once in OnVisible. Switching tabs then filters memory instead of
+# issuing a SharePoint query per click, which is what made the strip feel slow.
+#
+# This is safe here and NOT generally safe: the whole catalogue is 85 rows and
+# 3 types, far below the 500-row collection cap. Do NOT copy this to
+# APPLICATIONS, which is unbounded — there the delegable query IS the design.
+#
+# Writes always target the SharePoint list, never the collection, and
+# re-ClearCollect immediately after. Patching a collection row would leave the
+# two copies disagreeing until the next navigation. Where a write needs the
+# real record rather than the collected copy, it is re-fetched with
+# LookUp(SOURCE, ID = ThisItem.ID) — a collection row is a copy, and Patch
+# needs the source record to know what it is updating.
+#
+# The cost is staleness: another admin's change is not seen until this screen
+# is re-entered. For an admin catalogue edited by one team, that is a fair
+# trade for instant tab switching. A spinner would have hidden the delay
+# without removing it.
+#
+# ---------------------------------------------------------------------------
+# DELEGATION
+# ---------------------------------------------------------------------------
+# The competency gallery picks between two whole Filter() expressions rather
+# than putting the toggle inside one:
+#     If(tglHideRetired.Value, Filter(a, b), Filter(a))
+# Or(Not(tglHideRetired.Value), State.Value = "Active") reads better and does
+# not delegate, because the toggle is not a column. Both branches here delegate
+# on CompetencyTypeID and the indexed State.
+#
+# ---------------------------------------------------------------------------
+# IF drpCompType IS STILL BLANK AFTER PASTING
+# ---------------------------------------------------------------------------
+# Select it and set its Value property to  Value  in the property panel.
+# Classic/DropDown.Value names the display column and is an OUTPUT as far as
+# YAML is concerned (PA2108), so it can only be set in Studio. Items is now a
+# single-column text table whose column IS named Value, so Studio should fill
+# this in on its own — but if the rows render blank, that is the one property
+# to check.
+# ===========================================================================
+
+- lblCompTitle:
+    Control: Label@2.5.1
+    Properties:
+      Color: =ColorPalette.TextHeading
+      Font: =Typography.Family
+      FontWeight: =Typography.WeightBold
+      Height: =30
+      Size: =Typography.SizeHeading
+      Text: ="Competencies"
+      Width: =400
+      X: =24
+      Y: =18
+
+- btnCompManageTypes:
+    Control: Classic/Button@2.2.0
+    Properties:
+      BorderColor: =ColorPalette.Gray300
+      BorderStyle: =BorderStyle.Solid
+      BorderThickness: =1
+      Color: =ColorPalette.TextBody
+      Fill: =ColorPalette.White
+      FocusedBorderColor: =ColorPalette.FocusOnLight
+      FocusedBorderThickness: =3
+      Font: =Typography.Family
+      Height: =32
+      HoverFill: =ColorPalette.Gray50
+      OnSelect: |-
+        =UpdateContext({ locTypeModal: true })
+      PressedFill: =ColorPalette.White
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      Size: =Typography.SizeBody
+      TabIndex: =2
+      Text: ="Manage types"
+      Width: =140
+      X: =Parent.Width - 164
+      Y: =18
+
+- btnCompAdd:
+    Control: Classic/Button@2.2.0
+    Properties:
+      BorderColor: =ColorPalette.Blue600
+      BorderStyle: =BorderStyle.Solid
+      BorderThickness: =0
+      Color: =ColorPalette.TextOnDark
+      # Nothing to add a competency TO until a type exists.
+      DisplayMode: |-
+        =If(IsEmpty(Filter(colTypes, State.Value = "Active")),
+           DisplayMode.Disabled, DisplayMode.Edit)
+      Fill: =ColorPalette.Blue600
+      FocusedBorderColor: =ColorPalette.FocusOnDark
+      FocusedBorderThickness: =3
+      Font: =Typography.Family
+      Height: =32
+      HoverFill: =ColorPalette.Blue700
+      OnSelect: |-
+        =UpdateContext({ locComp: Blank(), locCompModal: true });
+        Reset(txtCompName);
+        Reset(txtCompDesc);
+        Reset(drpCompType)
+      PressedFill: =ColorPalette.Blue700
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      Size: =Typography.SizeBody
+      TabIndex: =1
+      Text: ="Add competency"
+      Width: =150
+      X: =Parent.Width - 326
+      Y: =18
+
+# ===========================================================================
+# TYPE STRIP — PowerLibs tab-bar-v2-1, driven by COMPETENCY_TYPES
+# ===========================================================================
+- conCompTabs:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      BorderStyle: =BorderStyle.None
+      DropShadow: =DropShadow.None
+      # Transparent: this container only positions the strip. The full-width
+      # baseline is recCompTabsRule below, which is what gives Tab Bar V2 its
+      # look — tabs sitting ON a rule, not in a box.
+      Fill: =RGBA(0, 0, 0, 0)
+      Height: =42
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =64
+    Children:
+      - galCompTabs:
+          Control: Gallery@2.15.0
+          Variant: Horizontal
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Height: =Parent.Height
+            Items: |-
+              =SortByColumns(
+                Filter(colTypes, State.Value = "Active"),
+                "SortOrder", SortOrder.Ascending)
+            LayoutMinHeight: =0
+            LayoutMinWidth: =0
+            ShowScrollbar: =true
+            TemplatePadding: =0
+            # FIXED per-tab width, not a share of the container. Dividing the
+            # container is what made three tabs span the whole page; Tab Bar V2
+            # sizes each tab the same and packs them left.
+            TemplateSize: =150
+            # Only as wide as the tabs actually need, capped at the space
+            # available so a long list scrolls rather than overflowing.
+            Width: |-
+              =Min(Parent.Width,
+                150 * Max(1, CountRows(Filter(colTypes, State.Value = "Active"))))
+            X: =0
+            Y: =0
+          Children:
+            - btnCompTab:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  BorderStyle: =BorderStyle.Solid
+                  BorderThickness: =0
+                  Color: |-
+                    =If(ThisItem.ID = locTypeID,
+                       ColorPalette.Blue600, ColorPalette.TextHelp)
+                  Fill: =RGBA(0, 0, 0, 0)
+                  # DELIBERATE EXCEPTION to theme.md A11y rule 4: no focus ring.
+                  # A 3px box around a tab fights the underline that is the whole
+                  # point of Tab Bar V2. Canvas cannot distinguish mouse focus
+                  # from keyboard focus, so there is no way to show one and not
+                  # the other. The cost is real — a keyboard user tabbing across
+                  # the strip without activating gets no indication of position,
+                  # since colour, weight and underline all track SELECTION, not
+                  # focus. Revisit in T081.
+                  FocusedBorderThickness: =0
+                  Font: =Typography.Family
+                  FontWeight: |-
+                    =If(ThisItem.ID = locTypeID,
+                       Typography.WeightBold, Typography.WeightRegular)
+                  Height: =Parent.TemplateHeight - 3
+                  HoverColor: =ColorPalette.Blue600
+                  HoverFill: =ColorPalette.Gray25
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  # Changing tab clears the selection: the selected competency
+                  # belongs to the old type and would not be in the new list.
+                  OnSelect: |-
+                    =UpdateContext({ locTypeID: ThisItem.ID, locComp: Blank() })
+                  PressedFill: =ColorPalette.Gray50
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.TypeName
+                  Width: =Parent.TemplateWidth
+                  X: =0
+                  Y: =0
+            - recCompTabLine:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Fill: |-
+                    =If(ThisItem.ID = locTypeID,
+                       ColorPalette.Blue600, RGBA(0, 0, 0, 0))
+                  Height: =3
+                  Width: =Parent.TemplateWidth
+                  X: =0
+                  Y: =Parent.TemplateHeight - 3
+
+- recCompTabsRule:
+    Control: Rectangle@2.3.0
+    Properties:
+      BorderColor: =RGBA(0, 0, 0, 0)
+      Fill: =ColorPalette.Gray200
+      Height: =1
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =105
+
+# Default ON: the catalogue is 85 rows and retired entries are noise most of
+# the time. The gallery reads tglHideRetired.Value directly rather than mirroring
+# it into a context variable — one source of truth, one fewer thing to reset.
+- tglHideRetired:
+    Control: Classic/Toggle@2.1.0
+    Properties:
+      Default: =true
+      FalseFill: =ColorPalette.Gray300
+      Height: =24
+      HandleFill: =ColorPalette.White
+      OnChange: |-
+        =UpdateContext({ locComp: Blank() })
+      TrueFill: =ColorPalette.Blue600
+      Width: =44
+      X: =24
+      Y: =118
+
+- lblHideRetired:
+    Control: Label@2.5.1
+    Properties:
+      Color: =ColorPalette.TextBody
+      Font: =Typography.Family
+      Height: =24
+      Size: =Typography.SizeBody
+      Text: ="Hide retired"
+      Width: =160
+      X: =74
+      Y: =118
+
+# ===========================================================================
+# COMPETENCY TABLE — PowerLibs gallery-filter-header
+# ===========================================================================
+- conCompHead:
+    Control: GroupContainer@1.5.0
+    Variant: AutoLayout
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =ColorPalette.Gray25
+      Height: =36
+      LayoutAlignItems: =LayoutAlignItems.Center
+      LayoutDirection: =LayoutDirection.Horizontal
+      PaddingLeft: =16
+      PaddingRight: =16
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =154
+    Children:
+      - btnCompHeadName:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =1.5
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverFill: =RGBA(0, 0, 0, 0)
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locCompAsc: If(locCompSort = "CompetencyName", Not(locCompAsc), true),
+                locCompSort: "CompetencyName"
+              })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Competency" & If(locCompSort = "CompetencyName", If(locCompAsc, "  ▲", "  ▼"), "")
+      - lblCompHeadDesc:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            FillPortions: =3.2
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            LayoutMinWidth: =0
+            # Not sortable: sorting 400-character prose alphabetically answers
+            # no question anyone has.
+            Size: =Typography.SizeCaption
+            Text: ="Description"
+      - btnCompHeadState:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =0.6
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverFill: =RGBA(0, 0, 0, 0)
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locCompAsc: If(locCompSort = "State", Not(locCompAsc), true),
+                locCompSort: "State"
+              })
+            PressedFill: =RGBA(0, 0, 0, 0)
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="State" & If(locCompSort = "State", If(locCompAsc, "  ▲", "  ▼"), "")
+      - lblCompHeadActions:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Left
+            Color: =ColorPalette.TextHeading
+            # 0.5 == the row's two icon cells (0.25 each), so the header text
+            # begins at the left edge of the first icon cell. Header and row
+            # portions must keep summing to the SAME total or the columns
+            # stop lining up: 1.5 + 3.2 + 0.6 + 0.5 = 5.8 either way.
+            FillPortions: =0.5
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            LayoutMinWidth: =0
+            Size: =Typography.SizeCaption
+            Text: ="Actions"
+
+- galComps:
+    Control: Gallery@2.15.0
+    Variant: Vertical
+    Properties:
+      BorderColor: =ColorPalette.Gray200
+      Height: =Parent.Height - 214
+      # Two whole Filters, not one with the toggle inside it — see the header.
+      Items: |-
+        =SortByColumns(
+          If(tglHideRetired.Value,
+             Filter(colComps, CompetencyTypeID.Id = locTypeID,
+                    State.Value = "Active"),
+             Filter(colComps, CompetencyTypeID.Id = locTypeID)),
+          locCompSort,
+          If(locCompAsc, SortOrder.Ascending, SortOrder.Descending))
+      ShowScrollbar: =true
+      TemplatePadding: =0
+      TemplateSize: =52
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =190
+    Children:
+      - conCompRow:
+          Control: GroupContainer@1.5.0
+          Variant: AutoLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: |-
+              =If(And(Not(IsBlank(locComp)), ThisItem.ID = locComp.ID),
+                 ColorPalette.Blue50, ColorPalette.White)
+            Height: =Parent.TemplateHeight
+            LayoutAlignItems: =LayoutAlignItems.Center
+            LayoutDirection: =LayoutDirection.Horizontal
+            PaddingLeft: =16
+            PaddingRight: =16
+            Width: =Parent.TemplateWidth
+          Children:
+            - lblCompRowName:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =If(ThisItem.State.Value = "Retired",
+                       ColorPalette.TextHelp, ColorPalette.TextHeading)
+                  FillPortions: =1.5
+                  Font: =Typography.Family
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.CompetencyName
+            - lblCompRowDesc:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  FillPortions: =3.2
+                  Font: =Typography.Family
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeBody
+                  # Descriptions run to 417 characters. The full text is in the
+                  # edit modal; the row shows enough to tell them apart.
+                  Text: |-
+                    =If(Len(ThisItem.Description) > 90,
+                       Left(ThisItem.Description, 90) & "…",
+                       ThisItem.Description)
+            - lblCompRowState:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =If(ThisItem.State.Value = "Retired",
+                       ColorPalette.WarningText, ColorPalette.SuccessText)
+                  FillPortions: =0.6
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeCaption
+                  Text: =ThisItem.State.Value
+            # Icon actions. An Image is not a button to a screen reader and
+            # takes no focus, so each icon is an Image plus a transparent
+            # Classic/Button overlay carrying the accessible name in Text and
+            # the Tooltip. Wrapped in a ManualLayout container because the
+            # overlay has to sit ON the image, which AutoLayout cannot express.
+            - conCompRowEdit:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Fill: =RGBA(0, 0, 0, 0)
+                  FillPortions: =0.25
+                  Height: =34
+                  LayoutMinHeight: =0
+                  LayoutMinWidth: =0
+                Children:
+                  - imgCompRowEdit:
+                      Control: Image@2.2.3
+                      Properties:
+                        Height: =18
+                        # currentColor is a placeholder in the stored SVG — a
+                        # data: URI has no cascade, so the colour is substituted
+                        # in rather than inherited.
+                        Image: |-
+                          ="data:image/svg+xml," &
+                            EncodeUrl(Substitute(gblNavIcons.DocumentEdit,
+                              "currentColor", "#246FAE"))
+                        Width: =18
+                        X: =Parent.Width / 2 - 9
+                        Y: =Parent.Height / 2 - 9
+                  - btnCompRowEdit:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        BorderStyle: =BorderStyle.Solid
+                        BorderThickness: =0
+                        Color: =RGBA(0, 0, 0, 0)
+                        Fill: =RGBA(0, 0, 0, 0)
+                        FocusedBorderColor: =ColorPalette.FocusOnLight
+                        FocusedBorderThickness: =3
+                        Height: =Parent.Height
+                        HoverColor: =RGBA(0, 0, 0, 0)
+                        HoverFill: =RGBA(0, 0, 0, 0.06)
+                        OnSelect: |-
+                          =UpdateContext({ locComp: ThisItem, locCompModal: true });
+                          Reset(txtCompName);
+                          Reset(txtCompDesc);
+                          Reset(drpCompType)
+                        PressedColor: =RGBA(0, 0, 0, 0)
+                        PressedFill: =RGBA(0, 0, 0, 0.12)
+                        RadiusBottomLeft: =6
+                        RadiusBottomRight: =6
+                        RadiusTopLeft: =6
+                        RadiusTopRight: =6
+                        Text: ="Edit competency"
+                        Tooltip: ="Edit competency"
+                        Width: =Parent.Width
+                        X: =0
+                        Y: =0
+            - conCompRowRetire:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Fill: =RGBA(0, 0, 0, 0)
+                  FillPortions: =0.25
+                  Height: =34
+                  LayoutMinHeight: =0
+                  LayoutMinWidth: =0
+                Children:
+                  - imgCompRowRetire:
+                      Control: Image@2.2.3
+                      Properties:
+                        Height: =18
+                        # Two different icons, not one recoloured: Archive to
+                        # retire, ArchiveArrowBack to restore. The whole URI is
+                        # chosen in one If rather than switching icon and colour
+                        # in two — one condition, so they cannot fall out of
+                        # step and show a green Archive.
+                        Image: |-
+                          =If(ThisItem.State.Value = "Retired",
+                            "data:image/svg+xml," &
+                              EncodeUrl(Substitute(gblNavIcons.ArchiveArrowBack,
+                                "currentColor", "#047857")),
+                            "data:image/svg+xml," &
+                              EncodeUrl(Substitute(gblNavIcons.Archive,
+                                "currentColor", "#B45309")))
+                        Width: =18
+                        X: =Parent.Width / 2 - 9
+                        Y: =Parent.Height / 2 - 9
+                  - btnCompRowRetire:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        BorderStyle: =BorderStyle.Solid
+                        BorderThickness: =0
+                        Color: =RGBA(0, 0, 0, 0)
+                        Fill: =RGBA(0, 0, 0, 0)
+                        FocusedBorderColor: =ColorPalette.FocusOnLight
+                        FocusedBorderThickness: =3
+                        Height: =Parent.Height
+                        HoverColor: =RGBA(0, 0, 0, 0)
+                        HoverFill: =RGBA(0, 0, 0, 0.06)
+                        # Retiring asks; restoring does not. Confirmation is for
+                        # the action that takes something away.
+                        OnSelect: |-
+                          =If(ThisItem.State.Value = "Retired",
+                            Patch(COMPETENCIES,
+                              LookUp(COMPETENCIES, ID = ThisItem.ID),
+                              { State: { Value: "Active" } }),
+                            UpdateContext({ locRetireComp: ThisItem, locConfirmRetire: true }));
+                          UpdateContext({ locComp: Blank() });
+                          If(ThisItem.State.Value = "Retired", ClearCollect(colComps, COMPETENCIES))
+                        PressedColor: =RGBA(0, 0, 0, 0)
+                        PressedFill: =RGBA(0, 0, 0, 0.12)
+                        RadiusBottomLeft: =6
+                        RadiusBottomRight: =6
+                        RadiusTopLeft: =6
+                        RadiusTopRight: =6
+                        Text: |-
+                          =If(ThisItem.State.Value = "Retired",
+                             "Restore competency", "Retire competency")
+                        Tooltip: |-
+                          =If(ThisItem.State.Value = "Retired",
+                             "Restore competency", "Retire competency")
+                        Width: =Parent.Width
+                        X: =0
+                        Y: =0
+      - recCompRowLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.Gray200
+            Height: =1
+            Width: =Parent.TemplateWidth
+            Y: =Parent.TemplateHeight - 1
+
+- lblCompEmpty:
+    Control: Label@2.5.1
+    Properties:
+      Align: =Align.Center
+      Color: =ColorPalette.TextHelp
+      Font: =Typography.Family
+      Height: =40
+      Size: =Typography.SizeBody
+      Text: |-
+        =If(IsEmpty(Filter(colTypes, State.Value = "Active")),
+           "No competency types yet. Use Manage types to create one.",
+           "No competencies in this type yet. Use Add competency to create one.")
+      Visible: =CountRows(galComps.AllItems) = 0
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =240
+
+# ===========================================================================
+# COMPETENCY MODAL — add / edit. DECLARED LATE for z-order.
+# ===========================================================================
+- recCompModalScrim:
+    Control: Rectangle@2.3.0
+    Properties:
+      BorderColor: =RGBA(0, 0, 0, 0)
+      Fill: =RGBA(0, 0, 0, 0.3)
+      Height: =Parent.Height
+      Visible: =locCompModal
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+
+- conCompModal:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Bold
+      Fill: =ColorPalette.White
+      Height: =430
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: =locCompModal
+      Width: =640
+      X: =Parent.Width / 2 - Self.Width / 2
+      Y: =Parent.Height / 2 - Self.Height / 2
+    Children:
+      - lblCompModalTitle:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =28
+            Size: =Typography.SizeHeading
+            Text: |-
+              =If(IsBlank(locComp), "Add competency", "Edit competency")
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =24
+      - lblCompModalTypeLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            PaddingLeft: =8
+            Size: =Typography.SizeLabel
+            Text: ="Type (required)"
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =62
+      # Items is a table of PLAIN TEXT, not of records. ForAll returning a
+      # scalar produces a single-column table whose column is named Value —
+      # the same shape as a literal ["a","b"] — which is the one shape a
+      # Classic/DropDown renders without its Value property being set.
+      #
+      # That matters because Value is an OUTPUT (PA2108) and cannot be set from
+      # YAML at all. A records table (ShowColumns, or the raw Filter) leaves the
+      # control with no display column, so it draws the right NUMBER of blank
+      # rows, nothing can be selected, and Save stays disabled on validation.
+      #
+      # The type ID is recovered at save time with LookUp on the name. Type
+      # names are unique — btnTypeAdd enforces it — so that is a safe key.
+      - drpCompType:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locComp),
+                 LookUp(colTypes, ID = locTypeID).TypeName,
+                 locComp.CompetencyTypeID.Value)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =32
+            Items: |-
+              =ForAll(
+                SortByColumns(
+                  Filter(colTypes, State.Value = "Active"),
+                  "SortOrder", SortOrder.Ascending),
+                TypeName)
+            Size: =Typography.SizeBody
+            TabIndex: =1
+            Width: =280
+            X: =24
+            Y: =84
+      - lblCompModalNameLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            PaddingLeft: =8
+            Size: =Typography.SizeLabel
+            Text: ="Competency name (required)"
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =128
+      - txtCompName:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locComp), "", locComp.CompetencyName)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            PaddingLeft: =8
+            Size: =Typography.SizeBody
+            TabIndex: =2
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =150
+      - lblCompModalDescLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            PaddingLeft: =8
+            Size: =Typography.SizeLabel
+            Text: ="Description (required)"
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =194
+      # TAB TRAP: a multi-line TextInput consumes Tab as a character rather than
+      # moving focus. From here the keyboard route onward is Shift+Tab back.
+      - txtCompDesc:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locComp), "", locComp.Description)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =120
+            Mode: =TextMode.MultiLine
+            PaddingLeft: =8
+            Size: =Typography.SizeBody
+            TabIndex: =3
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =216
+      - lblCompModalValidation:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.DangerText
+            Font: =Typography.Family
+            Height: =20
+            PaddingLeft: =8
+            Size: =Typography.SizeCaption
+            Text: |-
+              =If(
+                IsBlank(drpCompType.Selected.Value),
+                "Choose a type.",
+                IsBlank(Trim(txtCompName.Text)),
+                "Competency name is required.",
+                IsBlank(Trim(txtCompDesc.Text)),
+                "Description is required.",
+                "")
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =344
+      - btnCompModalSave:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            DisplayMode: |-
+              =If(
+                Or(IsBlank(drpCompType.Selected.Value),
+                   IsBlank(Trim(txtCompName.Text)),
+                   IsBlank(Trim(txtCompDesc.Text))),
+                DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.Blue600
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.Blue700
+            # The '@odata.type' annotation is NOT optional on a SharePoint
+            # lookup. Without it the patch succeeds and the lookup saves EMPTY,
+            # with no error (build/CONVENTIONS.md).
+            OnSelect: |-
+              =UpdateContext({
+                locComp: Patch(COMPETENCIES,
+                  If(IsBlank(locComp),
+                     Defaults(COMPETENCIES),
+                     LookUp(COMPETENCIES, ID = locComp.ID)),
+                  {
+                    CompetencyName: txtCompName.Text,
+                    Description: txtCompDesc.Text,
+                    CompetencyTypeID: {
+                      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                      Id: LookUp(colTypes,
+                                 TypeName = drpCompType.Selected.Value).ID,
+                      Value: drpCompType.Selected.Value
+                    },
+                    State: If(IsBlank(locComp), { Value: "Active" }, locComp.State)
+                  }),
+                locCompModal: false,
+                locTypeID: LookUp(colTypes,
+                                  TypeName = drpCompType.Selected.Value).ID
+              });
+              ClearCollect(colComps, COMPETENCIES);
+              Notify("Competency saved.", NotificationType.Success)
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =4
+            Text: ="Save"
+            Width: =120
+            X: =24
+            Y: =372
+      - btnCompModalCancel:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =UpdateContext({ locCompModal: false })
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =5
+            Text: ="Cancel"
+            Width: =110
+            X: =156
+            Y: =372
+
+# ===========================================================================
+# TYPE MODAL — add / retire types. DECLARED LAST so it paints above all.
+# ===========================================================================
+# Lists EVERY type, retired included — the strip shows only active ones, so
+# this is the only place a retired type can be brought back.
+- recTypeModalScrim:
+    Control: Rectangle@2.3.0
+    Properties:
+      BorderColor: =RGBA(0, 0, 0, 0)
+      Fill: =RGBA(0, 0, 0, 0.3)
+      Height: =Parent.Height
+      Visible: =locTypeModal
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+
+- conTypeModal:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Bold
+      Fill: =ColorPalette.White
+      Height: =420
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: =locTypeModal
+      Width: =560
+      X: =Parent.Width / 2 - Self.Width / 2
+      Y: =Parent.Height / 2 - Self.Height / 2
+    Children:
+      - lblTypeModalTitle:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =28
+            Size: =Typography.SizeHeading
+            Text: ="Competency types"
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =24
+      - lblTypeModalHint:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="Retiring a type hides its tab. Its competencies are kept."
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =54
+      - galTypes:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            Height: =212
+            Items: |-
+              =SortByColumns(colTypes, "SortOrder", SortOrder.Ascending)
+            ShowScrollbar: =true
+            TemplatePadding: =0
+            TemplateSize: =44
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =82
+          Children:
+            - conTypeRow:
+                Control: GroupContainer@1.5.0
+                Variant: AutoLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Fill: =ColorPalette.White
+                  Height: =Parent.TemplateHeight
+                  LayoutAlignItems: =LayoutAlignItems.Center
+                  LayoutDirection: =LayoutDirection.Horizontal
+                  PaddingLeft: =12
+                  PaddingRight: =12
+                  Width: =Parent.TemplateWidth
+                Children:
+                  - lblTypeRowName:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: |-
+                          =If(ThisItem.State.Value = "Retired",
+                             ColorPalette.TextHelp, ColorPalette.TextHeading)
+                        FillPortions: =1.6
+                        Font: =Typography.Family
+                        LayoutMinWidth: =0
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.TypeName
+                  - lblTypeRowCount:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHelp
+                        FillPortions: =1
+                        Font: =Typography.Family
+                        LayoutMinWidth: =0
+                        Size: =Typography.SizeCaption
+                        # Small bounded list; CountRows does not delegate and is
+                        # acceptable here for the same reason it is on PROGRAMS.
+                        Text: |-
+                          =CountRows(Filter(colComps,
+                             CompetencyTypeID.Id = ThisItem.ID,
+                             State.Value = "Active")) & " active"
+                  - lblTypeRowState:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: |-
+                          =If(ThisItem.State.Value = "Retired",
+                             ColorPalette.WarningText, ColorPalette.SuccessText)
+                        FillPortions: =0.8
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        LayoutMinWidth: =0
+                        Size: =Typography.SizeCaption
+                        Text: =ThisItem.State.Value
+                  - btnTypeRowRetire:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        BorderStyle: =BorderStyle.Solid
+                        BorderThickness: =0
+                        Color: |-
+                          =If(ThisItem.State.Value = "Retired",
+                             ColorPalette.SuccessText, ColorPalette.WarningText)
+                        Fill: =RGBA(0, 0, 0, 0)
+                        FillPortions: =0.8
+                        FocusedBorderColor: =ColorPalette.FocusOnLight
+                        FocusedBorderThickness: =3
+                        Font: =Typography.Family
+                        Height: =30
+                        HoverFill: =ColorPalette.Blue50
+                        LayoutMinWidth: =0
+                        # Retiring the type you are looking at would leave the
+                        # strip with no valid selection, so move to the first
+                        # remaining active type.
+                        OnSelect: |-
+                          =Patch(COMPETENCY_TYPES,
+                            LookUp(COMPETENCY_TYPES, ID = ThisItem.ID),
+                            {
+                              State: {
+                                Value: If(ThisItem.State.Value = "Retired", "Active", "Retired")
+                              }
+                            });
+                          ClearCollect(colTypes, COMPETENCY_TYPES);
+                          UpdateContext({
+                            locTypeID:
+                              If(LookUp(colTypes, ID = locTypeID).State.Value = "Active",
+                                 locTypeID,
+                                 First(SortByColumns(
+                                   Filter(colTypes, State.Value = "Active"),
+                                   "SortOrder", SortOrder.Ascending)).ID),
+                            locComp: Blank()
+                          })
+                        PressedFill: =ColorPalette.Blue50
+                        Size: =Typography.SizeCaption
+                        Text: |-
+                          =If(ThisItem.State.Value = "Retired", "Restore", "Retire")
+            - recTypeRowLine:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Fill: =ColorPalette.Gray200
+                  Height: =1
+                  Width: =Parent.TemplateWidth
+                  Y: =Parent.TemplateHeight - 1
+
+      - lblTypeAddLabel:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =20
+            PaddingLeft: =8
+            Size: =Typography.SizeLabel
+            Text: ="New type name"
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =304
+      - txtNewType:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            PaddingLeft: =8
+            Size: =Typography.SizeBody
+            TabIndex: =6
+            Width: =340
+            X: =24
+            Y: =326
+      - btnTypeAdd:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            # Blocks blanks and duplicates. Nothing in SharePoint enforces
+            # uniqueness on TypeName, so the app layer has to.
+            DisplayMode: |-
+              =If(
+                Or(IsBlank(Trim(txtNewType.Text)),
+                   Not(IsEmpty(Filter(colTypes,
+                        TypeName = Trim(txtNewType.Text))))),
+                DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.Blue600
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            HoverFill: =ColorPalette.Blue700
+            # SortOrder continues the existing 10/20/30 sequence so a new type
+            # lands at the end of the strip rather than at an arbitrary spot.
+            OnSelect: |-
+              =Patch(COMPETENCY_TYPES, Defaults(COMPETENCY_TYPES),
+                {
+                  TypeName: Trim(txtNewType.Text),
+                  State: { Value: "Active" },
+                  SortOrder: Coalesce(Max(colTypes, SortOrder), 0) + 10
+                });
+              ClearCollect(colTypes, COMPETENCY_TYPES);
+              Reset(txtNewType);
+              Notify("Competency type added.", NotificationType.Success)
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =7
+            Text: ="Add type"
+            Width: =120
+            X: =378
+            Y: =326
+      - lblTypeDupe:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.DangerText
+            Font: =Typography.Family
+            Height: =18
+            PaddingLeft: =8
+            Size: =Typography.SizeCaption
+            Text: ="That type already exists."
+            Visible: |-
+              =And(Not(IsBlank(Trim(txtNewType.Text))),
+                 Not(IsEmpty(Filter(colTypes,
+                      TypeName = Trim(txtNewType.Text)))))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =360
+      - btnTypeModalClose:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =34
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =UpdateContext({ locTypeModal: false })
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =8
+            Text: ="Done"
+            Width: =110
+            X: =Parent.Width - 134
+            Y: =Parent.Height - 52
+
+# ===========================================================================
+# RETIRE CONFIRMATION — PowerLibs `confirmation-modal-1`, adapted.
+# DECLARED LAST so it paints above both other modals.
+# ===========================================================================
+# Adaptations from the generated component:
+# · GroupContainer@1.3.0 -> 1.5.0; `varPopUp` -> locConfirmRetire.
+# · the generated trigger button is dropped — btnCompRowRetire raises this.
+# · its Height was a chain of AutoHeight label references; fixed here, because
+#   the body text is a known length and the chain recomputes on every render.
+# · pure red RGBA(255,0,0,1) -> WarningText. Retiring is reversible, so it is
+#   not a danger-red action; DangerText is reserved for what cannot be undone.
+# · the body names the competency. "Are you sure?" about an unnamed row is a
+#   question the user cannot actually answer.
+- recRetireScrim:
+    Control: Rectangle@2.3.0
+    Properties:
+      BorderColor: =RGBA(0, 0, 0, 0)
+      Fill: =RGBA(0, 0, 0, 0.3)
+      Height: =Parent.Height
+      Visible: =locConfirmRetire
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+
+- conRetireConfirm:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Bold
+      Fill: =ColorPalette.White
+      Height: =250
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: =locConfirmRetire
+      Width: =480
+      X: =Parent.Width / 2 - Self.Width / 2
+      Y: =Parent.Height / 2 - Self.Height / 2
+    Children:
+      - shpRetireHalo:
+          Control: Circle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.WarningLight
+            Height: =56
+            Width: =56
+            X: =Parent.Width / 2 - 28
+            Y: =24
+      - icoRetireWarn:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.WarningText
+            Height: =30
+            Icon: =Icon.Warning
+            Width: =30
+            X: =Parent.Width / 2 - 15
+            Y: =37
+      - lblRetireTitle:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =26
+            Size: =Typography.SizeHeading
+            Text: ="Retire this competency?"
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =92
+      - lblRetireBody:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =56
+            Size: =Typography.SizeBody
+            Text: |-
+              =locRetireComp.CompetencyName &
+                " will stop appearing to applicants. Existing applications that reference it are unaffected, and you can restore it at any time."
+            VerticalAlign: =VerticalAlign.Top
+            Width: =Parent.Width - 64
+            X: =32
+            Y: =122
+      - btnRetireConfirm:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            Fill: =ColorPalette.Blue600
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.Blue700
+            OnSelect: |-
+              =Patch(COMPETENCIES,
+                LookUp(COMPETENCIES, ID = locRetireComp.ID),
+                { State: { Value: "Retired" } });
+              UpdateContext({ locConfirmRetire: false, locRetireComp: Blank() });
+              ClearCollect(colComps, COMPETENCIES);
+              Notify("Competency retired.", NotificationType.Success)
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =9
+            Text: ="Retire"
+            Width: =120
+            X: =Parent.Width / 2 - 130
+            Y: =Parent.Height - 60
+      - btnRetireCancel:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =UpdateContext({ locConfirmRetire: false, locRetireComp: Blank() })
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =10
+            Text: ="Cancel"
+            Width: =120
+            X: =Parent.Width / 2 + 10
+            Y: =Parent.Height - 60

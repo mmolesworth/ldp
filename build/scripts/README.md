@@ -1,6 +1,7 @@
 # Provisioning runbook — SharePoint lists
 
-Creates the 14 lists in `build/lists/` on your SharePoint site.
+Creates the 16 lists in `build/lists/` on your SharePoint site, and optionally
+seeds the competency catalogue.
 Script: [`New-LdpSharePointLists.ps1`](New-LdpSharePointLists.ps1)
 
 ## This environment
@@ -130,9 +131,15 @@ edit — the Windows copy does not track the repo:
 
 ```powershell
 cd C:\Users\mmole\projects\leadership
-copy \\wsl$\Ubuntu\home\mark\projects\leadership-development\build\scripts\New-LdpSharePointLists.ps1 .
+copy \\wsl$\Ubuntu\home\mark\projects\leadership-development\build\scripts\*.ps1 .
+copy \\wsl$\Ubuntu\home\mark\projects\leadership-development\build\scripts\*.csv .
 Unblock-File .\New-LdpSharePointLists.ps1
 ```
+
+Copy the **CSVs as well as the script**. `-DataPath` defaults to the script's own
+directory, so as long as they travel together no path argument is needed. Only
+the `.ps1` needs `Unblock-File` — the execution-policy check does not apply to
+data files.
 
 ### Execution policy
 
@@ -163,7 +170,7 @@ Nothing is written. Confirm the plan is what you expect:
     -WhatIf
 ```
 
-You should see `What if:` lines for 14 lists, ~90 columns, 16 lookups, and 22 indexes.
+You should see `What if:` lines for 16 lists, ~100 columns, 17 lookups, and 25 indexes.
 It still signs you in — `-WhatIf` suppresses the writes, not the connection.
 
 ## Step 5 — Run it
@@ -179,7 +186,7 @@ Same command without `-WhatIf`:
 Output is four passes, colour-coded: green `+` created, grey `=` already existed,
 yellow `~` deliberately skipped. It ends with a summary and a to-do list.
 
-**`ListsCreated 14` in the summary is the proof it worked.** A `-WhatIf` run prints
+**`ListsCreated 16` in the summary is the proof it worked.** A `-WhatIf` run prints
 the same four passes but every line reads `What if:` and the summary is all zeroes —
 which is easy to mistake for success.
 
@@ -190,12 +197,52 @@ pass `-ShowInNavigation` to put them in the left nav.
 If it fails partway, **just run it again** — the script is idempotent. It checks for
 each list and column before creating it, so a re-run picks up where it stopped.
 
+## Step 5b — Seed the competency catalogue
+
+The 85 competencies are not created by default. Regenerate the CSVs from the
+workbook, then re-run with `-SeedCompetencies`:
+
+```powershell
+python3 build/scripts/Convert-CompetencyWorkbook.py     # in WSL, from the repo root
+```
+
+```powershell
+./New-LdpSharePointLists.ps1 `
+    -SiteUrl https://markmolesworth.sharepoint.com/sites/leadership-development-program `
+    -ClientId <your-client-id> `
+    -SeedCompetencies
+```
+
+`-DataPath` defaults to `build/scripts` relative to the script. If you copied the
+`.ps1` to a Windows path (step 4), the CSVs are not next to it — pass
+`-DataPath \\wsl$\Ubuntu\home\mark\projects\leadership-development\build\data`.
+
+Expect `ItemsSeeded 88` on a first run (3 types + 85 competencies). Re-running
+is safe: it adds only what is missing and reports the rest as existing.
+
+**Seeding is not a sync.** Editing a description in the CSV will not update a row
+already in SharePoint. Edit it in SharePoint, or delete the row and re-seed.
+
+If the lists already exist and you only want the data in, `-SeedOnly` skips
+passes 1-4 entirely:
+
+```powershell
+./New-LdpSharePointLists.ps1 `
+    -SiteUrl https://markmolesworth.sharepoint.com/sites/leadership-development-program `
+    -ClientId <your-client-id> `
+    -SeedOnly `
+    -DataPath \\wsl$\Ubuntu\home\mark\projects\leadership-development\build\data
+```
+
+`-SeedOnly` implies `-SeedCompetencies`. It does not verify that the lists or the
+`CompetencyTypeID` lookup exist — if they do not, it fails at the first write.
+
 ## Step 6 — Verify
 
 ```powershell
 Connect-PnPOnline -Url https://markmolesworth.sharepoint.com/sites/leadership-development-program -Interactive -ClientId <guid>
 
-# 15 lists?
+# 16 lists?
 Get-PnPList | Where-Object { $_.Title -cmatch '^[A-Z_]+$' } | Select-Object Title, ItemCount
 
 # Lookups wired to the right targets?

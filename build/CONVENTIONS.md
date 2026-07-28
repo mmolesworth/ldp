@@ -99,6 +99,13 @@ Learned from real paste failures; PowerLibs does not document these. Check here 
   `GroupContainer@1.5.0` (guide says 1.4.0) · `Classic/DatePicker@2.6.0` (guide says 2.5.0).
   A stale version is a PA2105 *warning*, not an error — Studio substitutes the current one — but
   "may produce errors," so declare the real version.
+- **`Add-PnPViewField` does not exist in PnP.PowerShell.** It was a cmdlet in the retired
+  SharePointPnPPowerShellOnline module and still appears in most search results. The replacement is
+  `Set-PnPView -Fields`, which **replaces** the view's column list rather than appending — so read
+  `$view.ViewFields` first, add to it, and write the whole set back. If that read returns empty,
+  do nothing: writing a one-element list wipes every other column off the default view.
+  A lookup created by `Add-PnPFieldFromXml` needs this, or it exists and is queryable but is
+  invisible in the SharePoint UI.
 - **PowerLibs `calendar-1` ships three defects.** Found 2026-07-26 building the Application Cycles
   Screen; fix all three on transcription:
   1. It emits a `Screens:` wrapper, which Studio cannot paste at all. Strip it.

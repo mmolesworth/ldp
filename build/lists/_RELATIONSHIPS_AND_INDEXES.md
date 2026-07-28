@@ -11,7 +11,6 @@
 | APPLICATION_PROGRAM_CHOICES | ApplicationID | APPLICATIONS |
 | APPLICATION_PROGRAM_CHOICES | ProgramOptionID | PROGRAM_OPTIONS |
 | SUPERVISOR_ENDORSEMENTS | ApplicationID | APPLICATIONS |
-| RATING_SHEETS | CycleID | CYCLES |
 | RATING_SHEETS | ProgramID | PROGRAMS |
 | RATING_CRITERIA | RatingSheetID | RATING_SHEETS |
 | RATING_CRITERIA | CatalogCriterionID | CRITERION_CATALOG |
@@ -35,7 +34,7 @@ are plain **Number** columns (store the ID value) so the log survives parent cha
 | APPLICATIONS | CycleID, ApplicantEmail, Status, RoutingStage |
 | APPLICATION_PROGRAM_CHOICES | ApplicationID, ProgramOptionID |
 | SUPERVISOR_ENDORSEMENTS | ApplicationID |
-| RATING_SHEETS | CycleID, ProgramID, IsCurrent |
+| RATING_SHEETS | ProgramID, State |
 | RATING_CRITERIA | RatingSheetID |
 | CRITERION_CATALOG | State |
 | CRITERION_ANCHORS | CatalogCriterionID |

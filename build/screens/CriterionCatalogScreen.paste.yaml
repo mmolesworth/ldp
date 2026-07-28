@@ -1,68 +1,3 @@
-# Criterion Catalog Screen — US10 (RQ109–116, FR-046–048) — ADMIN
-# Rebuilt 2026-07-28. Classic controls only (Constitution II).
-# Colours = ColorPalette.*, sizes = Typography.*
-#
-# Composition (Constitution VIII):
-#   · PowerLibs `gallery-filter-header` — sortable criterion table
-#   · PowerLibs `modal-1`               — criterion + anchors editor
-#   · PowerLibs `confirmation-modal-1`  — retire confirmation
-#
-# ---------------------------------------------------------------------------
-# WHERE THE ANCHORS LIVE
-# ---------------------------------------------------------------------------
-# All four anchors are edited in the SAME modal as the criterion, in a 2x2 grid
-# below the name and description. A criterion without its anchors is not
-# publishable (FR-046), so they are not a separate thing to go and manage —
-# they are part of the record, and the ask was to see them together.
-#
-# The table cannot show anchor TEXT: four scores x two fields against a
-# 400-character description needs a row taller than the viewport. So selecting
-# a criterion — by clicking its NAME — lists its anchors in a panel below,
-# read-only, sorted by score. That shows WHICH anchor is missing, where a count
-# only said how many were.
-#
-# ---------------------------------------------------------------------------
-# LIFECYCLE — Draft -> Published -> Retired
-# ---------------------------------------------------------------------------
-# FR-047: a Published criterion is IMMUTABLE. The modal opens read-only for
-# anything not in Draft, and every input is Disabled rather than hidden, so it
-# still reads as a record instead of an empty form.
-#
-# FR-046: publishing requires all four anchors. btnCatPublish shows only for a
-# Draft and is disabled until all four descriptors are non-blank.
-#
-# Retiring is reversible and needs no FR-048 change: the Scoring Rubrics picker
-# filters State = "Published", so a retired criterion leaves the picker on its
-# own while staying resolvable from sheets that already reference it.
-#
-# NOTE: State gained "Retired" on 2026-07-28. Re-run the provisioning script,
-# or the single Set-PnPField in build/scripts/README.md, BEFORE using this
-# screen — otherwise every retire writes a choice the column does not accept.
-#
-# ---------------------------------------------------------------------------
-# READ FROM COLLECTIONS, WRITE TO SHAREPOINT
-# ---------------------------------------------------------------------------
-# Same pattern as the Competencies screen. colCrit / colAnchors are collected
-# in OnVisible; every gallery, count and default reads them. Writes always
-# target the SharePoint list and re-ClearCollect immediately after.
-#
-# Patch needs the SOURCE record and a collected row is a copy, so every write
-# re-fetches with LookUp(SOURCE, ID = ...). Patching the collected copy is the
-# failure that looks like it worked.
-#
-# Bounded-list exception (Constitution III): the catalogue is a curated set and
-# anchors are 4x that. Do NOT copy this to APPLICATIONS.
-#
-# ---------------------------------------------------------------------------
-# STARTDATE / ENDDATE ARE NOT EXPOSED HERE
-# ---------------------------------------------------------------------------
-# Both columns still exist and RatingSheetsScreen still reads EndDate for its
-# expiry flag (FR-045 / RQ117). Nothing on this screen sets EndDate, so it
-# stays blank — which reads as "still available" and is the safe default.
-# Publishing sets StartDate to today. If DTD needs date-windowed availability
-# as well as Retired, that is a deliberate addition, not an oversight.
-# ===========================================================================
-
 - lblCatTitle:
     Control: Label@2.5.1
     Properties:
@@ -108,7 +43,6 @@
       X: =Parent.Width - 174
       Y: =18
 
-# Default ON. A retired criterion is history, not working material.
 - tglCatHideRetired:
     Control: Classic/Toggle@2.1.0
     Properties:
@@ -143,8 +77,6 @@
       Font: =Typography.Family
       Height: =24
       Size: =Typography.SizeCaption
-      # Draft count is the actionable number — those are the ones still needing
-      # anchors before they can be published.
       Text: |-
         =CountRows(Filter(colCrit, State.Value = "Draft")) & " draft · " &
         CountRows(Filter(colCrit, State.Value = "Published")) & " published"
@@ -152,9 +84,6 @@
       X: =Parent.Width - 324
       Y: =62
 
-# ===========================================================================
-# CRITERION TABLE — PowerLibs gallery-filter-header
-# ===========================================================================
 - conCatHead:
     Control: GroupContainer@1.5.0
     Variant: AutoLayout
@@ -232,9 +161,6 @@
             Size: =Typography.SizeCaption
             Text: |-
               ="State" & If(locCatSort = "State", If(locCatAsc, "  ▲", "  ▼"), "")
-      # Fixed 104px, matching lblCatRowActionSpacer in the row. Portions would
-      # not line up: the row's icons are absolutely positioned now, so only a
-      # fixed cell can put this label above them.
       - lblCatHeadActions:
           Control: Label@2.5.1
           Properties:
@@ -248,22 +174,11 @@
             Text: ="Actions"
             Width: =104
 
-# Row height 92, not the usual 44 — descriptions run to 400 characters and the
-# point of this table is telling criteria apart without opening each one.
-#
-# It cannot auto-size. A canvas Gallery has ONE TemplateSize for every row;
-# AutoHeight on the label grows the label but not the template, so the text is
-# clipped at the row boundary with no ellipsis — worse than truncating on
-# purpose. So: a taller uniform row, a deliberate ellipsis, and the full text
-# reachable two ways that cost no layout at all — hover for the tooltip, or
-# select the row and read it in the detail panel below.
 - galCriteria:
     Control: Gallery@2.15.0
     Variant: Vertical
     Properties:
       BorderColor: =ColorPalette.Gray200
-      # Floors at 160 so the table never collapses to nothing on a short
-      # viewport; the anchors panel below has a fixed 260.
       Height: =Max(160, Parent.Height - 490)
       Items: |-
         =SortByColumns(
@@ -314,7 +229,6 @@
                   Font: =Typography.Family
                   LayoutMinWidth: =0
                   Size: =Typography.SizeBody
-                  # The ellipsis is deliberate — see the note on the gallery.
                   Text: |-
                     =If(Len(ThisItem.Description) > 220,
                        Left(ThisItem.Description, 220) & "…",
@@ -333,9 +247,6 @@
                   LayoutMinWidth: =0
                   Size: =Typography.SizeCaption
                   Text: =ThisItem.State.Value
-            # Reserves the actions zone inside the AutoLayout. The icons
-            # themselves are positioned absolutely below, so they can sit ON
-            # TOP of the row overlay rather than beside it.
             - lblCatRowActionSpacer:
                 Control: Label@2.5.1
                 Properties:
@@ -343,23 +254,14 @@
                   LayoutMinWidth: =0
                   Text: =""
                   Width: =104
-      # Whole-row hover and selection. Declared AFTER the row content so it
-      # paints over it, and BEFORE the icons so they stay clickable — z-order
-      # in canvas is declaration order. A translucent fill is essential: this
-      # sits on top of the text, and an opaque one would erase it.
       - btnCatRowSelect:
           Control: Classic/Button@2.2.0
           Properties:
             BorderColor: =RGBA(0, 0, 0, 0)
             BorderStyle: =BorderStyle.Solid
             BorderThickness: =0
-            # Accessible name in Text, painted transparent (PA2108).
             Color: =RGBA(0, 0, 0, 0)
             Fill: =RGBA(0, 0, 0, 0)
-            # Background only — no focus outline. The two action icons in this
-            # row keep their rings, so the table is still reachable and visible
-            # by keyboard; it is the row itself that has no focus cue.
-            # Deliberate, same as the tab strips. Revisit in T081.
             FocusedBorderThickness: =0
             Height: =Parent.TemplateHeight
             HoverColor: =RGBA(0, 0, 0, 0)
@@ -370,8 +272,6 @@
             PressedFill: =RGBA(0, 0, 0, 0.08)
             Text: |-
               ="Select " & ThisItem.CriterionName
-            # The whole description, untruncated. The overlay spans the row, so
-            # hovering anywhere over it shows this.
             Tooltip: =ThisItem.Description
             Width: =Parent.TemplateWidth
             X: =0
@@ -391,10 +291,6 @@
                       Control: Image@2.2.3
                       Properties:
                         Height: =18
-                        # Pencil for a Draft, eye for anything else. FR-047
-                        # freezes a Published criterion, so the icon should say
-                        # "look" before the click rather than offering an edit
-                        # the modal then refuses.
                         Image: |-
                           =If(ThisItem.State.Value = "Draft",
                             "data:image/svg+xml," &
@@ -502,8 +398,6 @@
                         Tooltip: |-
                           =If(ThisItem.State.Value = "Retired",
                              "Restore criterion", "Retire criterion")
-                        # A Draft has nothing to withdraw — it was never
-                        # selectable onto a sheet in the first place.
                         Visible: =ThisItem.State.Value <> "Draft"
                         Width: =Parent.Width
                         X: =0
@@ -531,24 +425,6 @@
       X: =24
       Y: =190
 
-# ===========================================================================
-# DETAIL PANEL FOR THE SELECTED CRITERION — two tabs
-# ===========================================================================
-# Tab 1  Scoring anchors  — the CRITERION_ANCHORS children.
-# Tab 2  Scoring rubrics  — every rubric version that selected this criterion.
-#
-# Tab 2 needs NO new relationship. RATING_CRITERIA is already the junction
-# table between RATING_SHEETS and CRITERION_CATALOG — a rubric has many
-# criteria, a criterion appears on many rubrics, and the join row carries both
-# lookups. The tab reads that junction; nothing was added to the schema.
-#
-# The strip is PowerLibs tab-bar-v2-1 with a static two-row Items. Unlike the
-# Competencies type strip these tabs are structural, not data — a third tab
-# would be a code change either way, so a Table() is honest here.
-#
-# Both tabs are read-only. Anchors are edited in the modal, where all four can
-# be validated as a set before publishing (FR-046); sheet membership is
-# controlled from the Scoring Rubrics screen, not from here.
 - conCatDetail:
     Control: GroupContainer@1.5.0
     Variant: ManualLayout
@@ -648,8 +524,6 @@
             Width: =Parent.Width - 400
             X: =380
             Y: =12
-      # The description in full, no truncation. This is the reason the table can
-      # afford to cut its copy off: selecting a row puts the whole thing here.
       - lblCatDetailDesc:
           Control: Label@2.5.1
           Properties:
@@ -664,7 +538,6 @@
             Width: =Parent.Width - 40
             X: =20
             Y: =50
-      # Names the gap rather than counting it.
       - lblCatAnchorWarn:
           Control: Label@2.5.1
           Properties:
@@ -756,8 +629,6 @@
           Properties:
             BorderColor: =ColorPalette.Gray200
             Height: =146
-            # Sorted by Score, so a missing anchor leaves a visible gap in the
-            # 0 / 1 / 3 / 5 sequence rather than silently shortening the list.
             Items: |-
               =SortByColumns(
                 Filter(colAnchors, CatalogCriterionID.Id = locCrit.ID),
@@ -827,10 +698,6 @@
                   Width: =Parent.TemplateWidth
                   Y: =Parent.TemplateHeight - 1
 
-      # ---- tab 2: sheets that selected this criterion ----
-      # The join is RATING_CRITERIA. ForAll flattens the sheet's own fields onto
-      # each junction row so the gallery template reads plain scalars — a
-      # template cannot resolve LookUp chains per cell without re-querying.
       - conCatSheetHead:
           Control: GroupContainer@1.5.0
           Variant: AutoLayout
@@ -883,19 +750,6 @@
           Properties:
             BorderColor: =ColorPalette.Gray200
             Height: =146
-            # ForAll with an explicit `As rc` alias, NOT AddColumns. Inside
-            # AddColumns both records are in scope and both have an ID, so
-            # `LookUp(colSheets, ID = RatingSheetID.Id)` is ambiguous — ID binds
-            # to the LookUp's own scope and the row's RatingSheetID may not
-            # resolve at all. The alias removes the ambiguity, and ForAll
-            # returns a clean record with only the four fields the template
-            # reads.
-            # The outer Filter drops ORPHANS: RATING_CRITERIA rows whose parent
-            # RATING_SHEETS row no longer exists. The LookUp returns blank for
-            # those, so they rendered as an empty row with a bare "v". Hiding
-            # the "v" would have left a blank row that means nothing; dropping
-            # the row is the honest fix, and the junction row is unreachable
-            # from the app either way.
             Items: |-
               =SortByColumns(
                 Filter(
@@ -963,7 +817,6 @@
                         FontWeight: =Typography.WeightMedium
                         LayoutMinWidth: =0
                         Size: =Typography.SizeCaption
-                        # "Published" is the one in use; the rest read as history.
                         Text: |-
                           =If(ThisItem.SheetState = "Published",
                              "Published — in use", ThisItem.SheetState)
@@ -983,9 +836,6 @@
             Font: =Typography.Family
             Height: =40
             Size: =Typography.SizeBody
-            # Distinguishes "no rubrics have been built at all" from "this
-            # criterion is not on one" — the two look identical otherwise, and
-            # only the first is a reason to go and do something else.
             Text: |-
               =If(IsEmpty(colSheets),
                  "No scoring rubrics exist yet. Build one on the Scoring Rubrics screen.",
@@ -997,9 +847,6 @@
             X: =20
             Y: =196
 
-# ===========================================================================
-# CRITERION + ANCHORS MODAL. DECLARED LATE for z-order.
-# ===========================================================================
 - recCatModalScrim:
     Control: Rectangle@2.3.0
     Properties:
@@ -1084,7 +931,6 @@
             DisabledBorderColor: =ColorPalette.Gray200
             DisabledColor: =ColorPalette.TextBody
             DisabledFill: =ColorPalette.Gray25
-            # FR-047 — immutable once Published.
             DisplayMode: |-
               =If(Or(IsBlank(locCrit), locCrit.State.Value = "Draft"),
                  DisplayMode.Edit, DisplayMode.Disabled)
@@ -1496,13 +1342,6 @@
             Font: =Typography.Family
             Height: =38
             HoverFill: =ColorPalette.Blue700
-            # Criterion first, then the four anchors, matched on
-            # (CatalogCriterionID, Score) so a re-save updates in place instead
-            # of appending a fifth row — FR-046 requires exactly four.
-            #
-            # An anchor row is written only when its descriptor has text. That
-            # is what makes n/4 in the table mean something: 3/4 is a criterion
-            # genuinely missing an anchor, not one carrying a blank row.
             OnSelect: |-
               =UpdateContext({
                 locSaved: Patch(CRITERION_CATALOG,
@@ -1560,9 +1399,6 @@
             X: =24
             Y: =548
 
-      # FR-046. Gated on all four descriptors, read from the BOXES rather than
-      # from saved rows — so the button tells the truth about what is about to
-      # be written, not about what was written last time.
       - btnCatPublish:
           Control: Classic/Button@2.2.0
           Properties:
@@ -1671,9 +1507,6 @@
             X: =Parent.Width - 134
             Y: =548
 
-# ===========================================================================
-# RETIRE CONFIRMATION. DECLARED LAST so it paints above the editor.
-# ===========================================================================
 - recCatRetireScrim:
     Control: Rectangle@2.3.0
     Properties:

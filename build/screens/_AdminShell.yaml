@@ -44,7 +44,7 @@
 #   Cycles            → Application Cycles Screen   ✓ built
 #   Competencies      → Competencies Screen         (new, and see below)
 #   Criterion Catalog → Criterion Catalog Screen    ✓ built
-#   Rating Sheets     → Rating Sheets Screen        ✓ built
+#   Scoring Rubrics   → Scoring Rubrics Screen      ✓ built
 #
 # Every target must EXIST before this block is pasted, or the paste fails on
 # Navigate(). Four of the nine are new screens created 2026-07-26; the names
@@ -120,6 +120,9 @@
                         Size: =Typography.SizeBody
                         Text: ="LDP Administration"
                         Visible: =gblSidebar
+                        # See the note on lblShellItem — no wrapping during the
+                        # expand, or the text scrambles for a frame.
+                        Wrap: =false
                   - icoShellToggle:
                       Control: Classic/Icon@2.5.0
                       Properties:
@@ -165,7 +168,7 @@
                             { id: 9,  isHeader: false, labelText: "Competencies",          iconSvg: gblNavIcons.Competencies },
                             { id: 10, isHeader: true,  labelText: "EVALUATION MANAGEMENT", iconSvg: gblNavIcons.EvaluationManagement },
                             { id: 11, isHeader: false, labelText: "Criterion Catalog",     iconSvg: gblNavIcons.CriterionCatalog },
-                            { id: 12, isHeader: false, labelText: "Rating Sheets",         iconSvg: gblNavIcons.RatingSheets }
+                            { id: 12, isHeader: false, labelText: "Scoring Rubrics",       iconSvg: gblNavIcons.RatingSheets }
                           )
                         LayoutMinWidth: =0
                         ShowScrollbar: =false
@@ -209,6 +212,8 @@
                               Visible: |-
                                 =And(ThisItem.isHeader, gblSidebar)
                               Width: =Parent.TemplateWidth
+                              # See the note on lblShellItem.
+                              Wrap: =false
                               Y: =15
                         - conShellItem:
                             Control: GroupContainer@1.5.0
@@ -253,6 +258,22 @@
                                     Text: =ThisItem.labelText
                                     Visible: =gblSidebar
                                     Width: =Parent.Width - imgShellItem.Width - Parent.LayoutGap
+                                    # THIS is the expand stutter. Visible flips
+                                    # the instant gblSidebar changes, but the
+                                    # width it inherits from Parent is still the
+                                    # collapsed 68 for a frame or two. A
+                                    # wrapping label uses that width immediately
+                                    # and breaks "Application Cycles" into
+                                    # stacked fragments, then reflows once the
+                                    # rail reaches 300 — which is the scramble.
+                                    #
+                                    # Wrap: =false makes the intermediate width
+                                    # harmless: the text is simply clipped by the
+                                    # rail it is inside, and unclips as the rail
+                                    # widens. Nav labels should never wrap
+                                    # anyway; a two-line nav item would be a bug
+                                    # in its own right.
+                                    Wrap: =false
                         # Accessible name rides in Text, painted transparent —
                         # Classic/Button has no AccessibleLabel (PA2108).
                         - btnShellItem:
@@ -283,7 +304,7 @@
                                   "Application Cycles", Navigate('Application Cycles Screen'),
                                   "Competencies", Navigate('Competencies Screen'),
                                   "Criterion Catalog", Navigate('Criterion Catalog Screen'),
-                                  "Rating Sheets", Navigate('Rating Sheets Screen'),
+                                  "Scoring Rubrics", Navigate('Scoring Rubrics Screen'),
                                   Notify("That screen has not been built yet.", NotificationType.Information)
                                 )
                               PressedColor: =RGBA(0, 0, 0, 0)

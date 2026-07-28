@@ -46,7 +46,7 @@
 # ---------------------------------------------------------------------------
 # PROGRAMS.State and PROGRAM_OPTIONS.State are both Active/Retired. Retiring
 # keeps every historical reference resolvable — options under the program,
-# rating sheets, committee scores, an applicant's ranked choice — while removing
+# scoring rubrics, committee scores, an applicant's ranked choice — while removing
 # it from applicant-facing pickers. Reversible; deletion is not.
 #
 # BOTH COLUMNS ARE NEW. Re-run build/scripts/New-LdpSharePointLists.ps1 before

@@ -80,6 +80,17 @@ param(
     [ValidatePattern('^[0-9a-fA-F-]{36}$')]
     [string]$ClientId,
 
+    [switch]$SeedCompetencies,
+
+    # Skip provisioning entirely and run only the competency seed. For when the
+    # lists already exist and you just want the data in.
+    [switch]$SeedOnly,
+
+    # Defaults to the script's own directory. The CSVs are deliberately siblings
+    # of this file: it gets copied out of WSL to a Windows path to run, and a
+    # sibling data/ folder does not come with it.
+    [string]$DataPath = $PSScriptRoot,
+
     [switch]$IncludeProposed,
 
     [switch]$SkipIndexes,
@@ -141,6 +152,30 @@ $script:Lists = [ordered]@{
         )
     }
 
+    # COMPETENCY_TYPES is a LIST, not a Choice column on COMPETENCIES, so that a
+    # new type is DATA rather than a schema change. A choice column can only be
+    # extended in SharePoint's column settings by someone with list-design
+    # rights; a lookup list can be extended from the Competencies admin screen
+    # by DTD. Same parent/child shape as PROGRAMS -> PROGRAM_OPTIONS.
+    'COMPETENCY_TYPES' = @{
+        Description = 'Groupings of competency (OPM, ECQ, Technical). Parent of COMPETENCIES; extend by adding rows, not columns.'
+        Fields      = @(
+            @{ Name = 'TypeName';    Type = 'Text';   Required = $true }
+            @{ Name = 'Description'; Type = 'Note' }
+            @{ Name = 'SortOrder';   Type = 'Number' }
+            @{ Name = 'State';       Type = 'Choice'; Required = $true; Choices = @('Active', 'Retired') }
+        )
+    }
+
+    'COMPETENCIES' = @{
+        Description = 'The competency catalogue. Seeded from docs/competencies.xlsx via build/scripts/competencies.csv.'
+        Fields      = @(
+            @{ Name = 'CompetencyName'; Type = 'Text'; Required = $true }
+            @{ Name = 'Description';    Type = 'Note' }
+            @{ Name = 'State';          Type = 'Choice'; Required = $true; Choices = @('Active', 'Retired') }
+        )
+    }
+
     'APPLICATIONS' = @{
         Description = 'The central application record. Supporting documents are native SharePoint attachments.'
         Fields      = @(
@@ -195,10 +230,9 @@ $script:Lists = [ordered]@{
     'CRITERION_CATALOG' = @{
         Description = 'Shared master set of scoring criteria, reusable across programs and cycles.'
         Fields      = @(
-            @{ Name = 'CriterionCode'; Type = 'Text';   Required = $true }
             @{ Name = 'CriterionName'; Type = 'Text';   Required = $true }
             @{ Name = 'Description';   Type = 'Note';   Required = $true }
-            @{ Name = 'State';         Type = 'Choice'; Required = $true; Choices = @('Draft', 'Published') }
+            @{ Name = 'State';         Type = 'Choice'; Required = $true; Choices = @('Draft', 'Published', 'Retired') }
             @{ Name = 'StartDate';     Type = 'Date' }
             @{ Name = 'EndDate';       Type = 'Date' }
         )
@@ -214,11 +248,14 @@ $script:Lists = [ordered]@{
     }
 
     'RATING_SHEETS' = @{
-        Description = 'Committee rating sheets — immutably versioned, per program per cycle. Versions are rows (R3).'
+        Description = 'Committee rating sheets — immutably versioned, per program. Reused across cycles until replaced (R3).'
         Fields      = @(
             @{ Name = 'SheetVersion'; Type = 'Number'; Required = $true }
-            @{ Name = 'State';       Type = 'Choice'; Required = $true; Choices = @('Draft', 'Published') }
-            @{ Name = 'IsCurrent';   Type = 'Choice'; Required = $true; Choices = @('Yes', 'No') }
+            # Draft -> Published -> Superseded. At most ONE Published per
+            # program: that is the sheet in use. Publishing vN supersedes the
+            # one it replaces, which is what makes a separate IsCurrent
+            # redundant — two columns for one lifecycle can disagree.
+            @{ Name = 'State';       Type = 'Choice'; Required = $true; Choices = @('Draft', 'Published', 'Superseded') }
             @{ Name = 'CreatedBy';   Type = 'Text';   Required = $true }
             @{ Name = 'CreatedDate'; Type = 'Date';   Required = $true }
         )
@@ -284,15 +321,15 @@ $script:Lists = [ordered]@{
 # ---------------------------------------------------------------------------
 $script:Lookups = @(
     @{ List = 'PROGRAM_OPTIONS';             Name = 'ProgramID';          Target = 'PROGRAMS';           ShowField = 'ProgramName';   Required = $true }
+    @{ List = 'COMPETENCIES';                Name = 'CompetencyTypeID';   Target = 'COMPETENCY_TYPES';   ShowField = 'TypeName';      Required = $true }
     @{ List = 'APPLICATIONS';                Name = 'CycleID';            Target = 'CYCLES';             ShowField = 'CycleName';     Required = $true }
     @{ List = 'APPLICATION_PROGRAM_CHOICES'; Name = 'ApplicationID';      Target = 'APPLICATIONS';       ShowField = 'ApplicantEmail'; Required = $true }
     @{ List = 'APPLICATION_PROGRAM_CHOICES'; Name = 'ProgramOptionID';    Target = 'PROGRAM_OPTIONS';    ShowField = 'OptionName';    Required = $true }
     @{ List = 'SUPERVISOR_ENDORSEMENTS';     Name = 'ApplicationID';      Target = 'APPLICATIONS';       ShowField = 'ApplicantEmail'; Required = $true }
-    @{ List = 'RATING_SHEETS';               Name = 'CycleID';            Target = 'CYCLES';             ShowField = 'CycleName';     Required = $true }
     @{ List = 'RATING_SHEETS';               Name = 'ProgramID';          Target = 'PROGRAMS';           ShowField = 'ProgramName';   Required = $true }
     @{ List = 'RATING_CRITERIA';             Name = 'RatingSheetID';      Target = 'RATING_SHEETS';      ShowField = 'ID';            Required = $true }
-    @{ List = 'RATING_CRITERIA';             Name = 'CatalogCriterionID'; Target = 'CRITERION_CATALOG';  ShowField = 'CriterionCode'; Required = $true }
-    @{ List = 'CRITERION_ANCHORS';           Name = 'CatalogCriterionID'; Target = 'CRITERION_CATALOG';  ShowField = 'CriterionCode'; Required = $true }
+    @{ List = 'RATING_CRITERIA';             Name = 'CatalogCriterionID'; Target = 'CRITERION_CATALOG';  ShowField = 'CriterionName'; Required = $true }
+    @{ List = 'CRITERION_ANCHORS';           Name = 'CatalogCriterionID'; Target = 'CRITERION_CATALOG';  ShowField = 'CriterionName'; Required = $true }
     @{ List = 'COMMITTEE_SCORES';            Name = 'ApplicationID';      Target = 'APPLICATIONS';       ShowField = 'ApplicantEmail'; Required = $true }
     @{ List = 'COMMITTEE_SCORES';            Name = 'ProgramID';          Target = 'PROGRAMS';           ShowField = 'ProgramName';   Required = $true }
     @{ List = 'COMMITTEE_SCORES';            Name = 'RatingSheetID';      Target = 'RATING_SHEETS';      ShowField = 'ID';            Required = $true }
@@ -308,7 +345,7 @@ $script:Indexes = [ordered]@{
     'APPLICATIONS'                = @('CycleID', 'ApplicantEmail', 'Status', 'RoutingStage')
     'APPLICATION_PROGRAM_CHOICES' = @('ApplicationID', 'ProgramOptionID')
     'SUPERVISOR_ENDORSEMENTS'     = @('ApplicationID')
-    'RATING_SHEETS'               = @('CycleID', 'ProgramID', 'IsCurrent')
+    'RATING_SHEETS'               = @('ProgramID', 'State')
     'RATING_CRITERIA'             = @('RatingSheetID')
     'CRITERION_CATALOG'           = @('State')
     'CRITERION_ANCHORS'           = @('CatalogCriterionID')
@@ -319,12 +356,14 @@ $script:Indexes = [ordered]@{
     'CYCLES'                      = @('State')
     'PROGRAM_OPTIONS'             = @('ProgramID', 'State')
     'PROGRAMS'                    = @('State')
+    'COMPETENCY_TYPES'            = @('State')
+    'COMPETENCIES'                = @('CompetencyTypeID', 'State')
 }
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-$script:Tally = [ordered]@{ ListsCreated = 0; ListsExisting = 0; FieldsCreated = 0; FieldsExisting = 0; LookupsCreated = 0; IndexesSet = 0; Skipped = 0 }
+$script:Tally = [ordered]@{ ListsCreated = 0; ListsExisting = 0; FieldsCreated = 0; FieldsExisting = 0; LookupsCreated = 0; IndexesSet = 0; ItemsSeeded = 0; ItemsExisting = 0; Skipped = 0 }
 
 function Write-Step { param([string]$Message) Write-Host "  $Message" -ForegroundColor DarkGray }
 function Write-Made { param([string]$Message) Write-Host "  + $Message" -ForegroundColor Green }
@@ -458,9 +497,29 @@ function New-LdpLookup {
     # Add-PnPFieldFromXml has no -AddToDefaultView, so a lookup created this way is
     # invisible in the SharePoint UI even though it exists and is queryable. Add it
     # explicitly, or every lookup column looks "missing" when you open the list.
-    $defaultView = Get-PnPView -List $listTitle | Where-Object { $_.DefaultView } | Select-Object -First 1
-    if ($defaultView) {
-        Add-PnPViewField -List $listTitle -Identity $defaultView.Title -Field $name -ErrorAction SilentlyContinue | Out-Null
+    #
+    # Set-PnPView -Fields REPLACES the view's column list; there is no append.
+    # So read the current fields, add ours, and write the whole set back — and
+    # bail out if the read comes back empty, because writing @($name) alone
+    # would wipe every other column off the default view.
+    #
+    # (Add-PnPViewField does not exist in PnP.PowerShell — it was a cmdlet in the
+    # retired SharePointPnPPowerShellOnline module.)
+    #
+    # This is cosmetic. It must never abort provisioning: the lookup is already
+    # created and queryable by the time we get here.
+    try {
+        $defaultView = Get-PnPView -List $listTitle | Where-Object { $_.DefaultView } | Select-Object -First 1
+        if ($defaultView) {
+            $current = @($defaultView.ViewFields)
+            if ($current.Count -eq 0) {
+                Write-Held "$listTitle.$name - default view fields unreadable, column not added to the view"
+            } elseif ($current -notcontains $name) {
+                Set-PnPView -List $listTitle -Identity $defaultView.Title -Fields ($current + $name) | Out-Null
+            }
+        }
+    } catch {
+        Write-Held "$listTitle.$name created, but adding it to the default view failed: $($_.Exception.Message)"
     }
 
     Write-Made "$listTitle.$name -> $($Lookup.Target).$($Lookup.ShowField)"
@@ -488,6 +547,123 @@ function Set-LdpIndex {
 }
 
 # ---------------------------------------------------------------------------
+# PASS 5 — seed COMPETENCY_TYPES and COMPETENCIES from CSV
+# ---------------------------------------------------------------------------
+# Idempotent by NAME: types by TypeName, competencies by type + CompetencyName.
+# Re-running adds what is missing and touches nothing else, so a partial run is
+# safe to repeat.
+#
+# Seeding is NOT a sync. A description edited in the CSV will not overwrite the
+# row already in SharePoint. Edit it in SharePoint, or delete the row and
+# re-seed.
+#
+# The CSVs are generated from docs/competencies.xlsx by
+# build/scripts/Convert-CompetencyWorkbook.py, which repairs three known defects
+# in the workbook. Do not hand-edit the CSVs — fix the workbook and re-convert,
+# or the next conversion silently discards the edit.
+function Import-LdpCompetencies {
+    [CmdletBinding(SupportsShouldProcess)]
+    param([string]$Path)
+
+    $typesCsv = Join-Path $Path 'competency-types.csv'
+    $compsCsv = Join-Path $Path 'competencies.csv'
+    foreach ($f in @($typesCsv, $compsCsv)) {
+        if (-not (Test-Path $f)) {
+            throw "Seed file not found: $f. Run build/scripts/Convert-CompetencyWorkbook.py first."
+        }
+    }
+
+    # --- types ---
+    $existingTypes = @{}
+    foreach ($item in (Get-PnPListItem -List 'COMPETENCY_TYPES' -PageSize 500)) {
+        $existingTypes[[string]$item['TypeName']] = $item.Id
+    }
+
+    foreach ($row in (Import-Csv $typesCsv)) {
+        $name = $row.TypeName.Trim()
+        if ($existingTypes.ContainsKey($name)) {
+            Write-Kept "COMPETENCY_TYPES/$name"
+            $script:Tally.ItemsExisting++
+            continue
+        }
+        if ($PSCmdlet.ShouldProcess("COMPETENCY_TYPES/$name", 'Add item')) {
+            $values = @{ TypeName = $name; State = 'Active' }
+            if ($row.SortOrder) { $values['SortOrder'] = [int]$row.SortOrder }
+            Add-PnPListItem -List 'COMPETENCY_TYPES' -Values $values | Out-Null
+            Write-Made "COMPETENCY_TYPES/$name"
+            $script:Tally.ItemsSeeded++
+        }
+    }
+
+    # Re-read the types from the list rather than trusting the .Id on the object
+    # Add-PnPListItem returned. CSOM populates that lazily, so a type created in
+    # THIS run can hand back an Id that is not there yet — which then goes into
+    # the lookup and fails the write with a transport-level error that names
+    # neither the field nor the reason.
+    $existingTypes = @{}
+    foreach ($item in (Get-PnPListItem -List 'COMPETENCY_TYPES' -PageSize 500)) {
+        $existingTypes[[string]$item['TypeName']] = $item.Id
+    }
+    Write-Step "types resolved: $(($existingTypes.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ', ')"
+
+    # --- competencies ---
+    # Keyed on type + name: a name is only unique WITHIN a type.
+    $existingComps = @{}
+    foreach ($item in (Get-PnPListItem -List 'COMPETENCIES' -PageSize 500)) {
+        $lookup = $item['CompetencyTypeID']
+        $typeName = if ($lookup) { [string]$lookup.LookupValue } else { '' }
+        $existingComps["$typeName|$([string]$item['CompetencyName'])"] = $item.Id
+    }
+
+    $added = 0
+    $failed = 0
+    foreach ($row in (Import-Csv $compsCsv)) {
+        $type = $row.Type.Trim()
+        $name = $row.Name.Trim()
+
+        if ($existingComps.ContainsKey("$type|$name")) {
+            $script:Tally.ItemsExisting++
+            continue
+        }
+        if (-not $existingTypes.ContainsKey($type)) {
+            # -WhatIf never creates the types, so an unresolved type is expected
+            # there and is a genuine error anywhere else.
+            if ($WhatIfPreference) { continue }
+            throw "Competency '$name' names type '$type', which is not in competency-types.csv."
+        }
+        if ($PSCmdlet.ShouldProcess("COMPETENCIES/$type/$name", 'Add item')) {
+            $values = @{
+                CompetencyName   = $name
+                CompetencyTypeID = $existingTypes[$type]
+                State            = 'Active'
+            }
+            if ($row.Description) { $values['Description'] = $row.Description }
+
+            # Per row, so one bad record reports itself and the run continues.
+            # A single throw here previously killed the whole seed at item 1 and
+            # told us nothing about which field it objected to.
+            try {
+                Add-PnPListItem -List 'COMPETENCIES' -Values $values | Out-Null
+                $script:Tally.ItemsSeeded++
+                $added++
+            } catch {
+                $failed++
+                if ($failed -le 3) {
+                    Write-Held "COMPETENCIES/$type/$name failed: $($_.Exception.Message)"
+                    Write-Held "  name $($name.Length) chars, description $(($row.Description).Length) chars, typeId '$($values.CompetencyTypeID)'"
+                }
+            }
+        }
+    }
+    if ($added)  { Write-Made "COMPETENCIES - $added item(s)" }
+    if ($failed) {
+        Write-Held "COMPETENCIES - $failed item(s) FAILED"
+        $script:Tally.Skipped += $failed
+        if ($failed -gt 3) { Write-Held "  (only the first 3 errors are shown)" }
+    }
+}
+
+# ---------------------------------------------------------------------------
 # Run
 # ---------------------------------------------------------------------------
 $module = Get-Module -ListAvailable -Name 'PnP.PowerShell' | Select-Object -First 1
@@ -500,6 +676,7 @@ Write-Host "LDP SharePoint provisioning" -ForegroundColor Cyan
 Write-Host "  Site           : $SiteUrl"
 Write-Host "  PnP.PowerShell : $($module.Version)"
 Write-Host "  Proposed items : $(if ($IncludeProposed) { 'INCLUDED' } else { 'skipped (Constitution I)' })"
+Write-Host "  Competency seed: $(if ($SeedCompetencies -or $SeedOnly) { $DataPath } else { 'skipped (pass -SeedCompetencies)' })"
 Write-Host ''
 
 Connect-PnPOnline -Url $SiteUrl -Interactive -ClientId $ClientId
@@ -508,13 +685,17 @@ try {
     Write-Host "Connected to '$($web.Title)'" -ForegroundColor Cyan
     Write-Host ''
 
-    Write-Host 'PASS 1/4  Lists' -ForegroundColor Cyan
+    if ($SeedOnly) {
+        Write-Host 'PASSES 1-4 SKIPPED (-SeedOnly)' -ForegroundColor Yellow
+    } else {
+
+    Write-Host 'PASS 1/5  Lists' -ForegroundColor Cyan
     foreach ($listTitle in $script:Lists.Keys) {
         New-LdpList -Title $listTitle -Description $script:Lists[$listTitle].Description
     }
 
     Write-Host ''
-    Write-Host 'PASS 2/4  Columns' -ForegroundColor Cyan
+    Write-Host 'PASS 2/5  Columns' -ForegroundColor Cyan
     foreach ($listTitle in $script:Lists.Keys) {
         Write-Step "$listTitle"
         foreach ($field in $script:Lists[$listTitle].Fields) {
@@ -523,21 +704,31 @@ try {
     }
 
     Write-Host ''
-    Write-Host 'PASS 3/4  Lookups' -ForegroundColor Cyan
+    Write-Host 'PASS 3/5  Lookups' -ForegroundColor Cyan
     foreach ($lookup in $script:Lookups) {
         New-LdpLookup -Lookup $lookup
     }
 
     Write-Host ''
     if ($SkipIndexes) {
-        Write-Host 'PASS 4/4  Indexes — SKIPPED (-SkipIndexes)' -ForegroundColor Yellow
+        Write-Host 'PASS 4/5  Indexes — SKIPPED (-SkipIndexes)' -ForegroundColor Yellow
     } else {
-        Write-Host 'PASS 4/4  Indexes' -ForegroundColor Cyan
+        Write-Host 'PASS 4/5  Indexes' -ForegroundColor Cyan
         foreach ($listTitle in $script:Indexes.Keys) {
             foreach ($fieldName in $script:Indexes[$listTitle]) {
                 Set-LdpIndex -ListTitle $listTitle -FieldName $fieldName
             }
         }
+    }
+
+    }   # end of the -SeedOnly bypass
+
+    Write-Host ''
+    if ($SeedCompetencies -or $SeedOnly) {
+        Write-Host 'PASS 5/5  Competency data' -ForegroundColor Cyan
+        Import-LdpCompetencies -Path $DataPath
+    } else {
+        Write-Host 'PASS 5/5  Competency data - SKIPPED (pass -SeedCompetencies)' -ForegroundColor Yellow
     }
 
     Write-Host ''
