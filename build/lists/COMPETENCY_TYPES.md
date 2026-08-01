@@ -9,6 +9,7 @@
 | TypeName | Single line of text | Yes | OPM, ECQ, Technical. |
 | Description | Multiple lines of text | No | Not supplied by the source workbook; DTD may fill in. |
 | SortOrder | Number | No | Display order. Seeded 10/20/30 in workbook order. |
+| SelectionCount | Number | No | **Maximum** selections of this type on one application — OPM 3, Technical 3, ECQ 4 (RQ006 / RQ007 / RQ008). Data rather than a constant in the screens, so a fourth type is usable without a YAML edit. Blank means no limit is defined; treat as 0 and say so rather than guessing. |
 | State | Choice | Yes | Active, Retired. New types default to Active. |
 
 **Indexes:** `State`.

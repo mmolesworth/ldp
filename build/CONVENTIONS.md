@@ -99,6 +99,19 @@ Learned from real paste failures; PowerLibs does not document these. Check here 
   `GroupContainer@1.5.0` (guide says 1.4.0) · `Classic/DatePicker@2.6.0` (guide says 2.5.0).
   A stale version is a PA2105 *warning*, not an error — Studio substitutes the current one — but
   "may produce errors," so declare the real version.
+- **PnP and Power Fx read columns in mirror-image ways.** In PnP.PowerShell a **Choice** column
+  comes back as a plain string, and a **Lookup** comes back as an object (`.LookupId` /
+  `.LookupValue`). In Power Fx it is the reverse shape that trips you: a choice needs `.Value` and a
+  lookup needs `.Id`. So a predicate copied from a screen into a script fails with
+  *"The property 'Value' cannot be found on this object"*:
+
+  | | PnP.PowerShell | Power Fx |
+  |---|---|---|
+  | Choice | `[string]$_['State']` | `ThisItem.State.Value` |
+  | Lookup | `$_['CycleID'].LookupId` | `ThisItem.CycleID.Id` |
+  | Lookup label | `$_['CycleID'].LookupValue` | `ThisItem.CycleID.Value` |
+
+  Cast choices with `[string]` rather than comparing directly — it also survives a null.
 - **`Add-PnPViewField` does not exist in PnP.PowerShell.** It was a cmdlet in the retired
   SharePointPnPPowerShellOnline module and still appears in most search results. The replacement is
   `Set-PnPView -Fields`, which **replaces** the view's column list rather than appending — so read

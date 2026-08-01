@@ -24,12 +24,14 @@
 #                     And(CycleID.Id = locCycle.ID, ApplicantEmail = User().Email))
 #         });
 #         UpdateContext({
-#           locTimeStep: Switch(locApp.RoutingStage.Value,
-#             "Pending First Line",  2,
-#             "Pending Second Line", 3,
-#             "Pending Validation",  4,
-#             "In Committee",        5,
-#             "Closed",              6,
+#           locTimeStep: Switch(locApp.ReviewStage.Value,
+#             "Pending First-Line",       2,
+#             "Pending Second-Line",      3,
+#             "Pending DTD Validation",   4,
+#             "Committee Review",         5,
+#             "Pending Placement",        6,
+#             "Pending Notification",     6,
+#             "Complete",                6,
 #             1)
 #         })
 #      The three calls must stay separate and in order — each depends on the
@@ -64,7 +66,7 @@
 # ---------------------------------------------------------------------------
 # 1. REMOVED Next / Undo / Reset and the demo status line. An applicant able to
 #    advance their own endorsement state is an integrity problem.
-# 2. varTimeStep → locTimeStep, driven by APPLICATIONS.RoutingStage.
+# 2. varTimeStep → locTimeStep, driven by APPLICATIONS.ReviewStage.
 # 3. Description text Size 8 → Typography.SizeCaption (9); 8pt is below the
 #    Section 508 floor in theme.md.
 # Dot/line geometry, 70px step rhythm, active-state colouring and the green
@@ -93,9 +95,8 @@
       Visible: |-
         =Not(And(
           Not(IsBlank(locApp)),
-          Or(locApp.Status.Value = "Submitted",
-             locApp.Status.Value = "Complete",
-             locApp.Status.Value = "Incomplete")
+          Or(locApp.ApplicationStatus.Value = "Submitted",
+             locApp.ApplicationStatus.Value = "Validated")
         ))
       Width: =Parent.Width - 48
       X: =24
@@ -154,12 +155,14 @@
             Height: =24
             Size: =Typography.SizeBody
             Text: |-
-              =Switch(locApp.Status.Value,
+              =Switch(locApp.PlacementOutcome.Value,
                 "Placed", "You have been placed in this cohort.",
                 "Not Selected", "You were not selected for this cohort.",
+                "Placement Declined", "You declined your placement in this cohort.",
                 "")
             Visible: |-
-              =Or(locApp.Status.Value = "Placed", locApp.Status.Value = "Not Selected")
+              =And(Not(IsBlank(locApp.PlacementOutcome.Value)),
+                 locApp.PlacementOutcome.Value <> "Decision Pending")
             Width: =Parent.Width - 320
             X: =28
             Y: =120
@@ -227,7 +230,7 @@
       RadiusTopLeft: =8
       RadiusTopRight: =8
       # FirstLine/SecondLineSupervisorEmail are snapshots taken at submit (R1/R5).
-      # Delegable: ApplicantEmail and RoutingStage are indexed; this filters on
+      # Delegable: ApplicantEmail and ReviewStage are indexed; this filters on
       # the snapshot columns, which are not — acceptable because the result set
       # is one cycle's applications, but revisit at multi-cycle volume (T082).
       Visible: |-
@@ -294,9 +297,8 @@
       Visible: |-
         =And(
           Not(IsBlank(locApp)),
-          Or(locApp.Status.Value = "Submitted",
-             locApp.Status.Value = "Complete",
-             locApp.Status.Value = "Incomplete")
+          Or(locApp.ApplicationStatus.Value = "Submitted",
+             locApp.ApplicationStatus.Value = "Validated")
         )
       Width: =420
       X: =24

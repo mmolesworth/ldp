@@ -106,7 +106,7 @@ $ErrorActionPreference = 'Stop'
 # ---------------------------------------------------------------------------
 $script:ProposedItems = @(
     'APPLICATIONS.AlternateSecondLineEmail (column)              — FR-012a'
-    'APPLICATIONS.RoutingStage → "Held For Alternate"            — R5'
+    'APPLICATIONS.ReviewStage → "Needs Supervisor Assigned"      — FR-012a'
     'SUPERVISOR_ENDORSEMENTS.SupervisorLevel → "Alternate Second Line" — FR-012a'
     'CHANGE_HISTORY.ChangeType → "Alternate Designation"         — FR-012a'
 )
@@ -163,6 +163,11 @@ $script:Lists = [ordered]@{
             @{ Name = 'TypeName';    Type = 'Text';   Required = $true }
             @{ Name = 'Description'; Type = 'Note' }
             @{ Name = 'SortOrder';   Type = 'Number' }
+            # MAXIMUM selections of this type on one application — RQ006 three
+            # OPM, RQ007 three technical, RQ008 four ECQ. A column rather than a
+            # constant in two screens, because the type list is data-driven and
+            # a fourth type would otherwise need a YAML edit to be usable.
+            @{ Name = 'SelectionCount'; Type = 'Number' }
             @{ Name = 'State';       Type = 'Choice'; Required = $true; Choices = @('Active', 'Retired') }
         )
     }
@@ -186,24 +191,41 @@ $script:Lists = [ordered]@{
             @{ Name = 'JobSeries';                Type = 'Text' }
             @{ Name = 'JobTitle';                 Type = 'Text' }
             # Type pending Appendix B (D-2) — may become multi-select Choice.
-            @{ Name = 'OPMCompetencies';          Type = 'Note' }
-            @{ Name = 'TechnicalCompetencies';    Type = 'Note' }
-            @{ Name = 'ECQs';                     Type = 'Note' }
             @{ Name = 'ListedOnIDP';              Type = 'Choice'; Choices = @('Yes', 'No') }
             @{ Name = 'LatestPerformanceRating';  Type = 'Number' }
             @{ Name = 'AttendedInfoSession';      Type = 'Choice'; Choices = @('Yes', 'No') }
             @{ Name = 'InfoSessionDate';          Type = 'Date' }
             @{ Name = 'NCUAStartDate';            Type = 'Date' }
             @{ Name = 'ServiceComputationDate';   Type = 'Date' }
-            @{ Name = 'Status';                   Type = 'Choice'; Required = $true; Choices = @('Draft', 'Submitted', 'Complete', 'Incomplete', 'Placed', 'Not Selected') }
+            # OPMCompetencies / TechnicalCompetencies / ECQs removed 2026-07-31.
+            # One text column per competency type cannot survive the type list
+            # being data-driven — DTD can add a fourth type and there would be
+            # no column for it. Selections live in APPLICATION_COMPETENCIES.
+            # One column became three on 2026-07-31 — see build/lists/_CHOICES.md.
+            # Each is owned by a different party and advances on its own clock;
+            # sharing a column meant every advance destroyed the last answer.
+            # Draft -> Submitted -> Validated is one linear progression, so a
+            # later value implies the earlier ones: Validated means submitted
+            # and accepted by DTD. An edit to a validated application drops it
+            # back to Submitted, which is a backward transition in the machine,
+            # not a separate flag. Withdrawn is terminal from anywhere.
+            @{ Name = 'ApplicationStatus';        Type = 'Choice'; Required = $true; Choices = @('Draft', 'Submitted', 'Validated', 'Withdrawn') }
+            @{ Name = 'PlacementOutcome';         Type = 'Choice'; Required = $true; Choices = @('Pending', 'Placed', 'Not Selected', 'Declined') }
             @{ Name = 'FirstLineSupervisorEmail'; Type = 'Text' }
             @{ Name = 'SecondLineSupervisorEmail'; Type = 'Text' }
             @{ Name = 'AlternateSecondLineEmail'; Type = 'Text'; Proposed = $true }
-            @{ Name = 'RoutingStage';             Type = 'Choice'
-               Choices         = @('Pending First Line', 'Pending Second Line', 'Pending Validation', 'In Committee', 'Closed')
-               ProposedChoices = @('Held For Alternate') }
-            @{ Name = 'RevalidationFlag';         Type = 'Choice'; Choices = @('Yes', 'No') }
+            # Linear, with ONE detour: no second-line supervisor on record sends
+            # the packet to Needs Supervisor Assigned, and it rejoins at Pending
+            # Second Line once DTD names someone. Nothing else forks.
+            @{ Name = 'ReviewStage';              Type = 'Choice'
+               Choices         = @('Pending First-Line', 'Pending Second-Line', 'Pending DTD Validation', 'Committee Review', 'Pending Placement', 'Pending Notification', 'Complete')
+               ProposedChoices = @('Needs Supervisor Assigned') }
         )
+    }
+
+    'APPLICATION_COMPETENCIES' = @{
+        Description = 'An application''s selected competencies (join of APPLICATIONS x COMPETENCIES). The TYPE comes from the competency''s parent and is deliberately not stored here — duplicating it would let the two disagree.'
+        Fields      = @()
     }
 
     'APPLICATION_PROGRAM_CHOICES' = @{
@@ -323,8 +345,15 @@ $script:Lookups = @(
     @{ List = 'PROGRAM_OPTIONS';             Name = 'ProgramID';          Target = 'PROGRAMS';           ShowField = 'ProgramName';   Required = $true }
     @{ List = 'COMPETENCIES';                Name = 'CompetencyTypeID';   Target = 'COMPETENCY_TYPES';   ShowField = 'TypeName';      Required = $true }
     @{ List = 'APPLICATIONS';                Name = 'CycleID';            Target = 'CYCLES';             ShowField = 'CycleName';     Required = $true }
+    @{ List = 'APPLICATION_COMPETENCIES';    Name = 'ApplicationID';      Target = 'APPLICATIONS';       ShowField = 'ApplicantEmail'; Required = $true }
+    @{ List = 'APPLICATION_COMPETENCIES';    Name = 'CompetencyID';       Target = 'COMPETENCIES';       ShowField = 'CompetencyName'; Required = $true }
     @{ List = 'APPLICATION_PROGRAM_CHOICES'; Name = 'ApplicationID';      Target = 'APPLICATIONS';       ShowField = 'ApplicantEmail'; Required = $true }
-    @{ List = 'APPLICATION_PROGRAM_CHOICES'; Name = 'ProgramOptionID';    Target = 'PROGRAM_OPTIONS';    ShowField = 'OptionName';    Required = $true }
+    # The PROGRAM is what the applicant chooses. The OPTION is an extra detail
+    # that only some programs have — HPP today, none tomorrow if it changes.
+    # Requiring the option is what forced fabricated "N/A" rows for MDP and
+    # NEXT, since neither can be chosen without one. See 2026-07-31.
+    @{ List = 'APPLICATION_PROGRAM_CHOICES'; Name = 'ProgramID';          Target = 'PROGRAMS';           ShowField = 'ProgramName';   Required = $true }
+    @{ List = 'APPLICATION_PROGRAM_CHOICES'; Name = 'ProgramOptionID';    Target = 'PROGRAM_OPTIONS';    ShowField = 'OptionName';    Required = $false }
     @{ List = 'SUPERVISOR_ENDORSEMENTS';     Name = 'ApplicationID';      Target = 'APPLICATIONS';       ShowField = 'ApplicantEmail'; Required = $true }
     @{ List = 'RATING_SHEETS';               Name = 'ProgramID';          Target = 'PROGRAMS';           ShowField = 'ProgramName';   Required = $true }
     @{ List = 'RATING_CRITERIA';             Name = 'RatingSheetID';      Target = 'RATING_SHEETS';      ShowField = 'ID';            Required = $true }
@@ -334,7 +363,8 @@ $script:Lookups = @(
     @{ List = 'COMMITTEE_SCORES';            Name = 'ProgramID';          Target = 'PROGRAMS';           ShowField = 'ProgramName';   Required = $true }
     @{ List = 'COMMITTEE_SCORES';            Name = 'RatingSheetID';      Target = 'RATING_SHEETS';      ShowField = 'ID';            Required = $true }
     @{ List = 'PLACEMENTS';                  Name = 'ApplicationID';      Target = 'APPLICATIONS';       ShowField = 'ApplicantEmail'; Required = $true }
-    @{ List = 'PLACEMENTS';                  Name = 'ProgramOptionID';    Target = 'PROGRAM_OPTIONS';    ShowField = 'OptionName';    Required = $true }
+    @{ List = 'PLACEMENTS';                  Name = 'ProgramID';          Target = 'PROGRAMS';           ShowField = 'ProgramName';   Required = $true }
+    @{ List = 'PLACEMENTS';                  Name = 'ProgramOptionID';    Target = 'PROGRAM_OPTIONS';    ShowField = 'OptionName';    Required = $false }
     @{ List = 'PLACEMENTS';                  Name = 'CycleID';            Target = 'CYCLES';             ShowField = 'CycleName';     Required = $true }
 )
 
@@ -342,15 +372,16 @@ $script:Lookups = @(
 # PASS 4 — indexes (Constitution III)
 # ---------------------------------------------------------------------------
 $script:Indexes = [ordered]@{
-    'APPLICATIONS'                = @('CycleID', 'ApplicantEmail', 'Status', 'RoutingStage')
-    'APPLICATION_PROGRAM_CHOICES' = @('ApplicationID', 'ProgramOptionID')
+    'APPLICATIONS'                = @('CycleID', 'ApplicantEmail', 'ApplicationStatus', 'ReviewStage', 'PlacementOutcome')
+    'APPLICATION_COMPETENCIES'    = @('ApplicationID', 'CompetencyID')
+    'APPLICATION_PROGRAM_CHOICES' = @('ApplicationID', 'ProgramID', 'ProgramOptionID')
     'SUPERVISOR_ENDORSEMENTS'     = @('ApplicationID')
     'RATING_SHEETS'               = @('ProgramID', 'State')
     'RATING_CRITERIA'             = @('RatingSheetID')
     'CRITERION_CATALOG'           = @('State')
     'CRITERION_ANCHORS'           = @('CatalogCriterionID')
     'COMMITTEE_SCORES'            = @('ApplicationID', 'ProgramID', 'RatingSheetID')
-    'PLACEMENTS'                  = @('ApplicationID', 'ProgramOptionID', 'CycleID')
+    'PLACEMENTS'                  = @('ApplicationID', 'ProgramID', 'ProgramOptionID', 'CycleID')
     'NOTIFICATIONS'               = @('ApplicationID')
     'CHANGE_HISTORY'              = @('ApplicationID')
     'CYCLES'                      = @('State')

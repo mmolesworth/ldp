@@ -412,6 +412,9 @@
                          And(Not(locNewDraft), Not(IsBlank(locVersion)),
                              locVersion.State.Value <> "Draft")),
                       DisplayMode.Disabled, DisplayMode.Edit)
+                  DisabledBorderColor: =RGBA(0, 0, 0, 0)
+                  DisabledColor: =ColorPalette.TextHelp
+                  DisabledFill: =RGBA(0, 0, 0, 0)
                   Fill: =RGBA(0, 0, 0, 0)
                   FillPortions: =1
                   FocusedBorderColor: =ColorPalette.FocusOnLight
@@ -597,7 +600,7 @@
             - btnRSRemove:
                 Control: Classic/Button@2.2.0
                 Properties:
-                  Align: =Align.Right
+                  Align: =Align.Center
                   BorderColor: =RGBA(0, 0, 0, 0)
                   BorderStyle: =BorderStyle.Solid
                   BorderThickness: =0
@@ -823,21 +826,7 @@
             "")
         });
         UpdateContext({ locWarn: locWarnMsg <> "" });
-        If(Not(locWarn),
-          ForAll(Filter(RATING_SHEETS, ProgramID.Id = locProgram.ID,
-                   State.Value = "Published") As old,
-            Patch(RATING_SHEETS, LookUp(RATING_SHEETS, ID = old.ID),
-              { State: { Value: "Superseded" } })));
-        If(Not(locWarn),
-          UpdateContext({
-            locVersion: Patch(RATING_SHEETS,
-              LookUp(RATING_SHEETS, ID = locVersion.ID),
-              { State: { Value: "Published" } })
-          }));
-        If(Not(locWarn), ClearCollect(colSheets, RATING_SHEETS));
-        If(Not(locWarn),
-          Notify("Version published. This is now the rubric in use for " &
-                 locProgram.ProgramName & ".", NotificationType.Success))
+        UpdateContext({ locConfirmPub: Not(locWarn) })
       PressedFill: =ColorPalette.White
       RadiusBottomLeft: =8
       RadiusBottomRight: =8
@@ -1084,5 +1073,152 @@
             TabIndex: =8
             Text: ="Cancel"
             Width: =120
+            X: =Parent.Width / 2 + 10
+            Y: =Parent.Height - 60
+
+- recRSPubScrim:
+    Control: Rectangle@2.3.0
+    Properties:
+      BorderColor: =RGBA(0, 0, 0, 0)
+      Fill: =RGBA(0, 0, 0, 0.3)
+      Height: =Parent.Height
+      Visible: =locConfirmPub
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+
+- conRSPubConfirm:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Bold
+      Fill: =ColorPalette.White
+      Height: =300
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: =locConfirmPub
+      Width: =560
+      X: =Parent.Width / 2 - Self.Width / 2
+      Y: =Parent.Height / 2 - Self.Height / 2
+    Children:
+      - shpRSPubHalo:
+          Control: Circle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.WarningLight
+            Height: =56
+            Width: =56
+            X: =Parent.Width / 2 - 28
+            Y: =24
+      - icoRSPubWarn:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.WarningText
+            Height: =30
+            Icon: =Icon.Warning
+            Width: =30
+            X: =Parent.Width / 2 - 15
+            Y: =37
+      - lblRSPubTitle:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =26
+            Size: =Typography.SizeHeading
+            Text: ="Publish this rubric?"
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =92
+      - lblRSPubBody:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =104
+            Size: =Typography.SizeBody
+            Text: |-
+              ="v" & locVersion.SheetVersion & " becomes the rubric in use for " &
+                locProgram.ProgramName &
+                ". The committee can begin scoring against it, and it can no longer be edited — a later change means publishing a new version." &
+                If(IsEmpty(Filter(colSheets, ProgramID.Id = locProgram.ID,
+                     State.Value = "Published")),
+                   "",
+                   " v" &
+                     First(Filter(colSheets, ProgramID.Id = locProgram.ID,
+                       State.Value = "Published")).SheetVersion &
+                     " will be superseded.")
+            VerticalAlign: =VerticalAlign.Top
+            Width: =Parent.Width - 64
+            X: =32
+            Y: =122
+      - btnRSPubConfirm:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            Fill: =ColorPalette.Blue600
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.Blue700
+            OnSelect: |-
+              =ForAll(Filter(RATING_SHEETS, ProgramID.Id = locProgram.ID,
+                       State.Value = "Published") As old,
+                Patch(RATING_SHEETS, LookUp(RATING_SHEETS, ID = old.ID),
+                  { State: { Value: "Superseded" } }));
+              UpdateContext({
+                locVersion: Patch(RATING_SHEETS,
+                  LookUp(RATING_SHEETS, ID = locVersion.ID),
+                  { State: { Value: "Published" } }),
+                locConfirmPub: false
+              });
+              ClearCollect(colSheets, RATING_SHEETS);
+              Notify("Version published. This is now the rubric in use for " &
+                     locProgram.ProgramName & ".", NotificationType.Success)
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =9
+            Text: ="Publish"
+            Width: =140
+            X: =Parent.Width / 2 - 150
+            Y: =Parent.Height - 60
+      - btnRSPubCancel:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =38
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =UpdateContext({ locConfirmPub: false })
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =10
+            Text: ="Cancel"
+            Width: =140
             X: =Parent.Width / 2 + 10
             Y: =Parent.Height - 60

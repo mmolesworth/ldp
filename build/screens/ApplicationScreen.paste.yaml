@@ -1,77 +1,3 @@
-# Application Screen — US1, six-step wizard
-# RQ001–014, RQ105a/105b (PROPOSED), FR-004–011, FR-009a/009b (PROPOSED)
-# Classic controls only (Constitution II). Colours = ColorPalette.*, sizes = Typography.*
-#
-# Composition: PowerLibs `horizontal-stepper` (Pro), generated 2026-07-25 via
-# generate_yaml, adapted (see DEVIATIONS).
-#
-# ---------------------------------------------------------------------------
-# HOW TO TRANSCRIBE (Constitution IV)
-# ---------------------------------------------------------------------------
-#   1. New screen → Blank. Rename it "Application Screen".
-#   2. Fill: =ColorPalette.Gray50
-#   3. Paste build/screens/_UtilityBar.yaml FIRST, then everything below.
-#   4. Data sources (five): APPLICATIONS, APPLICATION_PROGRAM_CHOICES,
-#      PROGRAM_OPTIONS, PROGRAMS, CYCLES.  (four, plus APPLICATIONS)
-#   5. OnVisible — transcribe by hand (no # prefixes, no leading =):
-#
-#      UpdateContext({
-#          locCycle: If(IsBlank(LookUp(CYCLES, State.Value = "Open")),
-#                       First(Sort(CYCLES, OpenDate, SortOrder.Descending)),
-#                       LookUp(CYCLES, State.Value = "Open")),
-#          locStep: 1
-#      });
-#      UpdateContext({
-#          locApp: LookUp(APPLICATIONS,
-#                    And(CycleID.Id = locCycle.ID, ApplicantEmail = User().Email))
-#      });
-#      ClearCollect(colRanked,
-#          ForAll(Filter(APPLICATION_PROGRAM_CHOICES, ApplicationID.Id = locApp.ID) As c,
-#              { OptionID: c.ProgramOptionID.Id,
-#                OptionName: LookUp(PROGRAM_OPTIONS, ID = c.ProgramOptionID.Id).OptionName,
-#                Rank: c.Rank }))
-#
-#   6. Preview (F5) — OnVisible does not run on the design surface.
-#
-# ---------------------------------------------------------------------------
-# NAVIGATION MODEL — RQ105a (PROPOSED, supersedes RQ105)
-# ---------------------------------------------------------------------------
-# Forward and backward one step at a time. The step circles are INDICATORS, not
-# buttons — there is no control over them, so a step cannot be clicked directly.
-# The only jumps are from step 6, where each missing item links to its step.
-#
-# NEXT NEVER BLOCKS. Advancing is unconditional by design: FR-009 validates the
-# whole application at submission, and RQ106 requires incomplete items to be
-# indicated without blocking navigation. Gaps surface at step 6 and stop Submit,
-# never Next. Do not add per-step gating without amending FR-009 and RQ106 too.
-#
-# ---------------------------------------------------------------------------
-# DEVIATIONS FROM THE GENERATED horizontal-stepper
-# ---------------------------------------------------------------------------
-# 1. Its demo content panel (conStepContent, with icon/title/description/hint)
-#    is REPLACED by the six real step panels. The circles, connector lines,
-#    labels and the Back/Next pair are kept as designed.
-# 2. varHStep → locStep (project convention).
-# 3. Step labels Size 8 → Typography.SizeCaption (9); 8pt is below the 508 floor.
-# 4. "All steps completed successfully!" removed — completion is a submission,
-#    not a wizard state.
-#
-# ---------------------------------------------------------------------------
-# TWO KNOWN BLOCKERS — unchanged, both still open
-# ---------------------------------------------------------------------------
-# OI-APP-1  (see build/OPEN_ISSUES.md)
-# OI-APP-1  Step 5 cannot deliver three independent document slots. SharePoint
-#           item attachments are ONE unnamed collection with no per-slot
-#           identity, no MIME filter and no size guard. Step 5 ships as a
-#           placeholder stating the three options. Blocks US1 verification.
-# D-2       Step 3's ten dropdowns have no values. _CHOICES.md marks OPM
-#           competencies, technical competencies and ECQs "TBD — Appendix B",
-#           and Constitution I forbids inventing them. Items: =Table() renders
-#           an empty list; fill each in when Appendix B lands.
-
-# ===========================================================================
-# STEPPER — progress indicator (PowerLibs horizontal-stepper)
-# ===========================================================================
 - conStepperAP:
     Control: GroupContainer@1.5.0
     Variant: ManualLayout
@@ -401,7 +327,6 @@
             X: =conStep6Circle.X + conStep6Circle.Width / 2 - 70
             Y: =lblStep1Label.Y
 
-# ---------- Read-only banner (FR-008) ----------
 - lblReadOnlyAP:
     Control: Label@2.5.1
     Properties:
@@ -420,9 +345,6 @@
       X: =24
       Y: =186
 
-# ===========================================================================
-# STEP 1 — Personnel (RQ002, RQ003, RQ004 / RQ105b)
-# ===========================================================================
 - conStep1AP:
     Control: GroupContainer@1.5.0
     Variant: ManualLayout
@@ -451,8 +373,6 @@
             Width: =Parent.Width - 48
             X: =24
             Y: =20
-      # RQ002/RQ003 — read-only when the directory has a record, editable when
-      # it does not. D-1 seam: the directory stands in for HR Links.
       - lblS1SourceAP:
           Control: Label@2.5.1
           Properties:
@@ -483,9 +403,6 @@
             Color: =ColorPalette.TextBody
             Default: |-
               =If(IsBlank(locApp), "", locApp.ApplicantName)
-            # Disabled, NOT View: DisplayMode.View strips a TextInput's border
-            # and fill, so an empty one renders as nothing at all and the step
-            # looks broken. Disabled stays visible and greyed.
             DisplayMode: |-
               =If(Or(locCycle.State.Value <> "Open",
                      And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
@@ -627,8 +544,6 @@
             Width: =536
             X: =360
             Y: =240
-      # R1/R5 — shown so the applicant knows who will review it. Snapshotted
-      # onto the application at submit, not here.
       - lblS1ChainAP:
           Control: Label@2.5.1
           Properties:
@@ -642,9 +557,6 @@
             X: =24
             Y: =300
 
-# ===========================================================================
-# STEP 2 — Program choices (RQ005, FR-004)
-# ===========================================================================
 - conStep2AP:
     Control: GroupContainer@1.5.0
     Variant: ManualLayout
@@ -706,9 +618,6 @@
             FocusedBorderThickness: =1
             Font: =Typography.Family
             Height: =32
-            # <> "Retired", NOT = "Active": PROGRAMS.State is blank on rows
-            # created before the column existed and nothing backfills it, so an
-            # equality test offers the applicant an empty list. See OI-DATA-2.
             Items: |-
               =Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName)
             SelectionColor: =ColorPalette.TextOnDark
@@ -717,7 +626,6 @@
             Width: =300
             X: =24
             Y: =114
-      # Options filtered to the chosen program. ProgramID is indexed.
       - drpOption1AP:
           Control: Classic/DropDown@2.3.1
           Properties:
@@ -737,15 +645,6 @@
             SelectionColor: =ColorPalette.TextOnDark
             SelectionFill: =ColorPalette.Blue600
             Size: =Typography.SizeBody
-            # Hidden when the chosen program has no options — MDP and NEXT
-            # today. IsEmpty(Filter(...)) rather than CountRows(...) = 0:
-            # CountRows does not delegate to SharePoint and would answer from
-            # the first 500 rows only.
-            #
-            # This property is also the single definition of "this program has
-            # options". The submit gate and the review checklist both read
-            # Self.Visible rather than repeating the query, so the rule cannot
-            # drift between the picker and the validation.
             Visible: |-
               =Not(IsEmpty(Filter(PROGRAM_OPTIONS,
                  ProgramID.Id = drpProgram1AP.Selected.ID,
@@ -762,9 +661,6 @@
             Size: =Typography.SizeBody
             Text: ="This program has no options — the program itself is the choice."
             VerticalAlign: =VerticalAlign.Middle
-            # The mirror of the dropdown's Visible: shown exactly when the
-            # dropdown is not, and only once a program has been picked. An
-            # empty gap here reads as something failing to load.
             Visible: |-
               =And(Not(IsBlank(drpProgram1AP.Selected.ID)),
                  Not(drpOption1AP.Visible))
@@ -793,9 +689,6 @@
             FocusedBorderThickness: =1
             Font: =Typography.Family
             Height: =32
-            # <> "Retired", NOT = "Active": PROGRAMS.State is blank on rows
-            # created before the column existed and nothing backfills it, so an
-            # equality test offers the applicant an empty list. See OI-DATA-2.
             Items: |-
               =Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName)
             SelectionColor: =ColorPalette.TextOnDark
@@ -823,15 +716,6 @@
             SelectionColor: =ColorPalette.TextOnDark
             SelectionFill: =ColorPalette.Blue600
             Size: =Typography.SizeBody
-            # Hidden when the chosen program has no options — MDP and NEXT
-            # today. IsEmpty(Filter(...)) rather than CountRows(...) = 0:
-            # CountRows does not delegate to SharePoint and would answer from
-            # the first 500 rows only.
-            #
-            # This property is also the single definition of "this program has
-            # options". The submit gate and the review checklist both read
-            # Self.Visible rather than repeating the query, so the rule cannot
-            # drift between the picker and the validation.
             Visible: |-
               =Not(IsEmpty(Filter(PROGRAM_OPTIONS,
                  ProgramID.Id = drpProgram2AP.Selected.ID,
@@ -848,9 +732,6 @@
             Size: =Typography.SizeBody
             Text: ="This program has no options — the program itself is the choice."
             VerticalAlign: =VerticalAlign.Middle
-            # The mirror of the dropdown's Visible: shown exactly when the
-            # dropdown is not, and only once a program has been picked. An
-            # empty gap here reads as something failing to load.
             Visible: |-
               =And(Not(IsBlank(drpProgram2AP.Selected.ID)),
                  Not(drpOption2AP.Visible))
@@ -879,9 +760,6 @@
             FocusedBorderThickness: =1
             Font: =Typography.Family
             Height: =32
-            # <> "Retired", NOT = "Active": PROGRAMS.State is blank on rows
-            # created before the column existed and nothing backfills it, so an
-            # equality test offers the applicant an empty list. See OI-DATA-2.
             Items: |-
               =Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName)
             SelectionColor: =ColorPalette.TextOnDark
@@ -909,15 +787,6 @@
             SelectionColor: =ColorPalette.TextOnDark
             SelectionFill: =ColorPalette.Blue600
             Size: =Typography.SizeBody
-            # Hidden when the chosen program has no options — MDP and NEXT
-            # today. IsEmpty(Filter(...)) rather than CountRows(...) = 0:
-            # CountRows does not delegate to SharePoint and would answer from
-            # the first 500 rows only.
-            #
-            # This property is also the single definition of "this program has
-            # options". The submit gate and the review checklist both read
-            # Self.Visible rather than repeating the query, so the rule cannot
-            # drift between the picker and the validation.
             Visible: |-
               =Not(IsEmpty(Filter(PROGRAM_OPTIONS,
                  ProgramID.Id = drpProgram3AP.Selected.ID,
@@ -934,16 +803,12 @@
             Size: =Typography.SizeBody
             Text: ="This program has no options — the program itself is the choice."
             VerticalAlign: =VerticalAlign.Middle
-            # The mirror of the dropdown's Visible: shown exactly when the
-            # dropdown is not, and only once a program has been picked. An
-            # empty gap here reads as something failing to load.
             Visible: |-
               =And(Not(IsBlank(drpProgram3AP.Selected.ID)),
                  Not(drpOption3AP.Visible))
             Width: =Parent.Width - 372
             X: =340
             Y: =270
-      # FR-004 — the same option cannot be chosen twice.
       - lblS2DupAP:
           Control: Label@2.5.1
           Properties:
@@ -953,10 +818,6 @@
             Size: =Typography.SizeCaption
             Text: |-
               ="The same choice has been made more than once. Pick a different program, or a different option under the same program."
-            # Compares the PAIR, not the option. HPP may be ranked more than
-            # once with a different option each time; MDP or NEXT twice is
-            # still blocked and needs no special case, because both rows would
-            # be (program, blank) and Coalesce makes those two blanks equal.
             Visible: |-
               =Or(
                 And(Not(IsBlank(drpProgram1AP.Selected.ID)),
@@ -973,9 +834,6 @@
             X: =24
             Y: =318
 
-# ===========================================================================
-# STEP 3 — Competencies and ECQs (RQ006–008, FR-005) — see D-2 blocker
-# ===========================================================================
 - conStep3AP:
     Control: GroupContainer@1.5.0
     Variant: ManualLayout
@@ -1004,9 +862,6 @@
             Width: =Parent.Width - 48
             X: =24
             Y: =20
-      # Constitution I — the value lists do not exist. Items: =Table() is an
-      # empty table, so each dropdown renders with no options until Appendix B
-      # (D-2) arrives and the real lists replace it.
       - lblS3PendingAP:
           Control: Label@2.5.1
           Properties:
@@ -1205,9 +1060,6 @@
             X: =drpEcq3AP.X + drpEcq1AP.Width + 16
             Y: =266
 
-# ===========================================================================
-# STEP 4 — Eligibility and background (Appendix A fields; FR-006a)
-# ===========================================================================
 - conStep4AP:
     Control: GroupContainer@1.5.0
     Variant: ManualLayout
@@ -1264,8 +1116,6 @@
             Width: =300
             X: =24
             Y: =82
-      # FR-006a / OI-8 — a number, deliberately distinct from the appraisal
-      # document attached at step 5. Both are required.
       - lblS4RatingAP:
           Control: Label@2.5.1
           Properties:
@@ -1323,7 +1173,6 @@
             Width: =300
             X: =24
             Y: =152
-      # Conditional — the date only means anything if they attended.
       - lblS4SessionDateAP:
           Control: Label@2.5.1
           Properties:
@@ -1396,9 +1245,6 @@
             X: =360
             Y: =222
 
-# ===========================================================================
-# STEP 5 — Supporting documents (RQ009, FR-006) — OI-APP-1 BLOCKER
-# ===========================================================================
 - conStep5AP:
     Control: GroupContainer@1.5.0
     Variant: ManualLayout
@@ -1461,9 +1307,6 @@
             X: =24
             Y: =294
 
-# ===========================================================================
-# STEP 6 — Review and submit (RQ012, RQ013; FR-009, FR-010)
-# ===========================================================================
 - conStep6AP:
     Control: GroupContainer@1.5.0
     Variant: ManualLayout
@@ -1492,7 +1335,6 @@
             Width: =Parent.Width - 48
             X: =24
             Y: =20
-      # RQ107 / FR-009 — the whole application is validated here, at submission.
       - lblS6HintAP:
           Control: Label@2.5.1
           Properties:
@@ -1504,8 +1346,6 @@
             Width: =Parent.Width - 48
             X: =24
             Y: =50
-      # Each row: status + jump link. These are the ONLY direct jumps in the
-      # wizard (RQ105a).
       - lblS6Check1AP:
           Control: Label@2.5.1
           Properties:
@@ -1664,8 +1504,6 @@
             Width: =120
             X: =Parent.Width - 144
             Y: =182
-      # Not a tick: documents genuinely cannot be validated yet (OI-APP-1).
-      # A green check here would be a lie.
       - lblS6Check5AP:
           Control: Label@2.5.1
           Properties:
@@ -1715,7 +1553,6 @@
             Width: =Parent.Width - 48
             X: =24
             Y: =260
-      # FR-009 — Submit is the ONLY gated action in the wizard.
       - btnSubmitAP:
           Control: Classic/Button@2.2.0
           Properties:
@@ -1836,9 +1673,6 @@
             X: =288
             Y: =324
 
-# ===========================================================================
-# WIZARD CONTROLS — Back / Next / Save Draft
-# ===========================================================================
 - btnBackAP:
     Control: Classic/Button@2.2.0
     Properties:
@@ -1866,7 +1700,6 @@
       X: =24
       Y: =Parent.Height - 60
 
-# Never blocked — see the navigation-model note at the top of this file.
 - btnNextAP:
     Control: Classic/Button@2.2.0
     Properties:
@@ -1892,7 +1725,6 @@
       X: =Parent.Width - 184
       Y: =Parent.Height - 60
 
-# FR-007 — save incomplete work at any step, resume later. No validation here.
 - btnSaveDraftAP:
     Control: Classic/Button@2.2.0
     Properties:

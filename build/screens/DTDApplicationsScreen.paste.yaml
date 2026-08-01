@@ -1,0 +1,2729 @@
+- lblAppTitleDTD:
+    Control: Label@2.5.1
+    Properties:
+      Color: =ColorPalette.TextHeading
+      Font: =Typography.Family
+      FontWeight: =Typography.WeightBold
+      Height: =30
+      Size: =Typography.SizeHeading
+      Text: ="Applications"
+      Width: =400
+      X: =24
+      Y: =18
+
+- lblCycleLabelDTD:
+    Control: Label@2.5.1
+    Properties:
+      Color: =ColorPalette.TextHelp
+      Font: =Typography.Family
+      FontWeight: =Typography.WeightBold
+      Height: =18
+      Size: =Typography.SizeCaption
+      Text: ="CYCLE"
+      Width: =250
+      X: =24
+      Y: =58
+
+- lblStatusLabelDTD:
+    Control: Label@2.5.1
+    Properties:
+      Color: =ColorPalette.TextHelp
+      Font: =Typography.Family
+      FontWeight: =Typography.WeightBold
+      Height: =18
+      Size: =Typography.SizeCaption
+      Text: ="APPLICATION STATUS"
+      Width: =190
+      X: =290
+      Y: =58
+
+- lblStageLabelDTD:
+    Control: Label@2.5.1
+    Properties:
+      Color: =ColorPalette.TextHelp
+      Font: =Typography.Family
+      FontWeight: =Typography.WeightBold
+      Height: =18
+      Size: =Typography.SizeCaption
+      Text: ="REVIEW STAGE"
+      Width: =210
+      X: =496
+      Y: =58
+
+- drpCycleDTD:
+    Control: Classic/DropDown@2.3.1
+    Properties:
+      BorderColor: =ColorPalette.Gray300
+      Color: =ColorPalette.TextBody
+      Default: |-
+        =Coalesce(
+          First(Filter(CYCLES, State.Value = "Open")).CycleName,
+          First(SortByColumns(CYCLES, "OpenDate", SortOrder.Descending)).CycleName)
+      Fill: =ColorPalette.White
+      Font: =Typography.Family
+      Height: =32
+      Items: |-
+        =ForAll(SortByColumns(CYCLES, "OpenDate", SortOrder.Descending), CycleName)
+      OnChange: |-
+        =UpdateContext({
+          locCycle: LookUp(CYCLES, CycleName = drpCycleDTD.Selected.Value),
+          locApp: Blank(),
+          locEditApp: false,
+          locCompsDirty: false,
+          locChoicesDirty: false
+        })
+      Size: =Typography.SizeBody
+      TabIndex: =1
+      Width: =250
+      X: =24
+      Y: =78
+
+- drpStatusDTD:
+    Control: Classic/DropDown@2.3.1
+    Properties:
+      BorderColor: =ColorPalette.Gray300
+      Color: =ColorPalette.TextBody
+      Default: ="All statuses"
+      Fill: =ColorPalette.White
+      Font: =Typography.Family
+      Height: =32
+      Items: |-
+        =["All statuses", "Draft", "Submitted", "Validated", "Withdrawn"]
+      OnChange: |-
+        =UpdateContext({ locApp: Blank(), locEditApp: false, locClearWarn: false, locCompsDirty: false, locChoicesDirty: false })
+      Size: =Typography.SizeBody
+      TabIndex: =2
+      Width: =190
+      X: =290
+      Y: =78
+
+- drpStageDTD:
+    Control: Classic/DropDown@2.3.1
+    Properties:
+      BorderColor: =ColorPalette.Gray300
+      Color: =ColorPalette.TextBody
+      Default: ="All stages"
+      Fill: =ColorPalette.White
+      Font: =Typography.Family
+      Height: =32
+      Items: |-
+        =["All stages", "Pending First-Line", "Needs Supervisor Assigned",
+          "Pending Second-Line", "Pending DTD Validation", "Committee Review",
+          "Pending Placement", "Pending Notification", "Complete"]
+      OnChange: |-
+        =UpdateContext({ locApp: Blank(), locEditApp: false, locClearWarn: false, locCompsDirty: false, locChoicesDirty: false })
+      Size: =Typography.SizeBody
+      TabIndex: =3
+      Width: =210
+      X: =496
+      Y: =78
+
+- lblOutcomeLabelDTD:
+    Control: Label@2.5.1
+    Properties:
+      Color: =ColorPalette.TextHelp
+      Font: =Typography.Family
+      FontWeight: =Typography.WeightBold
+      Height: =18
+      Size: =Typography.SizeCaption
+      Text: ="PLACEMENT OUTCOME"
+      Width: =200
+      X: =722
+      Y: =58
+
+- drpOutcomeDTD:
+    Control: Classic/DropDown@2.3.1
+    Properties:
+      BorderColor: =ColorPalette.Gray300
+      Color: =ColorPalette.TextBody
+      Default: ="All outcomes"
+      Fill: =ColorPalette.White
+      Font: =Typography.Family
+      Height: =32
+      Items: |-
+        =["All outcomes", "Decision Pending", "Placed", "Not Selected", "Placement Declined"]
+      OnChange: |-
+        =UpdateContext({ locApp: Blank(), locEditApp: false, locClearWarn: false, locCompsDirty: false, locChoicesDirty: false })
+      Size: =Typography.SizeBody
+      TabIndex: =4
+      Width: =200
+      X: =722
+      Y: =78
+
+- lblCountDTD:
+    Control: Label@2.5.1
+    Properties:
+      Align: =Align.Right
+      Color: =ColorPalette.TextHelp
+      Font: =Typography.Family
+      Height: =32
+      Size: =Typography.SizeBody
+      Text: |-
+        =CountRows(galApplicationsDTD.AllItems) &
+         If(CountRows(galApplicationsDTD.AllItems) = 1, " applicant", " applicants")
+      Width: =180
+      X: =Parent.Width - 204
+      Y: =78
+
+- conHeadDTD:
+    Control: GroupContainer@1.5.0
+    Variant: AutoLayout
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =ColorPalette.Gray25
+      Height: =36
+      LayoutAlignItems: =LayoutAlignItems.Center
+      LayoutDirection: =LayoutDirection.Horizontal
+      PaddingLeft: =16
+      PaddingRight: =16
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =126
+    Children:
+      - btnHeadNameDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =2
+            FocusedBorderThickness: =0
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverBorderColor: =RGBA(0, 0, 0, 0)
+            HoverColor: =ColorPalette.Blue600
+            HoverFill: =ColorPalette.Gray50
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locAppAsc: If(locAppSort = "ApplicantName", Not(locAppAsc), true),
+                locAppSort: "ApplicantName"
+              })
+            PressedBorderColor: =RGBA(0, 0, 0, 0)
+            PressedColor: =ColorPalette.Blue700
+            PressedFill: =ColorPalette.Gray200
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Applicant" & If(locAppSort = "ApplicantName", If(locAppAsc, "  ▲", "  ▼"), "")
+      - btnHeadStatusDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =1
+            FocusedBorderThickness: =0
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverBorderColor: =RGBA(0, 0, 0, 0)
+            HoverColor: =ColorPalette.Blue600
+            HoverFill: =ColorPalette.Gray50
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locAppAsc: If(locAppSort = "ApplicationStatus", Not(locAppAsc), true),
+                locAppSort: "ApplicationStatus"
+              })
+            PressedBorderColor: =RGBA(0, 0, 0, 0)
+            PressedColor: =ColorPalette.Blue700
+            PressedFill: =ColorPalette.Gray200
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Application status" & If(locAppSort = "ApplicationStatus", If(locAppAsc, "  ▲", "  ▼"), "")
+      - btnHeadStageDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =1.4
+            FocusedBorderThickness: =0
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverBorderColor: =RGBA(0, 0, 0, 0)
+            HoverColor: =ColorPalette.Blue600
+            HoverFill: =ColorPalette.Gray50
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locAppAsc: If(locAppSort = "ReviewStage", Not(locAppAsc), true),
+                locAppSort: "ReviewStage"
+              })
+            PressedBorderColor: =RGBA(0, 0, 0, 0)
+            PressedColor: =ColorPalette.Blue700
+            PressedFill: =ColorPalette.Gray200
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Review stage" & If(locAppSort = "ReviewStage", If(locAppAsc, "  ▲", "  ▼"), "")
+      - btnHeadPlacementDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =1
+            FocusedBorderThickness: =0
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverBorderColor: =RGBA(0, 0, 0, 0)
+            HoverColor: =ColorPalette.Blue600
+            HoverFill: =ColorPalette.Gray50
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locAppAsc: If(locAppSort = "PlacementOutcome", Not(locAppAsc), true),
+                locAppSort: "PlacementOutcome"
+              })
+            PressedBorderColor: =RGBA(0, 0, 0, 0)
+            PressedColor: =ColorPalette.Blue700
+            PressedFill: =ColorPalette.Gray200
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Placement outcome" & If(locAppSort = "PlacementOutcome", If(locAppAsc, "  ▲", "  ▼"), "")
+      - lblHeadScoredDTD:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Left
+            Color: =ColorPalette.TextHeading
+            FillPortions: =1.1
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            LayoutMinWidth: =0
+            Size: =Typography.SizeCaption
+            Text: ="Programs scored"
+- galApplicationsDTD:
+    Control: Gallery@2.15.0
+    Variant: Vertical
+    Properties:
+      BorderColor: =ColorPalette.Gray200
+      Height: =190
+      Items: |-
+        =Sort(
+          If(
+            And(drpStatusDTD.Selected.Value = "All statuses", drpStageDTD.Selected.Value = "All stages", drpOutcomeDTD.Selected.Value = "All outcomes"),
+               Filter(APPLICATIONS, CycleID.Id = locCycle.ID),
+
+            And(drpStatusDTD.Selected.Value = "All statuses", drpStageDTD.Selected.Value = "All stages"),
+               Filter(APPLICATIONS, CycleID.Id = locCycle.ID,
+               PlacementOutcome.Value = drpOutcomeDTD.Selected.Value),
+
+            And(drpStatusDTD.Selected.Value = "All statuses", drpOutcomeDTD.Selected.Value = "All outcomes"),
+               Filter(APPLICATIONS, CycleID.Id = locCycle.ID,
+               ReviewStage.Value = drpStageDTD.Selected.Value),
+
+            And(drpStageDTD.Selected.Value = "All stages", drpOutcomeDTD.Selected.Value = "All outcomes"),
+               Filter(APPLICATIONS, CycleID.Id = locCycle.ID,
+               ApplicationStatus.Value = drpStatusDTD.Selected.Value),
+
+            drpStatusDTD.Selected.Value = "All statuses",
+               Filter(APPLICATIONS, CycleID.Id = locCycle.ID,
+               ReviewStage.Value = drpStageDTD.Selected.Value,
+               PlacementOutcome.Value = drpOutcomeDTD.Selected.Value),
+
+            drpStageDTD.Selected.Value = "All stages",
+               Filter(APPLICATIONS, CycleID.Id = locCycle.ID,
+               ApplicationStatus.Value = drpStatusDTD.Selected.Value,
+               PlacementOutcome.Value = drpOutcomeDTD.Selected.Value),
+
+            drpOutcomeDTD.Selected.Value = "All outcomes",
+               Filter(APPLICATIONS, CycleID.Id = locCycle.ID,
+               ApplicationStatus.Value = drpStatusDTD.Selected.Value,
+               ReviewStage.Value = drpStageDTD.Selected.Value),
+
+            Filter(APPLICATIONS, CycleID.Id = locCycle.ID,
+               ApplicationStatus.Value = drpStatusDTD.Selected.Value,
+               ReviewStage.Value = drpStageDTD.Selected.Value,
+               PlacementOutcome.Value = drpOutcomeDTD.Selected.Value)),
+          Switch(locAppSort,
+            "ApplicationStatus", ApplicationStatus.Value,
+            "ReviewStage",       ReviewStage.Value,
+            "PlacementOutcome",  PlacementOutcome.Value,
+            ApplicantName),
+          If(locAppAsc, SortOrder.Ascending, SortOrder.Descending))
+      ShowScrollbar: =true
+      TemplatePadding: =0
+      TemplateSize: =48
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =162
+    Children:
+      - conRowDTD:
+          Control: GroupContainer@1.5.0
+          Variant: AutoLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: |-
+              =If(And(Not(IsBlank(locApp)), ThisItem.ID = locApp.ID),
+                 ColorPalette.Blue50, ColorPalette.White)
+            Height: =Parent.TemplateHeight
+            LayoutAlignItems: =LayoutAlignItems.Center
+            LayoutDirection: =LayoutDirection.Horizontal
+            PaddingLeft: =16
+            PaddingRight: =16
+            Width: =Parent.TemplateWidth
+          Children:
+            - lblRowNameDTD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  FillPortions: =2
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.ApplicantName
+            - lblRowStatusDTD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =Switch(ThisItem.ApplicationStatus.Value,
+                       "Draft", ColorPalette.Blue700,
+                       "Submitted", ColorPalette.WarningText,
+                       "Validated", ColorPalette.SuccessText,
+                       "Withdrawn", ColorPalette.TextHelp,
+                       ColorPalette.TextHelp)
+                  FillPortions: =1
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeCaption
+                  Text: =ThisItem.ApplicationStatus.Value
+            - lblRowStageDTD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =Switch(ThisItem.ReviewStage.Value,
+                       "Pending First-Line", ColorPalette.WarningText,
+                       "Pending Second-Line", ColorPalette.WarningText,
+                       "Needs Supervisor Assigned", ColorPalette.DangerText,
+                       "Pending DTD Validation", ColorPalette.Blue700,
+                       "Committee Review", ColorPalette.Navy700,
+                       "Pending Placement", ColorPalette.Blue600,
+                       "Pending Notification", ColorPalette.DangerText,
+                       "Complete", ColorPalette.SuccessText,
+                       ColorPalette.TextHelp)
+                  FillPortions: =1.4
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeCaption
+                  Text: |-
+                    =If(IsBlank(ThisItem.ReviewStage.Value), "—",
+                       ThisItem.ReviewStage.Value)
+            - lblRowPlacementDTD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =Switch(ThisItem.PlacementOutcome.Value,
+                       "Placed", ColorPalette.SuccessText,
+                       "Not Selected", ColorPalette.WarningText,
+                       "Placement Declined", ColorPalette.TextHelp,
+                       ColorPalette.TextHelp)
+                  FillPortions: =1
+                  Font: =Typography.Family
+                  FontWeight: |-
+                    =If(Or(IsBlank(ThisItem.PlacementOutcome.Value),
+                           ThisItem.PlacementOutcome.Value = "Decision Pending"),
+                       Typography.WeightRegular, Typography.WeightMedium)
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeCaption
+                  Text: |-
+                    =If(Or(IsBlank(ThisItem.PlacementOutcome.Value),
+                           ThisItem.PlacementOutcome.Value = "Decision Pending"),
+                       "—", ThisItem.PlacementOutcome.Value)
+            - lblRowScoredDTD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =If(
+                      And(CountRows(Distinct(Filter(APPLICATION_PROGRAM_CHOICES,
+                            ApplicationID.Id = ThisItem.ID), ProgramID.Id)) > 0,
+                          CountRows(Filter(COMMITTEE_SCORES,
+                            ApplicationID.Id = ThisItem.ID)) =
+                          CountRows(Distinct(Filter(APPLICATION_PROGRAM_CHOICES,
+                            ApplicationID.Id = ThisItem.ID), ProgramID.Id))),
+                      ColorPalette.SuccessText, ColorPalette.TextHelp)
+                  FillPortions: =1.1
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =CountRows(Filter(COMMITTEE_SCORES,
+                       ApplicationID.Id = ThisItem.ID)) & " / " &
+                     CountRows(Distinct(Filter(APPLICATION_PROGRAM_CHOICES,
+                       ApplicationID.Id = ThisItem.ID), ProgramID.Id))
+      - btnRowSelectDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =RGBA(0, 0, 0, 0)
+            Fill: =RGBA(0, 0, 0, 0)
+            FocusedBorderThickness: =0
+            Height: =Parent.TemplateHeight
+            HoverColor: =RGBA(0, 0, 0, 0)
+            HoverFill: =RGBA(0, 0, 0, 0.04)
+            OnSelect: |-
+              =UpdateContext({
+                locApp: ThisItem, locEditApp: false, locClearWarn: false,
+                locCompsDirty: false, locChoicesDirty: false,
+                locCompTypeDTD:
+                  First(SortByColumns(
+                    Filter(COMPETENCY_TYPES, State.Value = "Active"),
+                    "SortOrder", SortOrder.Ascending)).ID
+              })
+            PressedColor: =RGBA(0, 0, 0, 0)
+            PressedFill: =RGBA(0, 0, 0, 0.08)
+            Text: |-
+              ="Select " & ThisItem.ApplicantName
+            Tooltip: ="Select this application"
+            Width: =Parent.TemplateWidth
+            X: =0
+            Y: =0
+      - recRowLineDTD:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.Gray200
+            Height: =1
+            Width: =Parent.TemplateWidth
+            Y: =Parent.TemplateHeight - 1
+
+- lblEmptyDTD:
+    Control: Label@2.5.1
+    Properties:
+      Align: =Align.Center
+      Color: =ColorPalette.TextHelp
+      Font: =Typography.Family
+      Height: =40
+      Size: =Typography.SizeBody
+      Text: |-
+        =If(
+          And(drpStatusDTD.Selected.Value = "All statuses",
+              drpStageDTD.Selected.Value = "All stages",
+              drpOutcomeDTD.Selected.Value = "All outcomes"),
+          "No applications in this cycle yet.",
+          "No applications match these filters.")
+      Visible: =CountRows(galApplicationsDTD.AllItems) = 0
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =216
+
+- conDetailDTD:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =Max(300, Parent.Height - 388)
+      RadiusBottomLeft: =10
+      RadiusBottomRight: =10
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =364
+    Children:
+      - conDetailHeaderDTD:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =ColorPalette.Navy850
+            Height: =52
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =10
+            RadiusTopRight: =10
+            Visible: =Not(IsBlank(locApp))
+            Width: =Parent.Width
+            X: =0
+            Y: =0
+      - lblDetailEmptyDTD:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =40
+            Size: =Typography.SizeBody
+            Text: ="Select an application above to see its full detail."
+            Visible: =IsBlank(locApp)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =Parent.Height / 2 - 20
+
+      - lblDetailNameDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextOnDark
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =24
+            Size: =Typography.SizeHeading
+            Text: =locApp.ApplicantName
+            Visible: =Not(IsBlank(locApp))
+            Width: =Parent.Width - 560
+            X: =24
+            Y: =5
+      - lblDetailEmailDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.Blue50
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeBody
+            Text: =locApp.ApplicantEmail
+            Visible: =Not(IsBlank(locApp))
+            Width: =Parent.Width - 560
+            X: =24
+            Y: =28
+      - btnDetailStatusBadgeDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =Self.Color
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: |-
+              =Switch(locApp.ApplicationStatus.Value,
+                 "Draft", ColorPalette.Blue700,
+                 "Submitted", ColorPalette.WarningText,
+                 "Validated", ColorPalette.SuccessText,
+                 "Withdrawn", ColorPalette.TextHelp,
+                 ColorPalette.TextHelp)
+            DisplayMode: =DisplayMode.View
+            Fill: |-
+              =Switch(Self.Color,
+                 ColorPalette.WarningText, ColorPalette.WarningLight,
+                 ColorPalette.DangerText,  ColorPalette.DangerLight,
+                 ColorPalette.SuccessText, ColorPalette.SuccessLight,
+                 ColorPalette.TextHelp,    ColorPalette.Gray50,
+                 ColorPalette.Blue50)
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =24
+            RadiusBottomLeft: =3
+            RadiusBottomRight: =3
+            RadiusTopLeft: =3
+            RadiusTopRight: =3
+            Size: =Typography.SizeCaption
+            Text: =locApp.ApplicationStatus.Value
+            Visible: =Not(IsBlank(locApp))
+            Width: =Len(Self.Text) * 5.6 + 26
+            X: |-
+              =If(btnDetailStageBadgeDTD.Visible,
+                 btnDetailStageBadgeDTD.X - 8,
+                 If(btnDetailOutcomeBadgeDTD.Visible,
+                    btnDetailOutcomeBadgeDTD.X - 8,
+                    Parent.Width - 24)) - Self.Width
+            Y: =14
+      - btnDetailStageBadgeDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =Self.Color
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: |-
+              =Switch(locApp.ReviewStage.Value,
+                 "Pending First-Line", ColorPalette.WarningText,
+                 "Pending Second-Line", ColorPalette.WarningText,
+                 "Needs Supervisor Assigned", ColorPalette.DangerText,
+                 "Pending DTD Validation", ColorPalette.Blue700,
+                 "Committee Review", ColorPalette.Navy700,
+                 "Pending Placement", ColorPalette.Blue600,
+                 "Pending Notification", ColorPalette.DangerText,
+                 "Complete", ColorPalette.SuccessText,
+                 ColorPalette.TextHelp)
+            DisplayMode: =DisplayMode.View
+            Fill: |-
+              =Switch(Self.Color,
+                 ColorPalette.WarningText, ColorPalette.WarningLight,
+                 ColorPalette.DangerText,  ColorPalette.DangerLight,
+                 ColorPalette.SuccessText, ColorPalette.SuccessLight,
+                 ColorPalette.TextHelp,    ColorPalette.Gray50,
+                 ColorPalette.Blue50)
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =24
+            RadiusBottomLeft: =3
+            RadiusBottomRight: =3
+            RadiusTopLeft: =3
+            RadiusTopRight: =3
+            Size: =Typography.SizeCaption
+            Text: =locApp.ReviewStage.Value
+            Visible: |-
+              =And(Not(IsBlank(locApp)), Not(IsBlank(locApp.ReviewStage.Value)))
+            Width: =Len(Self.Text) * 5.6 + 26
+            X: |-
+              =If(btnDetailOutcomeBadgeDTD.Visible,
+                 btnDetailOutcomeBadgeDTD.X - 8,
+                 Parent.Width - 24) - Self.Width
+            Y: =14
+      - btnDetailOutcomeBadgeDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =Self.Color
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: |-
+              =Switch(locApp.PlacementOutcome.Value,
+                 "Placed", ColorPalette.SuccessText,
+                 "Not Selected", ColorPalette.WarningText,
+                 "Placement Declined", ColorPalette.TextHelp,
+                 ColorPalette.TextHelp)
+            DisplayMode: =DisplayMode.View
+            Fill: |-
+              =Switch(Self.Color,
+                 ColorPalette.WarningText, ColorPalette.WarningLight,
+                 ColorPalette.DangerText,  ColorPalette.DangerLight,
+                 ColorPalette.SuccessText, ColorPalette.SuccessLight,
+                 ColorPalette.TextHelp,    ColorPalette.Gray50,
+                 ColorPalette.Blue50)
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =24
+            RadiusBottomLeft: =3
+            RadiusBottomRight: =3
+            RadiusTopLeft: =3
+            RadiusTopRight: =3
+            Size: =Typography.SizeCaption
+            Text: =locApp.PlacementOutcome.Value
+            Visible: |-
+              =And(Not(IsBlank(locApp)),
+                 Not(IsBlank(locApp.PlacementOutcome.Value)),
+                 locApp.PlacementOutcome.Value <> "Decision Pending")
+            Width: =Len(Self.Text) * 5.6 + 26
+            X: =Parent.Width - 24 - Self.Width
+            Y: =14
+
+      - btnValidateDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: |-
+              =If(locApp.ApplicationStatus.Value = "Validated",
+                 ColorPalette.Gray300, ColorPalette.Blue600)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: |-
+              =If(locApp.ApplicationStatus.Value = "Validated", 1, 0)
+            Color: |-
+              =If(locApp.ApplicationStatus.Value = "Validated",
+                 ColorPalette.TextBody, ColorPalette.TextOnDark)
+            DisplayMode: |-
+              =If(locApp.ApplicationStatus.Value = "Draft",
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: |-
+              =If(locApp.ApplicationStatus.Value = "Validated",
+                 ColorPalette.White, ColorPalette.Blue600)
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            HoverColor: =Self.Color
+            HoverFill: |-
+              =If(locApp.ApplicationStatus.Value = "Validated",
+                 ColorPalette.Gray50, ColorPalette.Blue700)
+            OnSelect: |-
+              =UpdateContext({
+                locClearWarn: locApp.ApplicationStatus.Value = "Validated",
+                locApp: If(locApp.ApplicationStatus.Value = "Validated",
+                  locApp,
+                  Patch(APPLICATIONS,
+                    LookUp(APPLICATIONS, ID = locApp.ID),
+                    { ApplicationStatus: { Value: "Validated" } }))
+              });
+              If(Not(locClearWarn),
+                 Notify("Application validated.", NotificationType.Success))
+            PressedColor: =Self.Color
+            PressedFill: |-
+              =If(locApp.ApplicationStatus.Value = "Validated",
+                 ColorPalette.White, ColorPalette.Blue700)
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            TabIndex: =7
+            Text: |-
+              =If(locApp.ApplicationStatus.Value = "Validated",
+                 "Clear validation", "Validate application")
+            Tooltip: |-
+              =If(locApp.ApplicationStatus.Value = "Draft",
+                 "A draft has not been submitted — there is nothing to validate",
+                 If(locApp.ApplicationStatus.Value = "Validated",
+                    "Send this back to Submitted so it waits on DTD again",
+                    "Mark this application as reviewed and accepted"))
+            Visible: |-
+              =And(Not(IsBlank(locApp)),
+                 locApp.ApplicationStatus.Value <> "Withdrawn",
+                 Not(locEditApp))
+            Width: =210
+            X: =Parent.Width - 234
+            Y: =60
+
+      - btnEditToggleDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            DisplayMode: |-
+              =If(locApp.ApplicationStatus.Value = "Draft",
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =UpdateContext({ locEditApp: Not(locEditApp), locCompsDirty: false, locChoicesDirty: false });
+              ClearCollect(colComps,
+                ForAll(
+                  Filter(APPLICATION_COMPETENCIES,
+                    ApplicationID.Id = locApp.ID) As ac,
+                  {
+                    CompId: ac.CompetencyID.Id,
+                    CompName: ac.CompetencyID.Value,
+                    TypeId:
+                      LookUp(COMPETENCIES, ID = ac.CompetencyID.Id).CompetencyTypeID.Id,
+                    TypeName:
+                      LookUp(COMPETENCIES, ID = ac.CompetencyID.Id).CompetencyTypeID.Value,
+                    TypeOrder:
+                      LookUp(COMPETENCY_TYPES,
+                        ID = LookUp(COMPETENCIES,
+                               ID = ac.CompetencyID.Id).CompetencyTypeID.Id
+                      ).SortOrder
+                  }));
+              UpdateContext({
+                locCompTypeDTD:
+                  Coalesce(locCompTypeDTD,
+                    First(SortByColumns(
+                      Filter(COMPETENCY_TYPES, State.Value = "Active"),
+                      "SortOrder", SortOrder.Ascending)).ID)
+              });
+              Reset(drpAddCompDTD);
+              Reset(txtPersNameDTD); Reset(txtPersLocationDTD); Reset(txtPersTitleDTD);
+              Reset(txtPersGradeDTD); Reset(txtPersSeriesDTD);
+              Reset(txtPersSup1DTD); Reset(txtPersSup2DTD);
+              Reset(dtpPersStartDTD); Reset(dtpPersScdDTD);
+              Reset(drpEditPrg1DTD); Reset(drpEditOpt1DTD);
+              Reset(drpEditPrg2DTD); Reset(drpEditOpt2DTD);
+              Reset(drpEditPrg3DTD); Reset(drpEditOpt3DTD);
+              Reset(txtEligRatingDTD); Reset(drpEligIdpDTD);
+              Reset(drpEligSessionDTD); Reset(dtpEligDateDTD)
+            PressedColor: =Self.Color
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            TabIndex: =5
+            Text: |-
+              =If(locEditApp, "Cancel", "Edit")
+            Tooltip: |-
+              =If(locApp.ApplicationStatus.Value = "Draft",
+                 "A draft is still the applicant's to change",
+                 If(locEditApp, "Discard changes",
+                    "Edit the personnel details"))
+            Visible: |-
+              =And(Not(IsBlank(locApp)),
+                 locApp.ApplicationStatus.Value <> "Withdrawn")
+            Width: =100
+            X: |-
+              =If(locEditApp, Parent.Width - 232, Parent.Width - 342)
+            Y: =60
+
+      - btnSaveAppDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            Fill: =ColorPalette.Blue600
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            DisplayMode: |-
+              =If(
+                Or(And(Not(IsBlank(drpEditPrg1DTD.Selected.Value)), drpEditOpt1DTD.Visible,
+                       IsBlank(drpEditOpt1DTD.Selected.Value)),
+                   And(Not(IsBlank(drpEditPrg2DTD.Selected.Value)), drpEditOpt2DTD.Visible,
+                       IsBlank(drpEditOpt2DTD.Selected.Value)),
+                   And(Not(IsBlank(drpEditPrg3DTD.Selected.Value)), drpEditOpt3DTD.Visible,
+                       IsBlank(drpEditOpt3DTD.Selected.Value)),
+                   And(Not(IsBlank(drpEditPrg1DTD.Selected.Value)),
+                       drpEditPrg1DTD.Selected.Value = drpEditPrg2DTD.Selected.Value,
+                       Coalesce(drpEditOpt1DTD.Selected.Value, "") =
+                         Coalesce(drpEditOpt2DTD.Selected.Value, "")),
+                   And(Not(IsBlank(drpEditPrg1DTD.Selected.Value)),
+                       drpEditPrg1DTD.Selected.Value = drpEditPrg3DTD.Selected.Value,
+                       Coalesce(drpEditOpt1DTD.Selected.Value, "") =
+                         Coalesce(drpEditOpt3DTD.Selected.Value, "")),
+                   And(Not(IsBlank(drpEditPrg2DTD.Selected.Value)),
+                       drpEditPrg2DTD.Selected.Value = drpEditPrg3DTD.Selected.Value,
+                       Coalesce(drpEditOpt2DTD.Selected.Value, "") =
+                         Coalesce(drpEditOpt3DTD.Selected.Value, ""))),
+                DisplayMode.Disabled, DisplayMode.Edit)
+            Font: =Typography.Family
+            Height: =32
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.Blue700
+            OnSelect: |-
+              =UpdateContext({
+                locApp: Patch(APPLICATIONS,
+                  LookUp(APPLICATIONS, ID = locApp.ID),
+                  {
+                    ApplicantName: If(txtPersNameDTD.Text = "—", Blank(), txtPersNameDTD.Text),
+                    Location: If(txtPersLocationDTD.Text = "—", Blank(), txtPersLocationDTD.Text),
+                    JobTitle: If(txtPersTitleDTD.Text = "—", Blank(), txtPersTitleDTD.Text),
+                    Grade: If(txtPersGradeDTD.Text = "—", Blank(), txtPersGradeDTD.Text),
+                    JobSeries: If(txtPersSeriesDTD.Text = "—", Blank(), txtPersSeriesDTD.Text),
+                    NCUAStartDate: dtpPersStartDTD.SelectedDate,
+                    ServiceComputationDate: dtpPersScdDTD.SelectedDate,
+                    FirstLineSupervisorEmail: If(txtPersSup1DTD.Text = "—", Blank(), txtPersSup1DTD.Text),
+                    SecondLineSupervisorEmail: If(txtPersSup2DTD.Text = "—", Blank(), txtPersSup2DTD.Text),
+                    // Eligibility. A choice is patched as { Value: "..." } and
+                    // the record form comes FIRST in the If — putting Blank()
+                    // first makes Power Fx infer the branch type from it.
+                    ListedOnIDP:
+                      If(Not(IsBlank(drpEligIdpDTD.Selected.Value)),
+                        { Value: drpEligIdpDTD.Selected.Value }, Blank()),
+                    AttendedInfoSession:
+                      If(Not(IsBlank(drpEligSessionDTD.Selected.Value)),
+                        { Value: drpEligSessionDTD.Selected.Value }, Blank()),
+                    LatestPerformanceRating:
+                      If(txtEligRatingDTD.Text = "—", Blank(),
+                        Value(txtEligRatingDTD.Text)),
+                    InfoSessionDate: dtpEligDateDTD.SelectedDate
+                  }),
+                locEditApp: false
+              });
+              // GUARDED, not diffed. Rank is positional, so a diff would have
+              // to match on the (program, option, rank) triple and rewrite any
+              // row whose rank moved — more failure surface than the
+              // delete-and-rewrite it replaces.
+              //
+              // The write failure that cost the competencies cannot happen on
+              // this list: New-LdpSharePointLists.ps1 made its Title optional
+              // when it created it. The remaining risk was an unrelated save
+              // rewriting choices from dropdowns that had failed to default,
+              // and locChoicesDirty closes that — the flag is raised only by
+              // the six dropdowns' OnChange.
+              If(locChoicesDirty,
+                Remove(APPLICATION_PROGRAM_CHOICES,
+                  Filter(APPLICATION_PROGRAM_CHOICES, ApplicationID.Id = locApp.ID)));
+              If(locChoicesDirty,
+                ForAll(
+                  Filter(
+                    Table(
+                    { PrgId: LookUp(PROGRAMS, ProgramName = drpEditPrg1DTD.Selected.Value).ID,
+                      PrgName: drpEditPrg1DTD.Selected.Value,
+                      OptId: LookUp(PROGRAM_OPTIONS,
+                        And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg1DTD.Selected.Value).ID,
+                            OptionName = drpEditOpt1DTD.Selected.Value)).ID,
+                      OptName: drpEditOpt1DTD.Selected.Value, Rnk: 1 },
+                    { PrgId: LookUp(PROGRAMS, ProgramName = drpEditPrg2DTD.Selected.Value).ID,
+                      PrgName: drpEditPrg2DTD.Selected.Value,
+                      OptId: LookUp(PROGRAM_OPTIONS,
+                        And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg2DTD.Selected.Value).ID,
+                            OptionName = drpEditOpt2DTD.Selected.Value)).ID,
+                      OptName: drpEditOpt2DTD.Selected.Value, Rnk: 2 },
+                    { PrgId: LookUp(PROGRAMS, ProgramName = drpEditPrg3DTD.Selected.Value).ID,
+                      PrgName: drpEditPrg3DTD.Selected.Value,
+                      OptId: LookUp(PROGRAM_OPTIONS,
+                        And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg3DTD.Selected.Value).ID,
+                            OptionName = drpEditOpt3DTD.Selected.Value)).ID,
+                      OptName: drpEditOpt3DTD.Selected.Value, Rnk: 3 }
+                  ),
+                    Not(IsBlank(PrgId))
+                  ) As ch,
+                  Patch(APPLICATION_PROGRAM_CHOICES, Defaults(APPLICATION_PROGRAM_CHOICES),
+                  {
+                    ApplicationID: {
+                      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                      Id: locApp.ID,
+                      Value: locApp.ApplicantEmail
+                    },
+                    ProgramID: {
+                      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                      Id: ch.PrgId,
+                      Value: ch.PrgName
+                    },
+                    ProgramOptionID:
+                      If(Not(IsBlank(ch.OptId)),
+                        {
+                          '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                          Id: ch.OptId,
+                          Value: ch.OptName
+                        },
+                        Blank()),
+                    Rank: ch.Rnk
+                  })
+              ));
+              // GUARDED. This block deletes every competency row for the
+              // application and rewrites it from colComps, so an empty or
+              // stale colComps destroys the lot. colComps is built only by the
+              // Edit toggle, which means a Personnel-only edit used to rewrite
+              // competencies as a side effect — and did, losing them.
+              //
+              // locCompsDirty is set only by Add and Remove on the Competencies
+              // tab. Deliberately removing every competency still saves,
+              // because that sets the flag; not touching the tab now leaves the
+              // list alone entirely.
+              //
+              // Two separate If()s rather than If(cond, A; B): semicolons
+              // inside an If branch are the shape that parses inconsistently.
+              // ADD FIRST, THEN REMOVE — never the other way round. Deleting
+              // and rewriting means any failed write loses the whole set, which
+              // is exactly what a required Title column did here: every Patch
+              // failed validation after the Remove had already run.
+              //
+              // In this order a failed write costs the additions and nothing
+              // else. The removal is correct either way, because it deletes
+              // only what is genuinely absent from the working copy.
+              //
+              // colCompsWas is the stored set snapshotted BEFORE any write, so
+              // "already there" is judged against what was on the server when
+              // Save started, not against what this handler has since added.
+              If(locCompsDirty,
+                ClearCollect(colCompsWas,
+                  ForAll(
+                    Filter(APPLICATION_COMPETENCIES,
+                      ApplicationID.Id = locApp.ID) As sv,
+                    { CompId: sv.CompetencyID.Id })));
+              If(locCompsDirty,
+                ForAll(
+                  Filter(colComps, Not(CompId in colCompsWas.CompId)) As cc,
+                  Patch(APPLICATION_COMPETENCIES, Defaults(APPLICATION_COMPETENCIES),
+                  {
+                    ApplicationID: {
+                      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                      Id: locApp.ID,
+                      Value: locApp.ApplicantEmail
+                    },
+                    CompetencyID: {
+                      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                      Id: cc.CompId,
+                      Value: cc.CompName
+                    }
+                  })));
+              If(locCompsDirty,
+                Remove(APPLICATION_COMPETENCIES,
+                  Filter(APPLICATION_COMPETENCIES,
+                    ApplicationID.Id = locApp.ID,
+                    Not(CompetencyID.Id in colComps.CompId))));
+              ClearCollect(colComps,
+                ForAll(
+                  Filter(APPLICATION_COMPETENCIES,
+                    ApplicationID.Id = locApp.ID) As ac,
+                  {
+                    CompId: ac.CompetencyID.Id,
+                    CompName: ac.CompetencyID.Value,
+                    TypeId:
+                      LookUp(COMPETENCIES, ID = ac.CompetencyID.Id).CompetencyTypeID.Id,
+                    TypeName:
+                      LookUp(COMPETENCIES, ID = ac.CompetencyID.Id).CompetencyTypeID.Value,
+                    TypeOrder:
+                      LookUp(COMPETENCY_TYPES,
+                        ID = LookUp(COMPETENCIES,
+                               ID = ac.CompetencyID.Id).CompetencyTypeID.Id
+                      ).SortOrder
+                  }));
+              UpdateContext({
+                locCompsDirty: false,
+                locChoicesDirty: false,
+                locCompTypeDTD:
+                  Coalesce(locCompTypeDTD,
+                    First(SortByColumns(
+                      Filter(COMPETENCY_TYPES, State.Value = "Active"),
+                      "SortOrder", SortOrder.Ascending)).ID)
+              });
+              Reset(drpAddCompDTD);
+              Reset(txtPersNameDTD); Reset(txtPersLocationDTD); Reset(txtPersTitleDTD);
+              Reset(txtPersGradeDTD); Reset(txtPersSeriesDTD);
+              Reset(txtPersSup1DTD); Reset(txtPersSup2DTD);
+              Reset(dtpPersStartDTD); Reset(dtpPersScdDTD);
+              Reset(drpEditPrg1DTD); Reset(drpEditOpt1DTD);
+              Reset(drpEditPrg2DTD); Reset(drpEditOpt2DTD);
+              Reset(drpEditPrg3DTD); Reset(drpEditOpt3DTD);
+              Reset(txtEligRatingDTD); Reset(drpEligIdpDTD);
+              Reset(drpEligSessionDTD); Reset(dtpEligDateDTD);
+              Notify("Application updated.", NotificationType.Success)
+            PressedColor: =Self.Color
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            TabIndex: =6
+            Text: ="Save"
+            Visible: =And(Not(IsBlank(locApp)), locEditApp)
+            Width: =100
+            X: =Parent.Width - 124
+            Y: =60
+
+      - galDetailTabsDTD:
+          Control: Gallery@2.15.0
+          Variant: Horizontal
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Height: =34
+            Items: |-
+              =Table(
+                { id: 1, label: "Personnel" },
+                { id: 2, label: "Program choices" },
+                { id: 3, label: "Competencies" },
+                { id: 4, label: "Eligibility" },
+                { id: 5, label: "Documents" }
+              )
+            LayoutMinHeight: =0
+            LayoutMinWidth: =0
+            ShowScrollbar: =false
+            TemplatePadding: =0
+            TemplateSize: =160
+            Visible: =Not(IsBlank(locApp))
+            Width: =800
+            X: =24
+            Y: =70
+          Children:
+            - btnDetailTabDTD:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  BorderStyle: =BorderStyle.Solid
+                  BorderThickness: =0
+                  Color: |-
+                    =If(ThisItem.id = locDetailTab,
+                       ColorPalette.Blue600, ColorPalette.TextHelp)
+                  Fill: =RGBA(0, 0, 0, 0)
+                  FocusedBorderThickness: =0
+                  Font: =Typography.Family
+                  FontWeight: |-
+                    =If(ThisItem.id = locDetailTab,
+                       Typography.WeightBold, Typography.WeightRegular)
+                  Height: =Parent.TemplateHeight - 3
+                  HoverColor: =ColorPalette.TextOnDark
+                  HoverFill: =ColorPalette.Blue700
+                  OnSelect: |-
+                    =UpdateContext({ locDetailTab: ThisItem.id })
+                  PressedColor: =ColorPalette.TextOnDark
+                  PressedFill: =ColorPalette.Blue700
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.label
+                  Width: =Parent.TemplateWidth
+                  X: =0
+                  Y: =0
+            - recDetailTabLineDTD:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Fill: |-
+                    =If(ThisItem.id = locDetailTab,
+                       ColorPalette.Blue600, RGBA(0, 0, 0, 0))
+                  Height: =3
+                  Width: =Parent.TemplateWidth
+                  X: =0
+                  Y: =Parent.TemplateHeight - 3
+      - recDetailTabsRuleDTD:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.Gray200
+            Height: =1
+            Visible: =Not(IsBlank(locApp))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =103
+
+      - txtPersNameDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.ApplicantName, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEditApp, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =(Parent.Width - 120) / 4
+            X: =24
+            Y: =118
+      - lblPersNameDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Full name"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersNameDTD.X + 10
+            Y: =txtPersNameDTD.Y - Self.Height / 2
+      - txtPersEmailDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.ApplicantEmail, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: =DisplayMode.Disabled
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =txtPersNameDTD.Width
+            X: =24
+            Y: =176
+      - lblPersEmailDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Email"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersEmailDTD.X + 10
+            Y: =txtPersEmailDTD.Y - Self.Height / 2
+      - txtPersLocationDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.Location, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEditApp, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =txtPersNameDTD.Width
+            X: =24
+            Y: =234
+      - lblPersLocationDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Location"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersLocationDTD.X + 10
+            Y: =txtPersLocationDTD.Y - Self.Height / 2
+      - txtPersTitleDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.JobTitle, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEditApp, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =txtPersNameDTD.Width
+            X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24)
+            Y: =118
+      - lblPersTitleDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Job title"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersTitleDTD.X + 10
+            Y: =txtPersTitleDTD.Y - Self.Height / 2
+      - txtPersGradeDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.Grade, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEditApp, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =txtPersNameDTD.Width
+            X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24)
+            Y: =176
+      - lblPersGradeDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Grade"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersGradeDTD.X + 10
+            Y: =txtPersGradeDTD.Y - Self.Height / 2
+      - txtPersSeriesDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.JobSeries, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEditApp, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =txtPersNameDTD.Width
+            X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24)
+            Y: =234
+      - lblPersSeriesDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Job series"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersSeriesDTD.X + 10
+            Y: =txtPersSeriesDTD.Y - Self.Height / 2
+      - txtPersStartDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locApp.NCUAStartDate), "—",
+                 Text(locApp.NCUAStartDate, "mm/dd/yyyy"))
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: =DisplayMode.Disabled
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 1, Not(locEditApp))
+            Width: =txtPersNameDTD.Width
+            X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24) * 2
+            Y: =118
+      - dtpPersStartDTD:
+          Control: Classic/DatePicker@2.5.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            DefaultDate: =locApp.NCUAStartDate
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 1, locEditApp)
+            Width: =txtPersNameDTD.Width
+            X: =txtPersStartDTD.X
+            Y: =txtPersStartDTD.Y
+      - lblPersStartDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="NCUA start date"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersStartDTD.X + 10
+            Y: =txtPersStartDTD.Y - Self.Height / 2
+      - txtPersScdDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locApp.ServiceComputationDate), "—",
+                 Text(locApp.ServiceComputationDate, "mm/dd/yyyy"))
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: =DisplayMode.Disabled
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 1, Not(locEditApp))
+            Width: =txtPersNameDTD.Width
+            X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24) * 2
+            Y: =176
+      - dtpPersScdDTD:
+          Control: Classic/DatePicker@2.5.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            DefaultDate: =locApp.ServiceComputationDate
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 1, locEditApp)
+            Width: =txtPersNameDTD.Width
+            X: =txtPersScdDTD.X
+            Y: =txtPersScdDTD.Y
+      - lblPersScdDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Service computation date"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersScdDTD.X + 10
+            Y: =txtPersScdDTD.Y - Self.Height / 2
+      - txtPersSup1DTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.FirstLineSupervisorEmail, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEditApp, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =txtPersNameDTD.Width
+            X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24) * 3
+            Y: =118
+      - lblPersSup1DTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="First-line supervisor"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersSup1DTD.X + 10
+            Y: =txtPersSup1DTD.Y - Self.Height / 2
+      - txtPersSup2DTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.SecondLineSupervisorEmail, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEditApp, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =txtPersNameDTD.Width
+            X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24) * 3
+            Y: =176
+      - lblPersSup2DTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Second-line supervisor"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersSup2DTD.X + 10
+            Y: =txtPersSup2DTD.Y - Self.Height / 2
+
+      - galDetailChoicesDTD:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            Height: =Parent.Height - 130
+            Items: |-
+              =SortByColumns(
+                ForAll(
+                  Filter(APPLICATION_PROGRAM_CHOICES,
+                    ApplicationID.Id = locApp.ID) As ch,
+                  {
+                    ChRank: ch.Rank,
+                    OptionName: ch.ProgramOptionID.Value,
+                    ProgramName: ch.ProgramID.Value
+                  }),
+                "ChRank", SortOrder.Ascending)
+            ShowScrollbar: =true
+            TemplatePadding: =0
+            TemplateSize: =56
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, Not(locEditApp))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =118
+          Children:
+            - conDetailChoiceDTD:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Fill: =ColorPalette.White
+                  Height: =Parent.TemplateHeight
+                  Width: =Parent.TemplateWidth
+                Children:
+                  - lblChoiceRankDTD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.Blue700
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightBold
+                        Height: =20
+                        Size: =Typography.SizeBody
+                        Text: |-
+                          ="#" & ThisItem.ChRank
+                        Width: =34
+                        X: =0
+                        Y: =6
+                  - lblChoiceProgramDTD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =20
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.ProgramName
+                        Width: =Parent.Width - 60
+                        X: =36
+                        Y: =6
+                  - lblChoiceOptionDTD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHelp
+                        Font: =Typography.Family
+                        Height: =18
+                        Size: =Typography.SizeCaption
+                        Text: =ThisItem.OptionName
+                        Width: =Parent.Width - 60
+                        X: =36
+                        Y: =26
+            - recDetailChoiceLineDTD:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Fill: =ColorPalette.Gray200
+                  Height: =1
+                  Width: =Parent.TemplateWidth
+                  Y: =Parent.TemplateHeight - 1
+      - lblDetailNoChoicesDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =40
+            Size: =Typography.SizeBody
+            Text: ="No program choices recorded yet."
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, Not(locEditApp),
+                 CountRows(galDetailChoicesDTD.AllItems) = 0)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =130
+
+      - lblEditRank1DTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="FIRST CHOICE"
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp)
+            Width: =360
+            X: =24
+            Y: =112
+      - drpEditPrg1DTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 1)).ProgramID.Value
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            OnChange: |-
+              =UpdateContext({ locChoicesDirty: true })
+            Items: |-
+              =ForAll(
+                Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName),
+                ProgramName)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp)
+            Width: =360
+            X: =24
+            Y: =130
+      - drpEditOpt1DTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 1)).ProgramOptionID.Value
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            OnChange: |-
+              =UpdateContext({ locChoicesDirty: true })
+            Items: |-
+              =ForAll(
+                Sort(
+                  Filter(PROGRAM_OPTIONS,
+                    ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg1DTD.Selected.Value).ID,
+                    Or(State.Value = "Active",
+                       OptionName = LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 1)).ProgramOptionID.Value)),
+                  OptionName),
+                OptionName)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp,
+                 Not(IsEmpty(Filter(PROGRAM_OPTIONS,
+                   ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg1DTD.Selected.Value).ID,
+                   State.Value = "Active"))))
+            Width: =588
+            X: =400
+            Y: =130
+      - lblEditNoOpt1DTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeBody
+            Text: ="No options — the program itself is the choice."
+            VerticalAlign: =VerticalAlign.Middle
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp,
+                 Not(IsBlank(drpEditPrg1DTD.Selected.Value)),
+                 Not(drpEditOpt1DTD.Visible))
+            Width: =588
+            X: =400
+            Y: =130
+
+      - lblEditRank2DTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="SECOND CHOICE"
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp)
+            Width: =360
+            X: =24
+            Y: =166
+      - drpEditPrg2DTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 2)).ProgramID.Value
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            OnChange: |-
+              =UpdateContext({ locChoicesDirty: true })
+            Items: |-
+              =ForAll(
+                Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName),
+                ProgramName)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp)
+            Width: =360
+            X: =24
+            Y: =184
+      - drpEditOpt2DTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 2)).ProgramOptionID.Value
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            OnChange: |-
+              =UpdateContext({ locChoicesDirty: true })
+            Items: |-
+              =ForAll(
+                Sort(
+                  Filter(PROGRAM_OPTIONS,
+                    ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg2DTD.Selected.Value).ID,
+                    Or(State.Value = "Active",
+                       OptionName = LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 2)).ProgramOptionID.Value)),
+                  OptionName),
+                OptionName)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp,
+                 Not(IsEmpty(Filter(PROGRAM_OPTIONS,
+                   ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg2DTD.Selected.Value).ID,
+                   State.Value = "Active"))))
+            Width: =588
+            X: =400
+            Y: =184
+      - lblEditNoOpt2DTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeBody
+            Text: ="No options — the program itself is the choice."
+            VerticalAlign: =VerticalAlign.Middle
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp,
+                 Not(IsBlank(drpEditPrg2DTD.Selected.Value)),
+                 Not(drpEditOpt2DTD.Visible))
+            Width: =588
+            X: =400
+            Y: =184
+
+      - lblEditRank3DTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="THIRD CHOICE"
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp)
+            Width: =360
+            X: =24
+            Y: =220
+      - drpEditPrg3DTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 3)).ProgramID.Value
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            OnChange: |-
+              =UpdateContext({ locChoicesDirty: true })
+            Items: |-
+              =ForAll(
+                Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName),
+                ProgramName)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp)
+            Width: =360
+            X: =24
+            Y: =238
+      - drpEditOpt3DTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 3)).ProgramOptionID.Value
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            OnChange: |-
+              =UpdateContext({ locChoicesDirty: true })
+            Items: |-
+              =ForAll(
+                Sort(
+                  Filter(PROGRAM_OPTIONS,
+                    ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg3DTD.Selected.Value).ID,
+                    Or(State.Value = "Active",
+                       OptionName = LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 3)).ProgramOptionID.Value)),
+                  OptionName),
+                OptionName)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp,
+                 Not(IsEmpty(Filter(PROGRAM_OPTIONS,
+                   ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg3DTD.Selected.Value).ID,
+                   State.Value = "Active"))))
+            Width: =588
+            X: =400
+            Y: =238
+      - lblEditNoOpt3DTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeBody
+            Text: ="No options — the program itself is the choice."
+            VerticalAlign: =VerticalAlign.Middle
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp,
+                 Not(IsBlank(drpEditPrg3DTD.Selected.Value)),
+                 Not(drpEditOpt3DTD.Visible))
+            Width: =588
+            X: =400
+            Y: =238
+
+      - lblEditChoiceWarnDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.DangerText
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeCaption
+            Text: |-
+              =If(
+                Or(And(Not(IsBlank(drpEditPrg1DTD.Selected.Value)), drpEditOpt1DTD.Visible,
+                       IsBlank(drpEditOpt1DTD.Selected.Value)),
+                   And(Not(IsBlank(drpEditPrg2DTD.Selected.Value)), drpEditOpt2DTD.Visible,
+                       IsBlank(drpEditOpt2DTD.Selected.Value)),
+                   And(Not(IsBlank(drpEditPrg3DTD.Selected.Value)), drpEditOpt3DTD.Visible,
+                       IsBlank(drpEditOpt3DTD.Selected.Value))),
+                "Choose an option for every program that has them.",
+                "The same program and option is selected more than once.")
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp,
+                 Or(And(Not(IsBlank(drpEditPrg1DTD.Selected.Value)), drpEditOpt1DTD.Visible,
+                       IsBlank(drpEditOpt1DTD.Selected.Value)),
+                    And(Not(IsBlank(drpEditPrg2DTD.Selected.Value)), drpEditOpt2DTD.Visible,
+                       IsBlank(drpEditOpt2DTD.Selected.Value)),
+                    And(Not(IsBlank(drpEditPrg3DTD.Selected.Value)), drpEditOpt3DTD.Visible,
+                       IsBlank(drpEditOpt3DTD.Selected.Value)),
+                    And(Not(IsBlank(drpEditPrg1DTD.Selected.Value)),
+                       drpEditPrg1DTD.Selected.Value = drpEditPrg2DTD.Selected.Value,
+                       Coalesce(drpEditOpt1DTD.Selected.Value, "") =
+                         Coalesce(drpEditOpt2DTD.Selected.Value, "")),
+                    And(Not(IsBlank(drpEditPrg1DTD.Selected.Value)),
+                       drpEditPrg1DTD.Selected.Value = drpEditPrg3DTD.Selected.Value,
+                       Coalesce(drpEditOpt1DTD.Selected.Value, "") =
+                         Coalesce(drpEditOpt3DTD.Selected.Value, "")),
+                    And(Not(IsBlank(drpEditPrg2DTD.Selected.Value)),
+                       drpEditPrg2DTD.Selected.Value = drpEditPrg3DTD.Selected.Value,
+                       Coalesce(drpEditOpt2DTD.Selected.Value, "") =
+                         Coalesce(drpEditOpt3DTD.Selected.Value, ""))))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =276
+
+      - conCompTabsDTD:
+          Control: GroupContainer@1.5.0
+          Variant: AutoLayout
+          Properties:
+            BorderStyle: =BorderStyle.None
+            DropShadow: =DropShadow.None
+            Fill: =ColorPalette.White
+            Height: =40
+            LayoutDirection: =LayoutDirection.Horizontal
+            PaddingBottom: =5
+            PaddingLeft: =5
+            PaddingRight: =5
+            PaddingTop: =5
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 3)
+            Width: |-
+              =Min(Parent.Width - 300,
+                170 * Max(1, CountRows(Filter(COMPETENCY_TYPES, State.Value = "Active"))))
+            X: =24
+            Y: =118
+          Children:
+            - galCompTypeTabsDTD:
+                Control: Gallery@2.15.0
+                Variant: Horizontal
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Height: =Parent.Height - 10
+                  Items: |-
+                    =SortByColumns(
+                      Filter(COMPETENCY_TYPES, State.Value = "Active"),
+                      "SortOrder", SortOrder.Ascending)
+                  LayoutMinHeight: =0
+                  LayoutMinWidth: =0
+                  ShowScrollbar: =false
+                  TemplatePadding: =0
+                  TemplateSize: |-
+                    =galCompTypeTabsDTD.Width / Max(1, galCompTypeTabsDTD.AllItemsCount)
+                  Width: =Parent.Width - 10
+                Children:
+                  - btnCompTypeTabDTD:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderStyle: =BorderStyle.Solid
+                        BorderColor: |-
+                          =If(ThisItem.ID = locCompTypeDTD,
+                             ColorPalette.Gray200, RGBA(0, 0, 0, 0))
+                        BorderThickness: |-
+                          =If(ThisItem.ID = locCompTypeDTD, 1, 0)
+                        Color: =ColorPalette.TextHeading
+                        Fill: |-
+                          =If(ThisItem.ID = locCompTypeDTD,
+                             ColorPalette.Blue50, RGBA(0, 0, 0, 0))
+                        FocusedBorderThickness: |-
+                          =If(ThisItem.ID = locCompTypeDTD, 1, 0)
+                        Font: =Typography.Family
+                        FontWeight: |-
+                          =If(ThisItem.ID = locCompTypeDTD,
+                             Typography.WeightBold, Typography.WeightRegular)
+                        Height: =Parent.TemplateHeight - 2
+                        HoverBorderColor: =Self.BorderColor
+                        HoverColor: =Self.Color
+                        HoverFill: |-
+                          =If(ThisItem.ID = locCompTypeDTD,
+                             ColorPalette.Blue50, ColorPalette.Gray200)
+                        OnSelect: |-
+                          =UpdateContext({ locCompTypeDTD: ThisItem.ID });
+                          Reset(drpAddCompDTD)
+                        PressedBorderColor: =Self.BorderColor
+                        PressedColor: =Self.Color
+                        PressedFill: |-
+                          =If(ThisItem.ID = locCompTypeDTD,
+                             ColorPalette.Blue50, ColorPalette.Gray200)
+                        RadiusBottomLeft: =5
+                        RadiusBottomRight: =5
+                        RadiusTopLeft: =5
+                        RadiusTopRight: =5
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.TypeName
+                        Width: =Parent.TemplateWidth - 4
+                        X: =2
+                        Y: =1
+      - drpAddCompDTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            Items: |-
+              =ForAll(
+                Sort(
+                  Filter(COMPETENCIES,
+                    CompetencyTypeID.Id = locCompTypeDTD,
+                    State.Value = "Active",
+                    Not(ID in colComps.CompId)),
+                  CompetencyName),
+                CompetencyName)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 3, locEditApp, CountRows(Filter(colComps, TypeId = locCompTypeDTD)) < Coalesce(LookUp(COMPETENCY_TYPES, ID = locCompTypeDTD).SelectionCount, 0))
+            Width: =560
+            X: =24
+            Y: =166
+      - btnAddCompDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            DisplayMode: |-
+              =If(IsBlank(drpAddCompDTD.Selected.Value),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.Blue600
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.Blue700
+            OnSelect: |-
+              =UpdateContext({ locCompsDirty: true });
+              Collect(colComps,
+                {
+                  CompId: LookUp(COMPETENCIES,
+                    And(CompetencyTypeID.Id = locCompTypeDTD,
+                        CompetencyName = drpAddCompDTD.Selected.Value)).ID,
+                  CompName: drpAddCompDTD.Selected.Value,
+                  TypeId: locCompTypeDTD,
+                  TypeName: LookUp(COMPETENCY_TYPES, ID = locCompTypeDTD).TypeName,
+                  TypeOrder: LookUp(COMPETENCY_TYPES, ID = locCompTypeDTD).SortOrder
+                });
+              Reset(drpAddCompDTD)
+            PressedColor: =Self.Color
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            Text: ="Add"
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 3, locEditApp, CountRows(Filter(colComps, TypeId = locCompTypeDTD)) < Coalesce(LookUp(COMPETENCY_TYPES, ID = locCompTypeDTD).SelectionCount, 0))
+            Width: =100
+            X: =596
+            Y: =166
+      - lblCompFullDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.WarningText
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeBody
+            Text: |-
+              =LookUp(COMPETENCY_TYPES, ID = locCompTypeDTD).TypeName & " is at its maximum of " & Coalesce(LookUp(COMPETENCY_TYPES, ID = locCompTypeDTD).SelectionCount, 0) &
+               ". Remove one to choose a different competency."
+            VerticalAlign: =VerticalAlign.Middle
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 3, locEditApp, Not(IsBlank(locCompTypeDTD)),
+                 CountRows(Filter(colComps, TypeId = locCompTypeDTD)) >= Coalesce(LookUp(COMPETENCY_TYPES, ID = locCompTypeDTD).SelectionCount, 0))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =166
+
+      - galCompsDTD:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            Height: =Parent.Height - If(locEditApp, 214, 168) - 24
+            Items: |-
+              =SortByColumns(
+                Filter(
+                  ForAll(
+                    Filter(APPLICATION_COMPETENCIES,
+                      ApplicationID.Id = locApp.ID) As ac,
+                    {
+                      CompName: ac.CompetencyID.Value,
+                      TypeId:
+                        LookUp(COMPETENCIES,
+                          ID = ac.CompetencyID.Id).CompetencyTypeID.Id
+                    }),
+                  TypeId = locCompTypeDTD),
+                "CompName", SortOrder.Ascending)
+            ShowScrollbar: =true
+            TemplatePadding: =0
+            TemplateSize: =44
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 3, Not(locEditApp))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =168
+          Children:
+            - conCompRowDTD:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Fill: =ColorPalette.White
+                  Height: =Parent.TemplateHeight
+                  Width: =Parent.TemplateWidth
+                Children:
+                  - lblCompNameDTD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        Height: =Parent.Height
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.CompName
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =560
+                        X: =0
+                        Y: =0
+            - recCompLineDTD:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Fill: =ColorPalette.Gray200
+                  Height: =1
+                  Width: =Parent.TemplateWidth
+                  Y: =Parent.TemplateHeight - 1
+      - lblNoCompsDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =40
+            Size: =Typography.SizeBody
+            Text: |-
+              ="No " & LookUp(COMPETENCY_TYPES, ID = locCompTypeDTD).TypeName & " competencies recorded."
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 3, Not(locEditApp), Not(IsBlank(locCompTypeDTD)),
+                 CountRows(galCompsDTD.AllItems) = 0)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =180
+      - galCompEditDTD:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            Height: =Parent.Height - 214 - 24
+            Items: |-
+              =SortByColumns(
+                Filter(colComps, TypeId = locCompTypeDTD),
+                "CompName", SortOrder.Ascending)
+            ShowScrollbar: =true
+            TemplatePadding: =0
+            TemplateSize: =44
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 3, locEditApp)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =214
+          Children:
+            - conCompEditRowDTD:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Fill: =ColorPalette.White
+                  Height: =Parent.TemplateHeight
+                  Width: =Parent.TemplateWidth
+                Children:
+                  - lblCompEditNameDTD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        Height: =Parent.Height
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.CompName
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =560
+                        X: =0
+                        Y: =0
+                  - icoCompRemoveDTD:
+                      Control: Classic/Icon@2.5.0
+                      Properties:
+                        BorderStyle: =BorderStyle.None
+                        Color: =ColorPalette.DangerText
+                        Height: =18
+                        Icon: =Icon.Trash
+                        Width: =18
+                        X: =583
+                        Y: =13
+                  - btnCompRemoveDTD:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        BorderStyle: =BorderStyle.Solid
+                        BorderThickness: =0
+                        Color: =RGBA(0, 0, 0, 0)
+                        Fill: =RGBA(0, 0, 0, 0)
+                        FocusedBorderColor: =ColorPalette.FocusOnLight
+                        FocusedBorderThickness: =2
+                        Height: =32
+                        HoverColor: =RGBA(0, 0, 0, 0)
+                        HoverFill: =ColorPalette.DangerLight
+                        OnSelect: |-
+                          =UpdateContext({ locCompsDirty: true });
+                          RemoveIf(colComps, CompId = ThisItem.CompId)
+                        PressedColor: =RGBA(0, 0, 0, 0)
+                        PressedFill: =ColorPalette.DangerLight
+                        RadiusBottomLeft: =6
+                        RadiusBottomRight: =6
+                        RadiusTopLeft: =6
+                        RadiusTopRight: =6
+                        Text: =""
+                        Tooltip: |-
+                          ="Remove " & ThisItem.CompName
+                        Width: =32
+                        X: =576
+                        Y: =6
+            - recCompEditLineDTD:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Fill: =ColorPalette.Gray200
+                  Height: =1
+                  Width: =Parent.TemplateWidth
+                  Y: =Parent.TemplateHeight - 1
+
+      - txtEligIdpDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.ListedOnIDP.Value, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: =DisplayMode.Disabled
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 4, Not(locEditApp))
+            Width: =(Parent.Width - 120) / 4
+            X: =24
+            Y: =118
+      - txtEligRatingDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locApp.LatestPerformanceRating), "—",
+                 Text(locApp.LatestPerformanceRating))
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEditApp, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 4)
+            Width: =txtEligIdpDTD.Width
+            X: =txtEligIdpDTD.X + (txtEligIdpDTD.Width + 24)
+            Y: =118
+      - txtEligSessionDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.AttendedInfoSession.Value, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: =DisplayMode.Disabled
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 4, Not(locEditApp))
+            Width: =txtEligIdpDTD.Width
+            X: =txtEligIdpDTD.X + (txtEligIdpDTD.Width + 24) * 2
+            Y: =118
+      - txtEligDateDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locApp.InfoSessionDate), "—",
+                 Text(locApp.InfoSessionDate, "mm/dd/yyyy"))
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: =DisplayMode.Disabled
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 4, Not(locEditApp))
+            Width: =txtEligIdpDTD.Width
+            X: =txtEligIdpDTD.X + (txtEligIdpDTD.Width + 24) * 3
+            Y: =118
+      - drpEligIdpDTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            Default: =locApp.ListedOnIDP.Value
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =40
+            Items: =Choices(APPLICATIONS.ListedOnIDP)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 4, locEditApp)
+            Width: =txtEligIdpDTD.Width
+            X: =txtEligIdpDTD.X
+            Y: =118
+      - drpEligSessionDTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            Default: =locApp.AttendedInfoSession.Value
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =40
+            Items: =Choices(APPLICATIONS.AttendedInfoSession)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 4, locEditApp)
+            Width: =txtEligSessionDTD.Width
+            X: =txtEligSessionDTD.X
+            Y: =118
+      - dtpEligDateDTD:
+          Control: Classic/DatePicker@2.5.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            DefaultDate: =locApp.InfoSessionDate
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 4, locEditApp)
+            Width: =txtEligDateDTD.Width
+            X: =txtEligDateDTD.X
+            Y: =118
+
+      - lblEligIdpDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Listed on IDP"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 4)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtEligIdpDTD.X + 10
+            Y: =txtEligIdpDTD.Y - Self.Height / 2
+      - lblEligRatingDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Latest performance rating"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 4)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtEligRatingDTD.X + 10
+            Y: =txtEligRatingDTD.Y - Self.Height / 2
+      - lblEligSessionDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Attended info session"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 4)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtEligSessionDTD.X + 10
+            Y: =txtEligSessionDTD.Y - Self.Height / 2
+      - lblEligDateDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Info session date"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 4)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtEligDateDTD.X + 10
+            Y: =txtEligDateDTD.Y - Self.Height / 2
+      - lblTabDocumentsDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =Parent.Height - 130
+            Size: =Typography.SizeBody
+            Text: |-
+              ="Résumé, statement of interest and performance appraisal are stored as SharePoint attachments on this application.
+              
+              They cannot be listed here yet: the attachment control exists only inside a Form data card, and this panel is read-only. Open the item in SharePoint to view them.
+              
+              Tracked as OI-APP-1."
+            VerticalAlign: =VerticalAlign.Top
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 5)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =118
+
+- recClearScrimDTD:
+    Control: Rectangle@2.3.0
+    Properties:
+      BorderColor: =RGBA(0, 0, 0, 0)
+      Fill: =RGBA(0, 0, 0, 0.3)
+      Height: =Parent.Height
+      Visible: =locClearWarn
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+
+- conClearWarnDTD:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Bold
+      Fill: =ColorPalette.White
+      Height: =248
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: =locClearWarn
+      Width: =520
+      X: =Parent.Width / 2 - Self.Width / 2
+      Y: =Parent.Height / 2 - Self.Height / 2
+    Children:
+      - shpClearHaloDTD:
+          Control: Circle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.WarningLight
+            Height: =56
+            Width: =56
+            X: =24
+            Y: =28
+      - icoClearWarnDTD:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.WarningText
+            Height: =30
+            Icon: =Icon.Warning
+            Width: =30
+            X: =37
+            Y: =41
+      - lblClearTitleDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =26
+            Size: =Typography.SizeHeading
+            Text: ="Clear validation?"
+            Width: =380
+            X: =96
+            Y: =42
+      - lblClearBodyDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =84
+            Size: =Typography.SizeBody
+            Text: |-
+              ="Confirming this will move " &
+               Coalesce(locApp.ApplicantName, "this applicant") &
+               "'s application back to Submitted status and return it to the DTD queue. Nothing else changes, and you can revalidate at any time."
+            VerticalAlign: =VerticalAlign.Top
+            Width: =400
+            X: =96
+            Y: =72
+      - btnClearCancelDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =38
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =UpdateContext({ locClearWarn: false })
+            PressedColor: =Self.Color
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =8
+            Text: ="Keep it validated"
+            Width: =150
+            X: =btnClearConfirmDTD.X - Self.Width - 10
+            Y: =Parent.Height - 62
+      - btnClearConfirmDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            Fill: =ColorPalette.Blue600
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =38
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.Blue700
+            OnSelect: |-
+              =UpdateContext({
+                locApp: Patch(APPLICATIONS,
+                  LookUp(APPLICATIONS, ID = locApp.ID),
+                  { ApplicationStatus: { Value: "Submitted" } }),
+                locClearWarn: false
+              });
+              Notify("Validation cleared — the application is waiting on DTD again.",
+                     NotificationType.Success)
+            PressedColor: =Self.Color
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =9
+            Text: ="Clear validation"
+            Width: =150
+            X: =Parent.Width - 174
+            Y: =Parent.Height - 62

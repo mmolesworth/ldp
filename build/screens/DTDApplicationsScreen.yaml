@@ -1,0 +1,3295 @@
+# DTD Applications Screen — US2 (RQ015–021, RQ096–100) — ADMIN
+# Built 2026-07-31. Classic controls only (Constitution II).
+# Colours = ColorPalette.*, sizes = Typography.*
+#
+# Composition (Constitution VIII):
+#   · PowerLibs `gallery-filter-header` — the applications table
+#   · PowerLibs `drawer-right-1`        — the detail panel
+#
+# ---------------------------------------------------------------------------
+# THREE STATUS COLUMNS, SHOWN AS THEY ARE
+# ---------------------------------------------------------------------------
+# ApplicationStatus (the applicant's progress), ReviewStage (where the packet
+# is), PlacementOutcome (the result). Each has a different owner and its own
+# clock — see build/lists/_CHOICES.md, 2026-07-31.
+#
+# The TABLE shows all three. ApplicationStatus carries DTD's acceptance as its
+# own value — Draft -> Submitted -> Validated is one linear progression, so
+# `Submitted` IS the queue of things waiting on DTD and sorting that column
+# groups them. An applicant edit drops a validated application back to
+# Submitted; that is a backward transition in the machine, not a second flag
+# to keep in step.
+#
+# Deriving one label from the three would collapse information the admin needs
+# and invent a value that exists nowhere in the data.
+#
+# Colour carries the triage:
+#   amber = waiting on someone outside DTD (a supervisor)
+#   blue  = in DTD's or the committee's hands
+#   green = done
+#   grey  = inert, or not started
+#
+# `Needs Supervisor Assigned` is [PROPOSED — FR-012a]. Rendered so the column is
+# complete, but nothing on this screen writes it (Constitution I).
+#
+# ---------------------------------------------------------------------------
+# DELEGATION — THIS IS THE SCREEN WHERE IT MATTERS
+# ---------------------------------------------------------------------------
+# APPLICATIONS is the only unbounded list in this app. Everything else has been
+# safe to collect; this is not, and the patterns used elsewhere would break it.
+#
+# The gallery therefore picks between EIGHT whole Filter() expressions — every
+# on/off combination of the three dropdowns — rather than one with Or() inside. The readable version —
+#   Or(drpStatusDTD.Selected.Value = "All", ApplicationStatus.Value = ...)
+# — does not delegate, because a control reference is not a column. All four
+# branches below filter on CycleID, ApplicationStatus and ReviewStage, all indexed.
+#
+# THE COUNTS ARE THE EXCEPTION, deliberately. Programs and Scored are per-row
+# CountRows against APPLICATION_PROGRAM_CHOICES and COMMITTEE_SCORES; neither
+# delegates. Accepted because a cycle is bounded by nature and a gallery only
+# evaluates rendered rows. If a cycle ever exceeds ~500 applications this needs
+# revisiting — rollup columns maintained by a flow are the usual answer, and a
+# new moving part not worth adding before it is needed.
+#
+# NO COLLECTIONS. The drawer used to map option -> program per row, which is
+# why PROGRAM_OPTIONS and PROGRAMS were collected in OnVisible. Since the
+# choice row carries ProgramID directly (2026-07-31) nothing on this screen
+# reads a collection at all, so OnVisible has no ClearCollect and there is one
+# fewer thing that is merely empty before it runs.
+#
+# ---------------------------------------------------------------------------
+# WHAT "SCORED" MEANS
+# ---------------------------------------------------------------------------
+# "2 / 3" = two COMMITTEE_SCORES rows against three DISTINCT PROGRAMS among the
+# ranked choices. Distinct, because the same program may be ranked more than
+# once with a different option and there is still only one thing to score.
+# The table gives the count; the panel names which ones.
+#
+# ---------------------------------------------------------------------------
+# THE DETAIL PANEL IS ALWAYS PRESENT
+# ---------------------------------------------------------------------------
+# Not a drawer. A drawer covers the list it was opened from, which is wrong
+# when the task is comparing a record against its neighbours. The panel sits
+# below the table, follows the selected row, and is divided by the SAME steps
+# as the applicant's own wizard — so DTD and the applicant are looking at the
+# same shape of information.
+#
+# "Review" is not a tab: the whole panel is the review.
+# ===========================================================================
+
+- lblAppTitleDTD:
+    Control: Label@2.5.1
+    Properties:
+      Color: =ColorPalette.TextHeading
+      Font: =Typography.Family
+      FontWeight: =Typography.WeightBold
+      Height: =30
+      Size: =Typography.SizeHeading
+      Text: ="Applications"
+      Width: =400
+      X: =24
+      Y: =18
+
+# Defaults to the Open cycle — the one an admin is almost always working in —
+# and falls back to the most recent when none is open.
+- lblCycleLabelDTD:
+    Control: Label@2.5.1
+    Properties:
+      Color: =ColorPalette.TextHelp
+      Font: =Typography.Family
+      FontWeight: =Typography.WeightBold
+      Height: =18
+      Size: =Typography.SizeCaption
+      Text: ="CYCLE"
+      Width: =250
+      X: =24
+      Y: =58
+
+- lblStatusLabelDTD:
+    Control: Label@2.5.1
+    Properties:
+      Color: =ColorPalette.TextHelp
+      Font: =Typography.Family
+      FontWeight: =Typography.WeightBold
+      Height: =18
+      Size: =Typography.SizeCaption
+      Text: ="APPLICATION STATUS"
+      Width: =190
+      X: =290
+      Y: =58
+
+- lblStageLabelDTD:
+    Control: Label@2.5.1
+    Properties:
+      Color: =ColorPalette.TextHelp
+      Font: =Typography.Family
+      FontWeight: =Typography.WeightBold
+      Height: =18
+      Size: =Typography.SizeCaption
+      Text: ="REVIEW STAGE"
+      Width: =210
+      X: =496
+      Y: =58
+
+- drpCycleDTD:
+    Control: Classic/DropDown@2.3.1
+    Properties:
+      BorderColor: =ColorPalette.Gray300
+      Color: =ColorPalette.TextBody
+      # Reads CYCLES DIRECTLY, not a collection. This control gates the whole
+      # screen: if it depends on a collection, then before OnVisible has run it
+      # is not merely empty but ERRORED, and every downstream control is blank
+      # with no clue why. CYCLES is a handful of rows and both expressions
+      # delegate on the indexed State, so there is nothing to gain by
+      # collecting it.
+      #
+      # It mirrors itself into locCycle, which the gallery reads. Inlining the
+      # LookUp into all eight filter branches instead was tried and reverted:
+      # it removes the OnVisible dependency but makes eight ~100-character
+      # lines out of one short one, and long lines in a formula this size are
+      # what gets mangled on paste. If the gallery is ever empty while this
+      # dropdown shows a cycle, locCycle is blank and OnVisible has not run.
+      Default: |-
+        =Coalesce(
+          First(Filter(CYCLES, State.Value = "Open")).CycleName,
+          First(SortByColumns(CYCLES, "OpenDate", SortOrder.Descending)).CycleName)
+      Fill: =ColorPalette.White
+      Font: =Typography.Family
+      Height: =32
+      Items: |-
+        =ForAll(SortByColumns(CYCLES, "OpenDate", SortOrder.Descending), CycleName)
+      OnChange: |-
+        =UpdateContext({
+          locCycle: LookUp(CYCLES, CycleName = drpCycleDTD.Selected.Value),
+          locApp: Blank(),
+          locEditApp: false,
+          locCompsDirty: false,
+          locChoicesDirty: false
+        })
+      Size: =Typography.SizeBody
+      TabIndex: =1
+      Width: =250
+      X: =24
+      Y: =78
+
+- drpStatusDTD:
+    Control: Classic/DropDown@2.3.1
+    Properties:
+      BorderColor: =ColorPalette.Gray300
+      Color: =ColorPalette.TextBody
+      Default: ="All statuses"
+      Fill: =ColorPalette.White
+      Font: =Typography.Family
+      Height: =32
+      # Literal text table — a Classic/DropDown renders this shape without its
+      # Value property, which YAML cannot set (PA2108).
+      Items: |-
+        =["All statuses", "Draft", "Submitted", "Validated", "Withdrawn"]
+      OnChange: |-
+        =UpdateContext({ locApp: Blank(), locEditApp: false, locClearWarn: false, locCompsDirty: false, locChoicesDirty: false })
+      Size: =Typography.SizeBody
+      TabIndex: =2
+      Width: =190
+      X: =290
+      Y: =78
+
+- drpStageDTD:
+    Control: Classic/DropDown@2.3.1
+    Properties:
+      BorderColor: =ColorPalette.Gray300
+      Color: =ColorPalette.TextBody
+      Default: ="All stages"
+      Fill: =ColorPalette.White
+      Font: =Typography.Family
+      Height: =32
+      Items: |-
+        =["All stages", "Pending First-Line", "Needs Supervisor Assigned",
+          "Pending Second-Line", "Pending DTD Validation", "Committee Review",
+          "Pending Placement", "Pending Notification", "Complete"]
+      OnChange: |-
+        =UpdateContext({ locApp: Blank(), locEditApp: false, locClearWarn: false, locCompsDirty: false, locChoicesDirty: false })
+      Size: =Typography.SizeBody
+      TabIndex: =3
+      Width: =210
+      X: =496
+      Y: =78
+
+- lblOutcomeLabelDTD:
+    Control: Label@2.5.1
+    Properties:
+      Color: =ColorPalette.TextHelp
+      Font: =Typography.Family
+      FontWeight: =Typography.WeightBold
+      Height: =18
+      Size: =Typography.SizeCaption
+      Text: ="PLACEMENT OUTCOME"
+      Width: =200
+      X: =722
+      Y: =58
+
+- drpOutcomeDTD:
+    Control: Classic/DropDown@2.3.1
+    Properties:
+      BorderColor: =ColorPalette.Gray300
+      Color: =ColorPalette.TextBody
+      Default: ="All outcomes"
+      Fill: =ColorPalette.White
+      Font: =Typography.Family
+      Height: =32
+      Items: |-
+        =["All outcomes", "Decision Pending", "Placed", "Not Selected", "Placement Declined"]
+      OnChange: |-
+        =UpdateContext({ locApp: Blank(), locEditApp: false, locClearWarn: false, locCompsDirty: false, locChoicesDirty: false })
+      Size: =Typography.SizeBody
+      TabIndex: =4
+      Width: =200
+      X: =722
+      Y: =78
+
+- lblCountDTD:
+    Control: Label@2.5.1
+    Properties:
+      Align: =Align.Right
+      Color: =ColorPalette.TextHelp
+      Font: =Typography.Family
+      Height: =32
+      Size: =Typography.SizeBody
+      # Singular at one — "1 applicants" is the kind of thing that reads as
+      # sloppy on a screen someone uses all day.
+      Text: |-
+        =CountRows(galApplicationsDTD.AllItems) &
+         If(CountRows(galApplicationsDTD.AllItems) = 1, " applicant", " applicants")
+      Width: =180
+      X: =Parent.Width - 204
+      Y: =78
+
+# ===========================================================================
+# TABLE — PowerLibs gallery-filter-header
+# ===========================================================================
+- conHeadDTD:
+    Control: GroupContainer@1.5.0
+    Variant: AutoLayout
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =ColorPalette.Gray25
+      Height: =36
+      LayoutAlignItems: =LayoutAlignItems.Center
+      LayoutDirection: =LayoutDirection.Horizontal
+      PaddingLeft: =16
+      PaddingRight: =16
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =126
+    Children:
+      # SORT HEADERS. Classic/Button defaults HoverColor to WHITE, which on a
+      # transparent HoverFill is invisible text — so every header vanished when
+      # the pointer crossed it. Hover is now a step from Gray25 to Gray50 with
+      # the label going Blue600: legible, and quiet enough not to compete with
+      # the rows below.
+      #
+      # FocusedBorderThickness was 3 and is now 0. The container is 36px tall
+      # and centres its children, so the ring's top and bottom edges fell
+      # outside the visible band and only the left and right verticals drew —
+      # the brackets. This LOSES the keyboard focus ring on these four controls
+      # (theme.md A11y rule 4); it is the one place in the app without one, and
+      # belongs in the T081 sweep. Restoring it means giving the container
+      # enough height to show the ring, not putting the 3px back.
+      - btnHeadNameDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =2
+            FocusedBorderThickness: =0
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverBorderColor: =RGBA(0, 0, 0, 0)
+            HoverColor: =ColorPalette.Blue600
+            HoverFill: =ColorPalette.Gray50
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locAppAsc: If(locAppSort = "ApplicantName", Not(locAppAsc), true),
+                locAppSort: "ApplicantName"
+              })
+            PressedBorderColor: =RGBA(0, 0, 0, 0)
+            PressedColor: =ColorPalette.Blue700
+            PressedFill: =ColorPalette.Gray200
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Applicant" & If(locAppSort = "ApplicantName", If(locAppAsc, "  ▲", "  ▼"), "")
+      - btnHeadStatusDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =1
+            FocusedBorderThickness: =0
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverBorderColor: =RGBA(0, 0, 0, 0)
+            HoverColor: =ColorPalette.Blue600
+            HoverFill: =ColorPalette.Gray50
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locAppAsc: If(locAppSort = "ApplicationStatus", Not(locAppAsc), true),
+                locAppSort: "ApplicationStatus"
+              })
+            PressedBorderColor: =RGBA(0, 0, 0, 0)
+            PressedColor: =ColorPalette.Blue700
+            PressedFill: =ColorPalette.Gray200
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Application status" & If(locAppSort = "ApplicationStatus", If(locAppAsc, "  ▲", "  ▼"), "")
+      - btnHeadStageDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =1.4
+            FocusedBorderThickness: =0
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverBorderColor: =RGBA(0, 0, 0, 0)
+            HoverColor: =ColorPalette.Blue600
+            HoverFill: =ColorPalette.Gray50
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locAppAsc: If(locAppSort = "ReviewStage", Not(locAppAsc), true),
+                locAppSort: "ReviewStage"
+              })
+            PressedBorderColor: =RGBA(0, 0, 0, 0)
+            PressedColor: =ColorPalette.Blue700
+            PressedFill: =ColorPalette.Gray200
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Review stage" & If(locAppSort = "ReviewStage", If(locAppAsc, "  ▲", "  ▼"), "")
+      - btnHeadPlacementDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Align: =Align.Left
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextHeading
+            Fill: =RGBA(0, 0, 0, 0)
+            FillPortions: =1
+            FocusedBorderThickness: =0
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            HoverBorderColor: =RGBA(0, 0, 0, 0)
+            HoverColor: =ColorPalette.Blue600
+            HoverFill: =ColorPalette.Gray50
+            LayoutMinWidth: =0
+            OnSelect: |-
+              =UpdateContext({
+                locAppAsc: If(locAppSort = "PlacementOutcome", Not(locAppAsc), true),
+                locAppSort: "PlacementOutcome"
+              })
+            PressedBorderColor: =RGBA(0, 0, 0, 0)
+            PressedColor: =ColorPalette.Blue700
+            PressedFill: =ColorPalette.Gray200
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Placement outcome" & If(locAppSort = "PlacementOutcome", If(locAppAsc, "  ▲", "  ▼"), "")
+      # NOT sortable, and the only header that is not. "2 / 3" is not a column
+      # — it is two CountRows per row against two other lists. Sorting by it
+      # would mean running both queries for every application in the cycle
+      # before the first row could render, where today a gallery only pays for
+      # the rows it draws. A plain label rather than a button that lies.
+      - lblHeadScoredDTD:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Left
+            Color: =ColorPalette.TextHeading
+            FillPortions: =1.1
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            LayoutMinWidth: =0
+            Size: =Typography.SizeCaption
+            Text: ="Programs scored"
+- galApplicationsDTD:
+    Control: Gallery@2.15.0
+    Variant: Vertical
+    Properties:
+      BorderColor: =ColorPalette.Gray200
+      Height: =190
+      # EIGHT branches — every on/off combination of the three filters,
+      # each a whole delegable Filter(). One Or() with a control
+      # reference inside would be far shorter and would silently stop
+      # delegating at 500 rows.
+      #
+      # Ordered MOST "All"s FIRST: If() takes the first condition that
+      # matches, so the least selective case has to be tested first or
+      # a narrower branch would shadow it. The final branch is the
+      # default — no filter set to "All", so all three predicates apply.
+      #
+      # SORTING A CHOICE COLUMN. SortByColumns takes a column NAME and needs a
+      # scalar; a SharePoint Choice arrives as a record ({Value, Id}), so
+      # naming one is an error rather than a sort — which is why the status and
+      # stage headers used to throw.
+      #
+      # Sort() takes an EXPRESSION instead, evaluated in each row's scope, so
+      # the key can be a Switch that picks the right field. locAppSort is a
+      # screen variable and constant across rows; every branch returns text, so
+      # the types unify. One copy of the filter, no projected columns to name.
+      #
+      # Sorting by an expression does not delegate. The Filter() inside still
+      # does — the query goes to SharePoint narrowed to one cycle and only the
+      # sort happens locally. Same bound as the per-row counts below: fine to
+      # ~500 applications in a cycle, wrong above it.
+      Items: |-
+        =Sort(
+          If(
+            And(drpStatusDTD.Selected.Value = "All statuses", drpStageDTD.Selected.Value = "All stages", drpOutcomeDTD.Selected.Value = "All outcomes"),
+               Filter(APPLICATIONS, CycleID.Id = locCycle.ID),
+
+            And(drpStatusDTD.Selected.Value = "All statuses", drpStageDTD.Selected.Value = "All stages"),
+               Filter(APPLICATIONS, CycleID.Id = locCycle.ID,
+               PlacementOutcome.Value = drpOutcomeDTD.Selected.Value),
+
+            And(drpStatusDTD.Selected.Value = "All statuses", drpOutcomeDTD.Selected.Value = "All outcomes"),
+               Filter(APPLICATIONS, CycleID.Id = locCycle.ID,
+               ReviewStage.Value = drpStageDTD.Selected.Value),
+
+            And(drpStageDTD.Selected.Value = "All stages", drpOutcomeDTD.Selected.Value = "All outcomes"),
+               Filter(APPLICATIONS, CycleID.Id = locCycle.ID,
+               ApplicationStatus.Value = drpStatusDTD.Selected.Value),
+
+            drpStatusDTD.Selected.Value = "All statuses",
+               Filter(APPLICATIONS, CycleID.Id = locCycle.ID,
+               ReviewStage.Value = drpStageDTD.Selected.Value,
+               PlacementOutcome.Value = drpOutcomeDTD.Selected.Value),
+
+            drpStageDTD.Selected.Value = "All stages",
+               Filter(APPLICATIONS, CycleID.Id = locCycle.ID,
+               ApplicationStatus.Value = drpStatusDTD.Selected.Value,
+               PlacementOutcome.Value = drpOutcomeDTD.Selected.Value),
+
+            drpOutcomeDTD.Selected.Value = "All outcomes",
+               Filter(APPLICATIONS, CycleID.Id = locCycle.ID,
+               ApplicationStatus.Value = drpStatusDTD.Selected.Value,
+               ReviewStage.Value = drpStageDTD.Selected.Value),
+
+            Filter(APPLICATIONS, CycleID.Id = locCycle.ID,
+               ApplicationStatus.Value = drpStatusDTD.Selected.Value,
+               ReviewStage.Value = drpStageDTD.Selected.Value,
+               PlacementOutcome.Value = drpOutcomeDTD.Selected.Value)),
+          Switch(locAppSort,
+            "ApplicationStatus", ApplicationStatus.Value,
+            "ReviewStage",       ReviewStage.Value,
+            "PlacementOutcome",  PlacementOutcome.Value,
+            ApplicantName),
+          If(locAppAsc, SortOrder.Ascending, SortOrder.Descending))
+      ShowScrollbar: =true
+      TemplatePadding: =0
+      TemplateSize: =48
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =162
+    Children:
+      - conRowDTD:
+          Control: GroupContainer@1.5.0
+          Variant: AutoLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: |-
+              =If(And(Not(IsBlank(locApp)), ThisItem.ID = locApp.ID),
+                 ColorPalette.Blue50, ColorPalette.White)
+            Height: =Parent.TemplateHeight
+            LayoutAlignItems: =LayoutAlignItems.Center
+            LayoutDirection: =LayoutDirection.Horizontal
+            PaddingLeft: =16
+            PaddingRight: =16
+            Width: =Parent.TemplateWidth
+          Children:
+            - lblRowNameDTD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  FillPortions: =2
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.ApplicantName
+            # Where the APPLICATION is.
+            # Submitted is AMBER, not green: under the new status column it
+            # means "submitted and waiting on DTD to accept it", which is a
+            # queue, not a finish line. Validated is the green one. Sorting
+            # this column therefore groups DTD's work without a filter.
+            #
+            # Plain labels, not badges. The badges live in the detail panel,
+            # where there are three of them against one record; a table of
+            # 20 rows x 3 pills is more chrome than content. The COLOUR still
+            # carries the meaning — amber waiting outside DTD, red DTD owes an
+            # action, blue in progress, green done.
+            - lblRowStatusDTD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =Switch(ThisItem.ApplicationStatus.Value,
+                       "Draft", ColorPalette.Blue700,
+                       "Submitted", ColorPalette.WarningText,
+                       "Validated", ColorPalette.SuccessText,
+                       "Withdrawn", ColorPalette.TextHelp,
+                       ColorPalette.TextHelp)
+                  FillPortions: =1
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeCaption
+                  Text: =ThisItem.ApplicationStatus.Value
+            - lblRowStageDTD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =Switch(ThisItem.ReviewStage.Value,
+                       "Pending First-Line", ColorPalette.WarningText,
+                       "Pending Second-Line", ColorPalette.WarningText,
+                       "Needs Supervisor Assigned", ColorPalette.DangerText,
+                       "Pending DTD Validation", ColorPalette.Blue700,
+                       "Committee Review", ColorPalette.Navy700,
+                       "Pending Placement", ColorPalette.Blue600,
+                       "Pending Notification", ColorPalette.DangerText,
+                       "Complete", ColorPalette.SuccessText,
+                       ColorPalette.TextHelp)
+                  FillPortions: =1.4
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeCaption
+                  # A Draft has no stage yet — an em dash, so the cell reads as
+                  # "nothing yet" rather than as something failing to render.
+                  Text: |-
+                    =If(IsBlank(ThisItem.ReviewStage.Value), "—",
+                       ThisItem.ReviewStage.Value)
+            - lblRowPlacementDTD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =Switch(ThisItem.PlacementOutcome.Value,
+                       "Placed", ColorPalette.SuccessText,
+                       "Not Selected", ColorPalette.WarningText,
+                       "Placement Declined", ColorPalette.TextHelp,
+                       ColorPalette.TextHelp)
+                  FillPortions: =1
+                  Font: =Typography.Family
+                  # Regular weight while undecided, medium once it is real —
+                  # "Decision Pending" is true of most rows most of the time.
+                  FontWeight: |-
+                    =If(Or(IsBlank(ThisItem.PlacementOutcome.Value),
+                           ThisItem.PlacementOutcome.Value = "Decision Pending"),
+                       Typography.WeightRegular, Typography.WeightMedium)
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeCaption
+                  Text: |-
+                    =If(Or(IsBlank(ThisItem.PlacementOutcome.Value),
+                           ThisItem.PlacementOutcome.Value = "Decision Pending"),
+                       "—", ThisItem.PlacementOutcome.Value)
+            - lblRowScoredDTD:
+                Control: Label@2.5.1
+                Properties:
+                  # DISTINCT PROGRAMS in the denominator, not choice rows.
+                  # COMMITTEE_SCORES is keyed (ApplicationID, ProgramID), so an
+                  # applicant who ranks HPP twice with two options has three
+                  # choices and only two things to score. Counting rows made
+                  # that "2 / 3" forever: parity unreachable, and the green
+                  # "ready to rank" state unreachable with it.
+                  #
+                  # Legal since 2026-07-31, when ranking the same program with
+                  # a different option became allowed — so this is a
+                  # consequence of that decision, not an older bug.
+                  #
+                  # Distinct() returns a one-column table of unique values. Not
+                  # delegable, like the CountRows around it — accepted for the
+                  # reason in the header: a cycle is bounded, and a gallery only
+                  # evaluates the rows it draws.
+                  Color: |-
+                    =If(
+                      And(CountRows(Distinct(Filter(APPLICATION_PROGRAM_CHOICES,
+                            ApplicationID.Id = ThisItem.ID), ProgramID.Id)) > 0,
+                          CountRows(Filter(COMMITTEE_SCORES,
+                            ApplicationID.Id = ThisItem.ID)) =
+                          CountRows(Distinct(Filter(APPLICATION_PROGRAM_CHOICES,
+                            ApplicationID.Id = ThisItem.ID), ProgramID.Id))),
+                      ColorPalette.SuccessText, ColorPalette.TextHelp)
+                  FillPortions: =1.1
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  LayoutMinWidth: =0
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =CountRows(Filter(COMMITTEE_SCORES,
+                       ApplicationID.Id = ThisItem.ID)) & " / " &
+                     CountRows(Distinct(Filter(APPLICATION_PROGRAM_CHOICES,
+                       ApplicationID.Id = ThisItem.ID), ProgramID.Id))
+      # Row overlay. Selecting a row is the only interaction — the detail
+      # panel below is always present and simply follows locApp.
+      - btnRowSelectDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =RGBA(0, 0, 0, 0)
+            Fill: =RGBA(0, 0, 0, 0)
+            FocusedBorderThickness: =0
+            Height: =Parent.TemplateHeight
+            HoverColor: =RGBA(0, 0, 0, 0)
+            HoverFill: =RGBA(0, 0, 0, 0.04)
+            OnSelect: |-
+              =UpdateContext({
+                locApp: ThisItem, locEditApp: false, locClearWarn: false,
+                locCompsDirty: false, locChoicesDirty: false,
+                locCompTypeDTD:
+                  First(SortByColumns(
+                    Filter(COMPETENCY_TYPES, State.Value = "Active"),
+                    "SortOrder", SortOrder.Ascending)).ID
+              })
+            PressedColor: =RGBA(0, 0, 0, 0)
+            PressedFill: =RGBA(0, 0, 0, 0.08)
+            Text: |-
+              ="Select " & ThisItem.ApplicantName
+            Tooltip: ="Select this application"
+            Width: =Parent.TemplateWidth
+            X: =0
+            Y: =0
+      - recRowLineDTD:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.Gray200
+            Height: =1
+            Width: =Parent.TemplateWidth
+            Y: =Parent.TemplateHeight - 1
+
+- lblEmptyDTD:
+    Control: Label@2.5.1
+    Properties:
+      Align: =Align.Center
+      Color: =ColorPalette.TextHelp
+      Font: =Typography.Family
+      Height: =40
+      Size: =Typography.SizeBody
+      Text: |-
+        =If(
+          And(drpStatusDTD.Selected.Value = "All statuses",
+              drpStageDTD.Selected.Value = "All stages",
+              drpOutcomeDTD.Selected.Value = "All outcomes"),
+          "No applications in this cycle yet.",
+          "No applications match these filters.")
+      Visible: =CountRows(galApplicationsDTD.AllItems) = 0
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =216
+
+# ===========================================================================
+# DETAIL PANEL — the selected application, tabbed by the wizard's own steps
+# ===========================================================================
+# Tabs mirror ApplicationScreen: Personnel, Program choices, Competencies,
+# Eligibility, Documents. Review is omitted — the panel IS the review.
+#
+# Fields are grouped into multi-line labels rather than one control per field.
+# Forty separate labels would be forty things to keep aligned for no gain: this
+# panel is read-only, so nothing here needs its own hit target or tab stop.
+- conDetailDTD:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =Max(300, Parent.Height - 388)
+      RadiusBottomLeft: =10
+      RadiusBottomRight: =10
+      RadiusTopLeft: =10
+      RadiusTopRight: =10
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =364
+    Children:
+      # HEADER BANNER. Declared first — z-order is declaration order, so the
+      # name, email and badges all draw on top of it.
+      #
+      # A GroupContainer, not a Rectangle: only Button, GroupContainer and
+      # Image support Radius, and the top corners have to match the panel's own
+      # 10px or the banner squares off the card it sits in. Bottom corners stay
+      # square so it meets the body flush.
+      - conDetailHeaderDTD:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            # Navy850, matching the admin sidebar (_AdminShell). The palette
+            # splits into Primary Navy for SURFACES and Accent Blue for accents
+            # — _NavBar uses Blue600 only for the selected-item indicator — so
+            # an accent blue here read as a stray highlight rather than a
+            # surface. Navy900 is the utility bar's shade; this panel sits
+            # beside the sidebar, so it takes the sidebar's.
+            Fill: =ColorPalette.Navy850
+            Height: =52
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =10
+            RadiusTopRight: =10
+            Visible: =Not(IsBlank(locApp))
+            Width: =Parent.Width
+            X: =0
+            Y: =0
+      - lblDetailEmptyDTD:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =40
+            Size: =Typography.SizeBody
+            Text: ="Select an application above to see its full detail."
+            Visible: =IsBlank(locApp)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =Parent.Height / 2 - 20
+
+      - lblDetailNameDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextOnDark
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =24
+            Size: =Typography.SizeHeading
+            Text: =locApp.ApplicantName
+            Visible: =Not(IsBlank(locApp))
+            Width: =Parent.Width - 560
+            X: =24
+            Y: =5
+      - lblDetailEmailDTD:
+          Control: Label@2.5.1
+          Properties:
+            # Blue50, not white: the email is secondary to the name and needs
+            # to read that way. 11.9:1 on Navy850, well past AA.
+            Color: =ColorPalette.Blue50
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeBody
+            Text: =locApp.ApplicantEmail
+            Visible: =Not(IsBlank(locApp))
+            Width: =Parent.Width - 560
+            X: =24
+            Y: =28
+      # Three badges, top right, no segment labels — the values say what they
+      # are. Laid out RIGHT to LEFT: the outcome anchors to the panel edge and
+      # each earlier badge positions off the one after it, so the row stays
+      # flush right whatever the values are. Each fallback skips a hidden
+      # neighbour, which is why a Draft (no stage, no outcome) still puts its
+      # single badge against the right edge instead of leaving two gaps.
+      #
+      # The status badge carries validation now: a Validated application says
+      # so here, in the same place it says Submitted.
+      - btnDetailStatusBadgeDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =Self.Color
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: |-
+              =Switch(locApp.ApplicationStatus.Value,
+                 "Draft", ColorPalette.Blue700,
+                 "Submitted", ColorPalette.WarningText,
+                 "Validated", ColorPalette.SuccessText,
+                 "Withdrawn", ColorPalette.TextHelp,
+                 ColorPalette.TextHelp)
+            DisplayMode: =DisplayMode.View
+            # Fill is the palette's DESIGNED pair for the text
+            # colour, not ColorFade(Self.Color, 80%). The component's
+            # derived fill lands too light for the warm hues — amber
+            # came out at 3.8:1 and red at 3.5:1, both under AA at
+            # 9pt. Switching on Self.Color rather than on the value
+            # means this can never drift from the Color expression
+            # above it.
+            Fill: |-
+              =Switch(Self.Color,
+                 ColorPalette.WarningText, ColorPalette.WarningLight,
+                 ColorPalette.DangerText,  ColorPalette.DangerLight,
+                 ColorPalette.SuccessText, ColorPalette.SuccessLight,
+                 ColorPalette.TextHelp,    ColorPalette.Gray50,
+                 ColorPalette.Blue50)
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =24
+            RadiusBottomLeft: =3
+            RadiusBottomRight: =3
+            RadiusTopLeft: =3
+            RadiusTopRight: =3
+            Size: =Typography.SizeCaption
+            Text: =locApp.ApplicationStatus.Value
+            Visible: =Not(IsBlank(locApp))
+            Width: =Len(Self.Text) * 5.6 + 26
+            X: |-
+              =If(btnDetailStageBadgeDTD.Visible,
+                 btnDetailStageBadgeDTD.X - 8,
+                 If(btnDetailOutcomeBadgeDTD.Visible,
+                    btnDetailOutcomeBadgeDTD.X - 8,
+                    Parent.Width - 24)) - Self.Width
+            Y: =14
+      - btnDetailStageBadgeDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =Self.Color
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: |-
+              =Switch(locApp.ReviewStage.Value,
+                 "Pending First-Line", ColorPalette.WarningText,
+                 "Pending Second-Line", ColorPalette.WarningText,
+                 "Needs Supervisor Assigned", ColorPalette.DangerText,
+                 "Pending DTD Validation", ColorPalette.Blue700,
+                 "Committee Review", ColorPalette.Navy700,
+                 "Pending Placement", ColorPalette.Blue600,
+                 "Pending Notification", ColorPalette.DangerText,
+                 "Complete", ColorPalette.SuccessText,
+                 ColorPalette.TextHelp)
+            DisplayMode: =DisplayMode.View
+            # Fill is the palette's DESIGNED pair for the text
+            # colour, not ColorFade(Self.Color, 80%). The component's
+            # derived fill lands too light for the warm hues — amber
+            # came out at 3.8:1 and red at 3.5:1, both under AA at
+            # 9pt. Switching on Self.Color rather than on the value
+            # means this can never drift from the Color expression
+            # above it.
+            Fill: |-
+              =Switch(Self.Color,
+                 ColorPalette.WarningText, ColorPalette.WarningLight,
+                 ColorPalette.DangerText,  ColorPalette.DangerLight,
+                 ColorPalette.SuccessText, ColorPalette.SuccessLight,
+                 ColorPalette.TextHelp,    ColorPalette.Gray50,
+                 ColorPalette.Blue50)
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =24
+            RadiusBottomLeft: =3
+            RadiusBottomRight: =3
+            RadiusTopLeft: =3
+            RadiusTopRight: =3
+            Size: =Typography.SizeCaption
+            Text: =locApp.ReviewStage.Value
+            Visible: |-
+              =And(Not(IsBlank(locApp)), Not(IsBlank(locApp.ReviewStage.Value)))
+            Width: =Len(Self.Text) * 5.6 + 26
+            X: |-
+              =If(btnDetailOutcomeBadgeDTD.Visible,
+                 btnDetailOutcomeBadgeDTD.X - 8,
+                 Parent.Width - 24) - Self.Width
+            Y: =14
+      - btnDetailOutcomeBadgeDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =Self.Color
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: |-
+              =Switch(locApp.PlacementOutcome.Value,
+                 "Placed", ColorPalette.SuccessText,
+                 "Not Selected", ColorPalette.WarningText,
+                 "Placement Declined", ColorPalette.TextHelp,
+                 ColorPalette.TextHelp)
+            DisplayMode: =DisplayMode.View
+            # Fill is the palette's DESIGNED pair for the text
+            # colour, not ColorFade(Self.Color, 80%). The component's
+            # derived fill lands too light for the warm hues — amber
+            # came out at 3.8:1 and red at 3.5:1, both under AA at
+            # 9pt. Switching on Self.Color rather than on the value
+            # means this can never drift from the Color expression
+            # above it.
+            Fill: |-
+              =Switch(Self.Color,
+                 ColorPalette.WarningText, ColorPalette.WarningLight,
+                 ColorPalette.DangerText,  ColorPalette.DangerLight,
+                 ColorPalette.SuccessText, ColorPalette.SuccessLight,
+                 ColorPalette.TextHelp,    ColorPalette.Gray50,
+                 ColorPalette.Blue50)
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =24
+            RadiusBottomLeft: =3
+            RadiusBottomRight: =3
+            RadiusTopLeft: =3
+            RadiusTopRight: =3
+            Size: =Typography.SizeCaption
+            Text: =locApp.PlacementOutcome.Value
+            # Hidden until there is a decision. Its neighbours are positioned
+            # from the badge BEFORE it, not from this one, so hiding it leaves
+            # no gap.
+            Visible: |-
+              =And(Not(IsBlank(locApp)),
+                 Not(IsBlank(locApp.PlacementOutcome.Value)),
+                 locApp.PlacementOutcome.Value <> "Decision Pending")
+            Width: =Len(Self.Text) * 5.6 + 26
+            X: =Parent.Width - 24 - Self.Width
+            Y: =14
+
+      # Advances ApplicationStatus, which is the whole of what validation
+      # is now: Submitted -> Validated, and back again if DTD changes its mind
+      # or the applicant edits. There is no separate flag to keep in step.
+      #
+      # Sits on the tab row rather than under the badges: the badges end at
+      # y=40 and the tabs start at y=70, and a 32px button does not fit in 30px.
+      - btnValidateDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            # Validated is shown by the status badge above. This button
+            # therefore never states the state — it states what clicking DOES.
+            # Green "Validated ✓" read as a badge, so nobody expected it to be
+            # live, and a single click silently undid the validation.
+            BorderColor: |-
+              =If(locApp.ApplicationStatus.Value = "Validated",
+                 ColorPalette.Gray300, ColorPalette.Blue600)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: |-
+              =If(locApp.ApplicationStatus.Value = "Validated", 1, 0)
+            Color: |-
+              =If(locApp.ApplicationStatus.Value = "Validated",
+                 ColorPalette.TextBody, ColorPalette.TextOnDark)
+            # A Draft has not been submitted — there is nothing to accept yet.
+            # It still reads "Validate application", greyed: the button states
+            # what has not happened, which is true of a draft too.
+            DisplayMode: |-
+              =If(locApp.ApplicationStatus.Value = "Draft",
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: |-
+              =If(locApp.ApplicationStatus.Value = "Validated",
+                 ColorPalette.White, ColorPalette.Blue600)
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            HoverColor: =Self.Color
+            HoverFill: |-
+              =If(locApp.ApplicationStatus.Value = "Validated",
+                 ColorPalette.Gray50, ColorPalette.Blue700)
+            # Patch returns the saved record, so locApp updates in place and the
+            # button, the badge and the gallery row all re-render off the same
+            # value without a re-query. Undo goes to Submitted — the state the
+            # application was in before DTD accepted it.
+            # Validating goes straight through — additive, and undone in one
+            # click. CLEARING raises the modal, because it puts the packet back
+            # in the queue and used to happen on a single unlabelled click.
+            #
+            # ONE UpdateContext, not two: every right-hand side reads the
+            # PRE-update locApp, so the same test drives both fields. The If
+            # after it reads the POST-update locClearWarn, which is true
+            # exactly when the modal opened and nothing was written.
+            OnSelect: |-
+              =UpdateContext({
+                locClearWarn: locApp.ApplicationStatus.Value = "Validated",
+                locApp: If(locApp.ApplicationStatus.Value = "Validated",
+                  locApp,
+                  Patch(APPLICATIONS,
+                    LookUp(APPLICATIONS, ID = locApp.ID),
+                    { ApplicationStatus: { Value: "Validated" } }))
+              });
+              If(Not(locClearWarn),
+                 Notify("Application validated.", NotificationType.Success))
+            PressedColor: =Self.Color
+            PressedFill: |-
+              =If(locApp.ApplicationStatus.Value = "Validated",
+                 ColorPalette.White, ColorPalette.Blue700)
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            TabIndex: =7
+            Text: |-
+              =If(locApp.ApplicationStatus.Value = "Validated",
+                 "Clear validation", "Validate application")
+            Tooltip: |-
+              =If(locApp.ApplicationStatus.Value = "Draft",
+                 "A draft has not been submitted — there is nothing to validate",
+                 If(locApp.ApplicationStatus.Value = "Validated",
+                    "Send this back to Submitted so it waits on DTD again",
+                    "Mark this application as reviewed and accepted"))
+            # Hidden for a withdrawal — validation is a step on a path the
+            # application has left, and offering it would imply it can rejoin.
+            Visible: |-
+              =And(Not(IsBlank(locApp)),
+                 locApp.ApplicationStatus.Value <> "Withdrawn",
+                 Not(locEditApp))
+            Width: =210
+            X: =Parent.Width - 234
+            Y: =60
+
+      # ---- edit toggle + save ----
+      # Locked by default, same as the cycle detail panel. The toggle doubles
+      # as Cancel: leaving edit mode Resets every field, so pending changes are
+      # discarded rather than silently kept.
+      #
+      # UpdateContext runs BEFORE the Resets, not after. Reset re-reads a
+      # control's Default, and these Defaults switch on locEditApp — resetting
+      # first would re-read the mode we are leaving. This is the opposite order
+      # from the cycle screen, where no Default depends on the flag.
+      - btnEditToggleDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            # A draft belongs to the applicant, who is still writing it; DTD
+            # editing underneath them would be overwritten on their next save.
+            DisplayMode: |-
+              =If(locApp.ApplicationStatus.Value = "Draft",
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =UpdateContext({ locEditApp: Not(locEditApp), locCompsDirty: false, locChoicesDirty: false });
+              ClearCollect(colComps,
+                ForAll(
+                  Filter(APPLICATION_COMPETENCIES,
+                    ApplicationID.Id = locApp.ID) As ac,
+                  {
+                    CompId: ac.CompetencyID.Id,
+                    CompName: ac.CompetencyID.Value,
+                    TypeId:
+                      LookUp(COMPETENCIES, ID = ac.CompetencyID.Id).CompetencyTypeID.Id,
+                    TypeName:
+                      LookUp(COMPETENCIES, ID = ac.CompetencyID.Id).CompetencyTypeID.Value,
+                    TypeOrder:
+                      LookUp(COMPETENCY_TYPES,
+                        ID = LookUp(COMPETENCIES,
+                               ID = ac.CompetencyID.Id).CompetencyTypeID.Id
+                      ).SortOrder
+                  }));
+              UpdateContext({
+                locCompTypeDTD:
+                  Coalesce(locCompTypeDTD,
+                    First(SortByColumns(
+                      Filter(COMPETENCY_TYPES, State.Value = "Active"),
+                      "SortOrder", SortOrder.Ascending)).ID)
+              });
+              Reset(drpAddCompDTD);
+              Reset(txtPersNameDTD); Reset(txtPersLocationDTD); Reset(txtPersTitleDTD);
+              Reset(txtPersGradeDTD); Reset(txtPersSeriesDTD);
+              Reset(txtPersSup1DTD); Reset(txtPersSup2DTD);
+              Reset(dtpPersStartDTD); Reset(dtpPersScdDTD);
+              Reset(drpEditPrg1DTD); Reset(drpEditOpt1DTD);
+              Reset(drpEditPrg2DTD); Reset(drpEditOpt2DTD);
+              Reset(drpEditPrg3DTD); Reset(drpEditOpt3DTD);
+              Reset(txtEligRatingDTD); Reset(drpEligIdpDTD);
+              Reset(drpEligSessionDTD); Reset(dtpEligDateDTD)
+            PressedColor: =Self.Color
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            TabIndex: =5
+            Text: |-
+              =If(locEditApp, "Cancel", "Edit")
+            Tooltip: |-
+              =If(locApp.ApplicationStatus.Value = "Draft",
+                 "A draft is still the applicant's to change",
+                 If(locEditApp, "Discard changes",
+                    "Edit the personnel details"))
+            Visible: |-
+              =And(Not(IsBlank(locApp)),
+                 locApp.ApplicationStatus.Value <> "Withdrawn")
+            Width: =100
+            X: |-
+              =If(locEditApp, Parent.Width - 232, Parent.Width - 342)
+            Y: =60
+
+      # Choices are removed and rewritten rather than diffed. They carry no
+      # data of their own beyond (program, option, rank), nothing references
+      # them — COMMITTEE_SCORES keys on ProgramID, not on a choice row — and
+      # rank ordering makes an in-place diff more fragile than a replace. Same
+      # shape as the applicant's own submit.
+      #
+      # Writes the nine editable columns. ApplicantEmail is NOT among them:
+      # both the Landing and Application screens find an applicant's record
+      # with ApplicantEmail = User().Email, so changing it here would detach
+      # the application from the person who filed it.
+      #
+      # ApplicationStatus is NOT touched either. The Validated -> Submitted
+      # revert exists because someone changed the application behind DTD's
+      # back; DTD changing it themselves is not that. Add
+      # ApplicationStatus: { Value: "Submitted" } to the Patch if you would
+      # rather have no exception to the rule.
+      - btnSaveAppDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            Fill: =ColorPalette.Blue600
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            # Blocked while the Program choices tab holds something the
+            # applicant's own form would have refused: a program with options
+            # and none chosen, or the same (program, option) pair twice. The
+            # warning label on that tab says which.
+            DisplayMode: |-
+              =If(
+                Or(And(Not(IsBlank(drpEditPrg1DTD.Selected.Value)), drpEditOpt1DTD.Visible,
+                       IsBlank(drpEditOpt1DTD.Selected.Value)),
+                   And(Not(IsBlank(drpEditPrg2DTD.Selected.Value)), drpEditOpt2DTD.Visible,
+                       IsBlank(drpEditOpt2DTD.Selected.Value)),
+                   And(Not(IsBlank(drpEditPrg3DTD.Selected.Value)), drpEditOpt3DTD.Visible,
+                       IsBlank(drpEditOpt3DTD.Selected.Value)),
+                   And(Not(IsBlank(drpEditPrg1DTD.Selected.Value)),
+                       drpEditPrg1DTD.Selected.Value = drpEditPrg2DTD.Selected.Value,
+                       Coalesce(drpEditOpt1DTD.Selected.Value, "") =
+                         Coalesce(drpEditOpt2DTD.Selected.Value, "")),
+                   And(Not(IsBlank(drpEditPrg1DTD.Selected.Value)),
+                       drpEditPrg1DTD.Selected.Value = drpEditPrg3DTD.Selected.Value,
+                       Coalesce(drpEditOpt1DTD.Selected.Value, "") =
+                         Coalesce(drpEditOpt3DTD.Selected.Value, "")),
+                   And(Not(IsBlank(drpEditPrg2DTD.Selected.Value)),
+                       drpEditPrg2DTD.Selected.Value = drpEditPrg3DTD.Selected.Value,
+                       Coalesce(drpEditOpt2DTD.Selected.Value, "") =
+                         Coalesce(drpEditOpt3DTD.Selected.Value, ""))),
+                DisplayMode.Disabled, DisplayMode.Edit)
+            Font: =Typography.Family
+            Height: =32
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.Blue700
+            OnSelect: |-
+              =UpdateContext({
+                locApp: Patch(APPLICATIONS,
+                  LookUp(APPLICATIONS, ID = locApp.ID),
+                  {
+                    ApplicantName: If(txtPersNameDTD.Text = "—", Blank(), txtPersNameDTD.Text),
+                    Location: If(txtPersLocationDTD.Text = "—", Blank(), txtPersLocationDTD.Text),
+                    JobTitle: If(txtPersTitleDTD.Text = "—", Blank(), txtPersTitleDTD.Text),
+                    Grade: If(txtPersGradeDTD.Text = "—", Blank(), txtPersGradeDTD.Text),
+                    JobSeries: If(txtPersSeriesDTD.Text = "—", Blank(), txtPersSeriesDTD.Text),
+                    NCUAStartDate: dtpPersStartDTD.SelectedDate,
+                    ServiceComputationDate: dtpPersScdDTD.SelectedDate,
+                    FirstLineSupervisorEmail: If(txtPersSup1DTD.Text = "—", Blank(), txtPersSup1DTD.Text),
+                    SecondLineSupervisorEmail: If(txtPersSup2DTD.Text = "—", Blank(), txtPersSup2DTD.Text),
+                    // Eligibility. A choice is patched as { Value: "..." } and
+                    // the record form comes FIRST in the If — putting Blank()
+                    // first makes Power Fx infer the branch type from it.
+                    ListedOnIDP:
+                      If(Not(IsBlank(drpEligIdpDTD.Selected.Value)),
+                        { Value: drpEligIdpDTD.Selected.Value }, Blank()),
+                    AttendedInfoSession:
+                      If(Not(IsBlank(drpEligSessionDTD.Selected.Value)),
+                        { Value: drpEligSessionDTD.Selected.Value }, Blank()),
+                    LatestPerformanceRating:
+                      If(txtEligRatingDTD.Text = "—", Blank(),
+                        Value(txtEligRatingDTD.Text)),
+                    InfoSessionDate: dtpEligDateDTD.SelectedDate
+                  }),
+                locEditApp: false
+              });
+              // GUARDED, not diffed. Rank is positional, so a diff would have
+              // to match on the (program, option, rank) triple and rewrite any
+              // row whose rank moved — more failure surface than the
+              // delete-and-rewrite it replaces.
+              //
+              // The write failure that cost the competencies cannot happen on
+              // this list: New-LdpSharePointLists.ps1 made its Title optional
+              // when it created it. The remaining risk was an unrelated save
+              // rewriting choices from dropdowns that had failed to default,
+              // and locChoicesDirty closes that — the flag is raised only by
+              // the six dropdowns' OnChange.
+              If(locChoicesDirty,
+                Remove(APPLICATION_PROGRAM_CHOICES,
+                  Filter(APPLICATION_PROGRAM_CHOICES, ApplicationID.Id = locApp.ID)));
+              If(locChoicesDirty,
+                ForAll(
+                  Filter(
+                    Table(
+                    { PrgId: LookUp(PROGRAMS, ProgramName = drpEditPrg1DTD.Selected.Value).ID,
+                      PrgName: drpEditPrg1DTD.Selected.Value,
+                      OptId: LookUp(PROGRAM_OPTIONS,
+                        And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg1DTD.Selected.Value).ID,
+                            OptionName = drpEditOpt1DTD.Selected.Value)).ID,
+                      OptName: drpEditOpt1DTD.Selected.Value, Rnk: 1 },
+                    { PrgId: LookUp(PROGRAMS, ProgramName = drpEditPrg2DTD.Selected.Value).ID,
+                      PrgName: drpEditPrg2DTD.Selected.Value,
+                      OptId: LookUp(PROGRAM_OPTIONS,
+                        And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg2DTD.Selected.Value).ID,
+                            OptionName = drpEditOpt2DTD.Selected.Value)).ID,
+                      OptName: drpEditOpt2DTD.Selected.Value, Rnk: 2 },
+                    { PrgId: LookUp(PROGRAMS, ProgramName = drpEditPrg3DTD.Selected.Value).ID,
+                      PrgName: drpEditPrg3DTD.Selected.Value,
+                      OptId: LookUp(PROGRAM_OPTIONS,
+                        And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg3DTD.Selected.Value).ID,
+                            OptionName = drpEditOpt3DTD.Selected.Value)).ID,
+                      OptName: drpEditOpt3DTD.Selected.Value, Rnk: 3 }
+                  ),
+                    Not(IsBlank(PrgId))
+                  ) As ch,
+                  Patch(APPLICATION_PROGRAM_CHOICES, Defaults(APPLICATION_PROGRAM_CHOICES),
+                  {
+                    ApplicationID: {
+                      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                      Id: locApp.ID,
+                      Value: locApp.ApplicantEmail
+                    },
+                    ProgramID: {
+                      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                      Id: ch.PrgId,
+                      Value: ch.PrgName
+                    },
+                    ProgramOptionID:
+                      If(Not(IsBlank(ch.OptId)),
+                        {
+                          '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                          Id: ch.OptId,
+                          Value: ch.OptName
+                        },
+                        Blank()),
+                    Rank: ch.Rnk
+                  })
+              ));
+              // GUARDED. This block deletes every competency row for the
+              // application and rewrites it from colComps, so an empty or
+              // stale colComps destroys the lot. colComps is built only by the
+              // Edit toggle, which means a Personnel-only edit used to rewrite
+              // competencies as a side effect — and did, losing them.
+              //
+              // locCompsDirty is set only by Add and Remove on the Competencies
+              // tab. Deliberately removing every competency still saves,
+              // because that sets the flag; not touching the tab now leaves the
+              // list alone entirely.
+              //
+              // Two separate If()s rather than If(cond, A; B): semicolons
+              // inside an If branch are the shape that parses inconsistently.
+              // ADD FIRST, THEN REMOVE — never the other way round. Deleting
+              // and rewriting means any failed write loses the whole set, which
+              // is exactly what a required Title column did here: every Patch
+              // failed validation after the Remove had already run.
+              //
+              // In this order a failed write costs the additions and nothing
+              // else. The removal is correct either way, because it deletes
+              // only what is genuinely absent from the working copy.
+              //
+              // colCompsWas is the stored set snapshotted BEFORE any write, so
+              // "already there" is judged against what was on the server when
+              // Save started, not against what this handler has since added.
+              If(locCompsDirty,
+                ClearCollect(colCompsWas,
+                  ForAll(
+                    Filter(APPLICATION_COMPETENCIES,
+                      ApplicationID.Id = locApp.ID) As sv,
+                    { CompId: sv.CompetencyID.Id })));
+              If(locCompsDirty,
+                ForAll(
+                  Filter(colComps, Not(CompId in colCompsWas.CompId)) As cc,
+                  Patch(APPLICATION_COMPETENCIES, Defaults(APPLICATION_COMPETENCIES),
+                  {
+                    ApplicationID: {
+                      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                      Id: locApp.ID,
+                      Value: locApp.ApplicantEmail
+                    },
+                    CompetencyID: {
+                      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                      Id: cc.CompId,
+                      Value: cc.CompName
+                    }
+                  })));
+              If(locCompsDirty,
+                Remove(APPLICATION_COMPETENCIES,
+                  Filter(APPLICATION_COMPETENCIES,
+                    ApplicationID.Id = locApp.ID,
+                    Not(CompetencyID.Id in colComps.CompId))));
+              ClearCollect(colComps,
+                ForAll(
+                  Filter(APPLICATION_COMPETENCIES,
+                    ApplicationID.Id = locApp.ID) As ac,
+                  {
+                    CompId: ac.CompetencyID.Id,
+                    CompName: ac.CompetencyID.Value,
+                    TypeId:
+                      LookUp(COMPETENCIES, ID = ac.CompetencyID.Id).CompetencyTypeID.Id,
+                    TypeName:
+                      LookUp(COMPETENCIES, ID = ac.CompetencyID.Id).CompetencyTypeID.Value,
+                    TypeOrder:
+                      LookUp(COMPETENCY_TYPES,
+                        ID = LookUp(COMPETENCIES,
+                               ID = ac.CompetencyID.Id).CompetencyTypeID.Id
+                      ).SortOrder
+                  }));
+              UpdateContext({
+                locCompsDirty: false,
+                locChoicesDirty: false,
+                locCompTypeDTD:
+                  Coalesce(locCompTypeDTD,
+                    First(SortByColumns(
+                      Filter(COMPETENCY_TYPES, State.Value = "Active"),
+                      "SortOrder", SortOrder.Ascending)).ID)
+              });
+              Reset(drpAddCompDTD);
+              Reset(txtPersNameDTD); Reset(txtPersLocationDTD); Reset(txtPersTitleDTD);
+              Reset(txtPersGradeDTD); Reset(txtPersSeriesDTD);
+              Reset(txtPersSup1DTD); Reset(txtPersSup2DTD);
+              Reset(dtpPersStartDTD); Reset(dtpPersScdDTD);
+              Reset(drpEditPrg1DTD); Reset(drpEditOpt1DTD);
+              Reset(drpEditPrg2DTD); Reset(drpEditOpt2DTD);
+              Reset(drpEditPrg3DTD); Reset(drpEditOpt3DTD);
+              Reset(txtEligRatingDTD); Reset(drpEligIdpDTD);
+              Reset(drpEligSessionDTD); Reset(dtpEligDateDTD);
+              Notify("Application updated.", NotificationType.Success)
+            PressedColor: =Self.Color
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            TabIndex: =6
+            Text: ="Save"
+            Visible: =And(Not(IsBlank(locApp)), locEditApp)
+            Width: =100
+            X: =Parent.Width - 124
+            Y: =60
+
+      # ---- tab strip (PowerLibs tab-bar-v2-1, static Items) ----
+      - galDetailTabsDTD:
+          Control: Gallery@2.15.0
+          Variant: Horizontal
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Height: =34
+            Items: |-
+              =Table(
+                { id: 1, label: "Personnel" },
+                { id: 2, label: "Program choices" },
+                { id: 3, label: "Competencies" },
+                { id: 4, label: "Eligibility" },
+                { id: 5, label: "Documents" }
+              )
+            LayoutMinHeight: =0
+            LayoutMinWidth: =0
+            ShowScrollbar: =false
+            TemplatePadding: =0
+            TemplateSize: =160
+            Visible: =Not(IsBlank(locApp))
+            Width: =800
+            X: =24
+            Y: =70
+          Children:
+            - btnDetailTabDTD:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  BorderStyle: =BorderStyle.Solid
+                  BorderThickness: =0
+                  Color: |-
+                    =If(ThisItem.id = locDetailTab,
+                       ColorPalette.Blue600, ColorPalette.TextHelp)
+                  Fill: =RGBA(0, 0, 0, 0)
+                  FocusedBorderThickness: =0
+                  Font: =Typography.Family
+                  FontWeight: |-
+                    =If(ThisItem.id = locDetailTab,
+                       Typography.WeightBold, Typography.WeightRegular)
+                  Height: =Parent.TemplateHeight - 3
+                  HoverColor: =ColorPalette.TextOnDark
+                  HoverFill: =ColorPalette.Blue700
+                  OnSelect: |-
+                    =UpdateContext({ locDetailTab: ThisItem.id })
+                  PressedColor: =ColorPalette.TextOnDark
+                  PressedFill: =ColorPalette.Blue700
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.label
+                  Width: =Parent.TemplateWidth
+                  X: =0
+                  Y: =0
+            - recDetailTabLineDTD:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Fill: |-
+                    =If(ThisItem.id = locDetailTab,
+                       ColorPalette.Blue600, RGBA(0, 0, 0, 0))
+                  Height: =3
+                  Width: =Parent.TemplateWidth
+                  X: =0
+                  Y: =Parent.TemplateHeight - 3
+      - recDetailTabsRuleDTD:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.Gray200
+            Height: =1
+            Visible: =Not(IsBlank(locApp))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =103
+
+      # ---- 1. Personnel — PowerLibs modern-input-label ----
+      # Was two labels holding six and four fields as one string each, with
+      # newlines inside the text. That gives no control over row spacing and no
+      # alignment between a label and its value, which is what read as jumbled.
+      #
+      # Each field is now the library's input-with-label pair: a disabled
+      # Classic/TextInput plus a Label sitting astride its top border, filled
+      # white so it punches a notch in the line.
+      #
+      # DISABLED, NOT VIEW. DisplayMode.View strips a TextInput's border and
+      # fill, so an empty one renders as nothing at all — the same trap noted on
+      # the Application Screen. Disabled keeps the box and greys nothing,
+      # because DisabledColor and DisabledFill are set to the normal values.
+      #
+      # The floating label's Width is estimated from its text. PaddingLeft and
+      # PaddingRight take 8px out of that width, so the first estimate — 5.2 per
+      # character — left the longest labels a few pixels short and they wrapped
+      # to a second line inside a 16px-tall control. 6 per character plus 16
+      # clears it, and Wrap: =false means a future label that outgrows the
+      # estimate clips at the edge rather than breaking in half.
+      #
+      # Four columns x three rows, grouped by what the fields are about:
+      # person, position, service dates, supervisors. Bottom row ends at 274,
+      # inside the panel's 300px minimum, so nothing clips when the window is
+      # short. Column 1 is the anchor; the rest position off it.
+      - txtPersNameDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.ApplicantName, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEditApp, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =(Parent.Width - 120) / 4
+            X: =24
+            Y: =118
+      - lblPersNameDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Full name"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersNameDTD.X + 10
+            Y: =txtPersNameDTD.Y - Self.Height / 2
+      - txtPersEmailDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.ApplicantEmail, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: =DisplayMode.Disabled
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =txtPersNameDTD.Width
+            X: =24
+            Y: =176
+      - lblPersEmailDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Email"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersEmailDTD.X + 10
+            Y: =txtPersEmailDTD.Y - Self.Height / 2
+      - txtPersLocationDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.Location, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEditApp, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =txtPersNameDTD.Width
+            X: =24
+            Y: =234
+      - lblPersLocationDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Location"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersLocationDTD.X + 10
+            Y: =txtPersLocationDTD.Y - Self.Height / 2
+      - txtPersTitleDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.JobTitle, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEditApp, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =txtPersNameDTD.Width
+            X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24)
+            Y: =118
+      - lblPersTitleDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Job title"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersTitleDTD.X + 10
+            Y: =txtPersTitleDTD.Y - Self.Height / 2
+      - txtPersGradeDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.Grade, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEditApp, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =txtPersNameDTD.Width
+            X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24)
+            Y: =176
+      - lblPersGradeDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Grade"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersGradeDTD.X + 10
+            Y: =txtPersGradeDTD.Y - Self.Height / 2
+      - txtPersSeriesDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.JobSeries, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEditApp, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =txtPersNameDTD.Width
+            X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24)
+            Y: =234
+      - lblPersSeriesDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Job series"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersSeriesDTD.X + 10
+            Y: =txtPersSeriesDTD.Y - Self.Height / 2
+      - txtPersStartDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locApp.NCUAStartDate), "—",
+                 Text(locApp.NCUAStartDate, "mm/dd/yyyy"))
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: =DisplayMode.Disabled
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 1, Not(locEditApp))
+            Width: =txtPersNameDTD.Width
+            X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24) * 2
+            Y: =118
+      - dtpPersStartDTD:
+          Control: Classic/DatePicker@2.5.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            # NOT Today(). A picker that defaults to today writes a plausible
+            # wrong date for anyone who opens the field and does not touch it —
+            # the same defaulting that makes these two columns untrustworthy on
+            # the Application Screen. Blank stays blank.
+            DefaultDate: =locApp.NCUAStartDate
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 1, locEditApp)
+            Width: =txtPersNameDTD.Width
+            X: =txtPersStartDTD.X
+            Y: =txtPersStartDTD.Y
+      - lblPersStartDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="NCUA start date"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersStartDTD.X + 10
+            Y: =txtPersStartDTD.Y - Self.Height / 2
+      - txtPersScdDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locApp.ServiceComputationDate), "—",
+                 Text(locApp.ServiceComputationDate, "mm/dd/yyyy"))
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: =DisplayMode.Disabled
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 1, Not(locEditApp))
+            Width: =txtPersNameDTD.Width
+            X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24) * 2
+            Y: =176
+      - dtpPersScdDTD:
+          Control: Classic/DatePicker@2.5.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            # NOT Today(). A picker that defaults to today writes a plausible
+            # wrong date for anyone who opens the field and does not touch it —
+            # the same defaulting that makes these two columns untrustworthy on
+            # the Application Screen. Blank stays blank.
+            DefaultDate: =locApp.ServiceComputationDate
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 1, locEditApp)
+            Width: =txtPersNameDTD.Width
+            X: =txtPersScdDTD.X
+            Y: =txtPersScdDTD.Y
+      - lblPersScdDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Service computation date"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersScdDTD.X + 10
+            Y: =txtPersScdDTD.Y - Self.Height / 2
+      - txtPersSup1DTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.FirstLineSupervisorEmail, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEditApp, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =txtPersNameDTD.Width
+            X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24) * 3
+            Y: =118
+      - lblPersSup1DTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="First-line supervisor"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersSup1DTD.X + 10
+            Y: =txtPersSup1DTD.Y - Self.Height / 2
+      - txtPersSup2DTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.SecondLineSupervisorEmail, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEditApp, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =txtPersNameDTD.Width
+            X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24) * 3
+            Y: =176
+      - lblPersSup2DTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Second-line supervisor"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 1)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtPersSup2DTD.X + 10
+            Y: =txtPersSup2DTD.Y - Self.Height / 2
+
+      # ---- 2. Program choices ----
+      - galDetailChoicesDTD:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            Height: =Parent.Height - 130
+            # No score here any more. It keyed on PROGRAM while these rows are
+            # per (program, option), so HPP ranked twice showed one score
+            # against two rows — accurate and unreadable. The gallery column on
+            # the table above already reports scoring progress; this tab is
+            # about what was chosen. Dropping it takes the COMMITTEE_SCORES
+            # lookup out of a per-row expression as well.
+            #
+            # OptionName is blank for MDP and NEXT, which have no options. That
+            # is the truth rather than a fabricated "N/A", and the row template
+            # below shows the program alone when it is blank.
+            Items: |-
+              =SortByColumns(
+                ForAll(
+                  Filter(APPLICATION_PROGRAM_CHOICES,
+                    ApplicationID.Id = locApp.ID) As ch,
+                  {
+                    ChRank: ch.Rank,
+                    OptionName: ch.ProgramOptionID.Value,
+                    ProgramName: ch.ProgramID.Value
+                  }),
+                "ChRank", SortOrder.Ascending)
+            ShowScrollbar: =true
+            TemplatePadding: =0
+            TemplateSize: =56
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, Not(locEditApp))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =118
+          Children:
+            - conDetailChoiceDTD:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Fill: =ColorPalette.White
+                  Height: =Parent.TemplateHeight
+                  Width: =Parent.TemplateWidth
+                Children:
+                  - lblChoiceRankDTD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.Blue700
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightBold
+                        Height: =20
+                        Size: =Typography.SizeBody
+                        Text: |-
+                          ="#" & ThisItem.ChRank
+                        Width: =34
+                        X: =0
+                        Y: =6
+                  # The PROGRAM is the headline, because it is the choice. The
+                  # option is the detail underneath it, and there simply is not
+                  # one for MDP or NEXT — that line renders empty rather than
+                  # carrying an invented "N/A". These were the other way round
+                  # while the option was the only thing recorded.
+                  - lblChoiceProgramDTD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =20
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.ProgramName
+                        Width: =Parent.Width - 60
+                        X: =36
+                        Y: =6
+                  - lblChoiceOptionDTD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHelp
+                        Font: =Typography.Family
+                        Height: =18
+                        Size: =Typography.SizeCaption
+                        Text: =ThisItem.OptionName
+                        Width: =Parent.Width - 60
+                        X: =36
+                        Y: =26
+            - recDetailChoiceLineDTD:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Fill: =ColorPalette.Gray200
+                  Height: =1
+                  Width: =Parent.TemplateWidth
+                  Y: =Parent.TemplateHeight - 1
+      - lblDetailNoChoicesDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =40
+            Size: =Typography.SizeBody
+            Text: ="No program choices recorded yet."
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, Not(locEditApp),
+                 CountRows(galDetailChoicesDTD.AllItems) = 0)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =130
+
+
+      # ---- 2b. Program choices, EDIT ----
+      # Three fixed rank rows rather than editable gallery rows. The data is
+      # capped at three by FR-004, the applicant's own step 2 has exactly this
+      # shape, and reading control values back out of a gallery's AllItems to
+      # save them is far more machinery than three pairs of dropdowns.
+      #
+      # SINGLE-COLUMN TEXT ITEMS, via ForAll(...). A Classic/DropDown matches
+      # Default against the column named by its Value property, and Value is an
+      # output that YAML cannot set (PA2108) — so with a table of RECORDS the
+      # match is against whichever column Power Apps picked, not necessarily
+      # ProgramName, and a correct Default silently fails to select anything.
+      # A one-column table makes display and Default the same thing. Same
+      # reason drpCycleDTD at the top of this screen is built this way.
+      #
+      # The cost is that Selected.ID is gone, so saving looks the name back up.
+      # Program names and option-names-within-a-program are unique, and both
+      # lists are small.
+      #
+      # AllowEmptySelection: without it a dropdown selects its first item when
+      # Default matches nothing — so rank 2 and rank 3 would arrive pre-filled
+      # with a program the applicant never chose, and saving would invent two
+      # choices. Blank has to stay blank.
+      #
+      # Items unions the ACTIVE set with whatever this application already
+      # chose. A retired program or option must still display on an application
+      # that chose it (PROGRAM_OPTIONS.md); without the union DTD would see an
+      # empty picker and overwrite a real choice on save. Same trap as
+      # OI-APP-2, solved here for this screen only.
+      - lblEditRank1DTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="FIRST CHOICE"
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp)
+            Width: =360
+            X: =24
+            Y: =112
+      - drpEditPrg1DTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 1)).ProgramID.Value
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            # <> "Retired", NOT = "Active". PROGRAMS.State was added after the
+            # three programs existed and no script has ever backfilled it, so
+            # those rows hold BLANK — which is not "Active", and an equality
+            # test returned an empty list. Both PowerShell scripts already test
+            # it this way for the same reason. Tighten to = "Active" once the
+            # column is backfilled (OI-DATA-2).
+            #
+            # No union with the current choice here, unlike the option list
+            # below: PROGRAMS.md treats NEXT/MDP/HPP as a closed set that
+            # nothing retires, so there is no retired program to keep visible.
+            OnChange: |-
+              =UpdateContext({ locChoicesDirty: true })
+            Items: |-
+              =ForAll(
+                Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName),
+                ProgramName)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp)
+            Width: =360
+            X: =24
+            Y: =130
+      - drpEditOpt1DTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 1)).ProgramOptionID.Value
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            # Unions the active options with whatever this application already
+            # chose, so a retired option still shows on an application that
+            # picked it. Matched on OptionName rather than ID: a bare ID inside
+            # a Filter that also nests a LookUp on another list resolves
+            # ambiguously, and the name is what Default matches on anyway, so
+            # the two cannot disagree.
+            OnChange: |-
+              =UpdateContext({ locChoicesDirty: true })
+            Items: |-
+              =ForAll(
+                Sort(
+                  Filter(PROGRAM_OPTIONS,
+                    ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg1DTD.Selected.Value).ID,
+                    Or(State.Value = "Active",
+                       OptionName = LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 1)).ProgramOptionID.Value)),
+                  OptionName),
+                OptionName)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            # This property IS "the chosen program has options"; the save gate
+            # reads Self.Visible rather than repeating the query.
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp,
+                 Not(IsEmpty(Filter(PROGRAM_OPTIONS,
+                   ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg1DTD.Selected.Value).ID,
+                   State.Value = "Active"))))
+            Width: =588
+            X: =400
+            Y: =130
+      - lblEditNoOpt1DTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeBody
+            Text: ="No options — the program itself is the choice."
+            VerticalAlign: =VerticalAlign.Middle
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp,
+                 Not(IsBlank(drpEditPrg1DTD.Selected.Value)),
+                 Not(drpEditOpt1DTD.Visible))
+            Width: =588
+            X: =400
+            Y: =130
+
+      - lblEditRank2DTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="SECOND CHOICE"
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp)
+            Width: =360
+            X: =24
+            Y: =166
+      - drpEditPrg2DTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 2)).ProgramID.Value
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            # <> "Retired", NOT = "Active". PROGRAMS.State was added after the
+            # three programs existed and no script has ever backfilled it, so
+            # those rows hold BLANK — which is not "Active", and an equality
+            # test returned an empty list. Both PowerShell scripts already test
+            # it this way for the same reason. Tighten to = "Active" once the
+            # column is backfilled (OI-DATA-2).
+            #
+            # No union with the current choice here, unlike the option list
+            # below: PROGRAMS.md treats NEXT/MDP/HPP as a closed set that
+            # nothing retires, so there is no retired program to keep visible.
+            OnChange: |-
+              =UpdateContext({ locChoicesDirty: true })
+            Items: |-
+              =ForAll(
+                Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName),
+                ProgramName)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp)
+            Width: =360
+            X: =24
+            Y: =184
+      - drpEditOpt2DTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 2)).ProgramOptionID.Value
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            # Unions the active options with whatever this application already
+            # chose, so a retired option still shows on an application that
+            # picked it. Matched on OptionName rather than ID: a bare ID inside
+            # a Filter that also nests a LookUp on another list resolves
+            # ambiguously, and the name is what Default matches on anyway, so
+            # the two cannot disagree.
+            OnChange: |-
+              =UpdateContext({ locChoicesDirty: true })
+            Items: |-
+              =ForAll(
+                Sort(
+                  Filter(PROGRAM_OPTIONS,
+                    ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg2DTD.Selected.Value).ID,
+                    Or(State.Value = "Active",
+                       OptionName = LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 2)).ProgramOptionID.Value)),
+                  OptionName),
+                OptionName)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            # This property IS "the chosen program has options"; the save gate
+            # reads Self.Visible rather than repeating the query.
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp,
+                 Not(IsEmpty(Filter(PROGRAM_OPTIONS,
+                   ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg2DTD.Selected.Value).ID,
+                   State.Value = "Active"))))
+            Width: =588
+            X: =400
+            Y: =184
+      - lblEditNoOpt2DTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeBody
+            Text: ="No options — the program itself is the choice."
+            VerticalAlign: =VerticalAlign.Middle
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp,
+                 Not(IsBlank(drpEditPrg2DTD.Selected.Value)),
+                 Not(drpEditOpt2DTD.Visible))
+            Width: =588
+            X: =400
+            Y: =184
+
+      - lblEditRank3DTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =18
+            Size: =Typography.SizeCaption
+            Text: ="THIRD CHOICE"
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp)
+            Width: =360
+            X: =24
+            Y: =220
+      - drpEditPrg3DTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 3)).ProgramID.Value
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            # <> "Retired", NOT = "Active". PROGRAMS.State was added after the
+            # three programs existed and no script has ever backfilled it, so
+            # those rows hold BLANK — which is not "Active", and an equality
+            # test returned an empty list. Both PowerShell scripts already test
+            # it this way for the same reason. Tighten to = "Active" once the
+            # column is backfilled (OI-DATA-2).
+            #
+            # No union with the current choice here, unlike the option list
+            # below: PROGRAMS.md treats NEXT/MDP/HPP as a closed set that
+            # nothing retires, so there is no retired program to keep visible.
+            OnChange: |-
+              =UpdateContext({ locChoicesDirty: true })
+            Items: |-
+              =ForAll(
+                Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName),
+                ProgramName)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp)
+            Width: =360
+            X: =24
+            Y: =238
+      - drpEditOpt3DTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 3)).ProgramOptionID.Value
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            # Unions the active options with whatever this application already
+            # chose, so a retired option still shows on an application that
+            # picked it. Matched on OptionName rather than ID: a bare ID inside
+            # a Filter that also nests a LookUp on another list resolves
+            # ambiguously, and the name is what Default matches on anyway, so
+            # the two cannot disagree.
+            OnChange: |-
+              =UpdateContext({ locChoicesDirty: true })
+            Items: |-
+              =ForAll(
+                Sort(
+                  Filter(PROGRAM_OPTIONS,
+                    ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg3DTD.Selected.Value).ID,
+                    Or(State.Value = "Active",
+                       OptionName = LookUp(APPLICATION_PROGRAM_CHOICES,
+                     And(ApplicationID.Id = locApp.ID, Rank = 3)).ProgramOptionID.Value)),
+                  OptionName),
+                OptionName)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            # This property IS "the chosen program has options"; the save gate
+            # reads Self.Visible rather than repeating the query.
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp,
+                 Not(IsEmpty(Filter(PROGRAM_OPTIONS,
+                   ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpEditPrg3DTD.Selected.Value).ID,
+                   State.Value = "Active"))))
+            Width: =588
+            X: =400
+            Y: =238
+      - lblEditNoOpt3DTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeBody
+            Text: ="No options — the program itself is the choice."
+            VerticalAlign: =VerticalAlign.Middle
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp,
+                 Not(IsBlank(drpEditPrg3DTD.Selected.Value)),
+                 Not(drpEditOpt3DTD.Visible))
+            Width: =588
+            X: =400
+            Y: =238
+
+      # The same two rules the applicant's form enforces, restated here — DTD
+      # editing must not be able to create a record the applicant could not
+      # have submitted.
+      - lblEditChoiceWarnDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.DangerText
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeCaption
+            Text: |-
+              =If(
+                Or(And(Not(IsBlank(drpEditPrg1DTD.Selected.Value)), drpEditOpt1DTD.Visible,
+                       IsBlank(drpEditOpt1DTD.Selected.Value)),
+                   And(Not(IsBlank(drpEditPrg2DTD.Selected.Value)), drpEditOpt2DTD.Visible,
+                       IsBlank(drpEditOpt2DTD.Selected.Value)),
+                   And(Not(IsBlank(drpEditPrg3DTD.Selected.Value)), drpEditOpt3DTD.Visible,
+                       IsBlank(drpEditOpt3DTD.Selected.Value))),
+                "Choose an option for every program that has them.",
+                "The same program and option is selected more than once.")
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 2, locEditApp,
+                 Or(And(Not(IsBlank(drpEditPrg1DTD.Selected.Value)), drpEditOpt1DTD.Visible,
+                       IsBlank(drpEditOpt1DTD.Selected.Value)),
+                    And(Not(IsBlank(drpEditPrg2DTD.Selected.Value)), drpEditOpt2DTD.Visible,
+                       IsBlank(drpEditOpt2DTD.Selected.Value)),
+                    And(Not(IsBlank(drpEditPrg3DTD.Selected.Value)), drpEditOpt3DTD.Visible,
+                       IsBlank(drpEditOpt3DTD.Selected.Value)),
+                    And(Not(IsBlank(drpEditPrg1DTD.Selected.Value)),
+                       drpEditPrg1DTD.Selected.Value = drpEditPrg2DTD.Selected.Value,
+                       Coalesce(drpEditOpt1DTD.Selected.Value, "") =
+                         Coalesce(drpEditOpt2DTD.Selected.Value, "")),
+                    And(Not(IsBlank(drpEditPrg1DTD.Selected.Value)),
+                       drpEditPrg1DTD.Selected.Value = drpEditPrg3DTD.Selected.Value,
+                       Coalesce(drpEditOpt1DTD.Selected.Value, "") =
+                         Coalesce(drpEditOpt3DTD.Selected.Value, "")),
+                    And(Not(IsBlank(drpEditPrg2DTD.Selected.Value)),
+                       drpEditPrg2DTD.Selected.Value = drpEditPrg3DTD.Selected.Value,
+                       Coalesce(drpEditOpt2DTD.Selected.Value, "") =
+                         Coalesce(drpEditOpt3DTD.Selected.Value, ""))))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =276
+
+      # ---- 3. Competencies ----
+      # DATA-DRIVEN END TO END. The type strip is COMPETENCY_TYPES, the ceiling
+      # is COMPETENCY_TYPES.SelectionCount, and the catalogue is COMPETENCIES.
+      # Nothing here knows the words OPM, Technical or ECQ, so a fourth type
+      # added on the Competencies admin screen works with no YAML change.
+      #
+      # Same Tab Bar V2 shape as that admin screen — fixed 150px tabs packed
+      # left, underline on the selected one — so the two screens read alike.
+      #
+      # The selected TYPE replaces what used to be a type dropdown in the add
+      # row: the tab already says which type is being worked on, and two
+      # controls answering that question could disagree.
+      # ---- type strip: PowerLibs shadcn-tabs-1 (Tab Bar) ----
+      # The library's Tab Bar, not the V2 underline used for the panel's own
+      # tabs — a filled track with the selected tab as a raised pill. The two
+      # shapes sitting one above the other is what makes the inner set read as
+      # subordinate rather than as a second row of the same strip.
+      #
+      # DATA-DRIVEN: the component ships a literal Items table; this reads
+      # COMPETENCY_TYPES. TemplateSize is the component's own
+      # Width/AllItemsCount, which divides the track evenly however many types
+      # there are, so a fourth needs no layout change.
+      #
+      # The component's "nothing selected yet, light up id 1" clause is dropped:
+      # it assumes the first tab has id 1, which is true of a literal table and
+      # false of SharePoint keys. locCompTypeDTD is set on row select and on
+      # entering edit mode, so it is never blank while this is visible.
+      - conCompTabsDTD:
+          Control: GroupContainer@1.5.0
+          Variant: AutoLayout
+          Properties:
+            BorderStyle: =BorderStyle.None
+            DropShadow: =DropShadow.None
+            # White, so the track itself disappears against the panel and only
+            # the selected Blue50 chip reads — closer to the underline pattern
+            # than to a segmented control, which is deliberate.
+            Fill: =ColorPalette.White
+            Height: =40
+            LayoutDirection: =LayoutDirection.Horizontal
+            PaddingBottom: =5
+            PaddingLeft: =5
+            PaddingRight: =5
+            PaddingTop: =5
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 3)
+            # Bounded so three types do not stretch the track across the panel.
+            Width: |-
+              =Min(Parent.Width - 300,
+                170 * Max(1, CountRows(Filter(COMPETENCY_TYPES, State.Value = "Active"))))
+            X: =24
+            Y: =118
+          Children:
+            - galCompTypeTabsDTD:
+                Control: Gallery@2.15.0
+                Variant: Horizontal
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Height: =Parent.Height - 10
+                  Items: |-
+                    =SortByColumns(
+                      Filter(COMPETENCY_TYPES, State.Value = "Active"),
+                      "SortOrder", SortOrder.Ascending)
+                  LayoutMinHeight: =0
+                  LayoutMinWidth: =0
+                  ShowScrollbar: =false
+                  TemplatePadding: =0
+                  TemplateSize: |-
+                    =galCompTypeTabsDTD.Width / Max(1, galCompTypeTabsDTD.AllItemsCount)
+                  Width: =Parent.Width - 10
+                Children:
+                  - btnCompTypeTabDTD:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderStyle: =BorderStyle.Solid
+                        # One text colour throughout; the selected tab is told
+                        # apart by the white pill and bold weight, which is how
+                        # the component itself works.
+                        #
+                        # Blue50 on white is 1.15:1 — a pale chip rather than a
+                        # raised pill, so the hairline Gray200 border still does
+                        # real work defining its edge. It matches the selected-row
+                        # tint in the applications table above, so "selected"
+                        # looks the same in both places.
+                        BorderColor: |-
+                          =If(ThisItem.ID = locCompTypeDTD,
+                             ColorPalette.Gray200, RGBA(0, 0, 0, 0))
+                        BorderThickness: |-
+                          =If(ThisItem.ID = locCompTypeDTD, 1, 0)
+                        Color: =ColorPalette.TextHeading
+                        Fill: |-
+                          =If(ThisItem.ID = locCompTypeDTD,
+                             ColorPalette.Blue50, RGBA(0, 0, 0, 0))
+                        FocusedBorderThickness: |-
+                          =If(ThisItem.ID = locCompTypeDTD, 1, 0)
+                        Font: =Typography.Family
+                        FontWeight: |-
+                          =If(ThisItem.ID = locCompTypeDTD,
+                             Typography.WeightBold, Typography.WeightRegular)
+                        # 1px of room top and bottom. Filling the row exactly
+                        # puts the border's bottom edge on the gallery bound
+                        # where it is clipped — the same thing that turned the
+                        # sort headers' focus ring into brackets.
+                        Height: =Parent.TemplateHeight - 2
+                        # Track Self.BorderColor rather than inheriting Power
+                        # Apps' defaults, which are visible colours — that
+                        # default is what drew an outline on hover at all.
+                        HoverBorderColor: =Self.BorderColor
+                        HoverColor: =Self.Color
+                        HoverFill: |-
+                          =If(ThisItem.ID = locCompTypeDTD,
+                             ColorPalette.Blue50, ColorPalette.Gray200)
+                        # Changing tab clears the half-typed add row: the
+                        # competency in it belongs to the type being left.
+                        OnSelect: |-
+                          =UpdateContext({ locCompTypeDTD: ThisItem.ID });
+                          Reset(drpAddCompDTD)
+                        PressedBorderColor: =Self.BorderColor
+                        PressedColor: =Self.Color
+                        PressedFill: |-
+                          =If(ThisItem.ID = locCompTypeDTD,
+                             ColorPalette.Blue50, ColorPalette.Gray200)
+                        RadiusBottomLeft: =5
+                        RadiusBottomRight: =5
+                        RadiusTopLeft: =5
+                        RadiusTopRight: =5
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.TypeName
+                        Width: =Parent.TemplateWidth - 4
+                        X: =2
+                        Y: =1
+      # ---- add row, at the TOP ----
+      # This is an admin screen: the competencies are usually already complete,
+      # so the common act is reading them, and the rare one is adding. The add
+      # controls sit above the list where they are found without scrolling, and
+      # disappear entirely once the type is at its ceiling — a disabled control
+      # invites a click that cannot succeed.
+      - drpAddCompDTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            # Already-chosen competencies are excluded rather than offered and
+            # rejected — the list IS the rule. Single-column text, like every
+            # dropdown on this screen: a Classic/DropDown over records matches
+            # against a column YAML cannot name (PA2108).
+            Items: |-
+              =ForAll(
+                Sort(
+                  Filter(COMPETENCIES,
+                    CompetencyTypeID.Id = locCompTypeDTD,
+                    State.Value = "Active",
+                    Not(ID in colComps.CompId)),
+                  CompetencyName),
+                CompetencyName)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 3, locEditApp, CountRows(Filter(colComps, TypeId = locCompTypeDTD)) < Coalesce(LookUp(COMPETENCY_TYPES, ID = locCompTypeDTD).SelectionCount, 0))
+            Width: =560
+            X: =24
+            Y: =166
+      - btnAddCompDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            DisplayMode: |-
+              =If(IsBlank(drpAddCompDTD.Selected.Value),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.Blue600
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.Blue700
+            OnSelect: |-
+              =UpdateContext({ locCompsDirty: true });
+              Collect(colComps,
+                {
+                  CompId: LookUp(COMPETENCIES,
+                    And(CompetencyTypeID.Id = locCompTypeDTD,
+                        CompetencyName = drpAddCompDTD.Selected.Value)).ID,
+                  CompName: drpAddCompDTD.Selected.Value,
+                  TypeId: locCompTypeDTD,
+                  TypeName: LookUp(COMPETENCY_TYPES, ID = locCompTypeDTD).TypeName,
+                  TypeOrder: LookUp(COMPETENCY_TYPES, ID = locCompTypeDTD).SortOrder
+                });
+              Reset(drpAddCompDTD)
+            PressedColor: =Self.Color
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            Text: ="Add"
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 3, locEditApp, CountRows(Filter(colComps, TypeId = locCompTypeDTD)) < Coalesce(LookUp(COMPETENCY_TYPES, ID = locCompTypeDTD).SelectionCount, 0))
+            Width: =100
+            X: =596
+            Y: =166
+      # Takes the add row's place at the ceiling, so the band does not collapse
+      # and the list does not jump.
+      - lblCompFullDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.WarningText
+            Font: =Typography.Family
+            Height: =32
+            Size: =Typography.SizeBody
+            Text: |-
+              =LookUp(COMPETENCY_TYPES, ID = locCompTypeDTD).TypeName & " is at its maximum of " & Coalesce(LookUp(COMPETENCY_TYPES, ID = locCompTypeDTD).SelectionCount, 0) &
+               ". Remove one to choose a different competency."
+            VerticalAlign: =VerticalAlign.Middle
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 3, locEditApp, Not(IsBlank(locCompTypeDTD)),
+                 CountRows(Filter(colComps, TypeId = locCompTypeDTD)) >= Coalesce(LookUp(COMPETENCY_TYPES, ID = locCompTypeDTD).SelectionCount, 0))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =166
+
+      # ---- the selections for the chosen type ----
+      # The row shows the competency alone: the tab above already says which
+      # type these are, so repeating it on every row would be noise.
+      - galCompsDTD:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            Height: =Parent.Height - If(locEditApp, 214, 168) - 24
+            Items: |-
+              =SortByColumns(
+                Filter(
+                  ForAll(
+                    Filter(APPLICATION_COMPETENCIES,
+                      ApplicationID.Id = locApp.ID) As ac,
+                    {
+                      CompName: ac.CompetencyID.Value,
+                      TypeId:
+                        LookUp(COMPETENCIES,
+                          ID = ac.CompetencyID.Id).CompetencyTypeID.Id
+                    }),
+                  TypeId = locCompTypeDTD),
+                "CompName", SortOrder.Ascending)
+            ShowScrollbar: =true
+            TemplatePadding: =0
+            TemplateSize: =44
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 3, Not(locEditApp))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =168
+          Children:
+            - conCompRowDTD:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Fill: =ColorPalette.White
+                  Height: =Parent.TemplateHeight
+                  Width: =Parent.TemplateWidth
+                Children:
+                  - lblCompNameDTD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        Height: =Parent.Height
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.CompName
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =560
+                        X: =0
+                        Y: =0
+            - recCompLineDTD:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Fill: =ColorPalette.Gray200
+                  Height: =1
+                  Width: =Parent.TemplateWidth
+                  Y: =Parent.TemplateHeight - 1
+      - lblNoCompsDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =40
+            Size: =Typography.SizeBody
+            Text: |-
+              ="No " & LookUp(COMPETENCY_TYPES, ID = locCompTypeDTD).TypeName & " competencies recorded."
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 3, Not(locEditApp), Not(IsBlank(locCompTypeDTD)),
+                 CountRows(galCompsDTD.AllItems) = 0)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =180
+      - galCompEditDTD:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            Height: =Parent.Height - 214 - 24
+            Items: |-
+              =SortByColumns(
+                Filter(colComps, TypeId = locCompTypeDTD),
+                "CompName", SortOrder.Ascending)
+            ShowScrollbar: =true
+            TemplatePadding: =0
+            TemplateSize: =44
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 3, locEditApp)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =214
+          Children:
+            - conCompEditRowDTD:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Fill: =ColorPalette.White
+                  Height: =Parent.TemplateHeight
+                  Width: =Parent.TemplateWidth
+                Children:
+                  - lblCompEditNameDTD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        Height: =Parent.Height
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.CompName
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =560
+                        X: =0
+                        Y: =0
+                  # Icon plus a transparent button on top. Classic/Button has
+                  # no Icon property — that is the documented pattern, and the
+                  # same one the Competencies admin screen uses for its row
+                  # actions.
+                  #
+                  # Icon.Trash is the Power Apps built-in. gblNavIcons carries
+                  # DocumentEdit, Archive, ArchiveArrowBack and Eye but nothing
+                  # for delete; drop a trash SVG in there and swap the Icon for
+                  # an Image if the built-in looks out of place next to them.
+                  - icoCompRemoveDTD:
+                      Control: Classic/Icon@2.5.0
+                      Properties:
+                        BorderStyle: =BorderStyle.None
+                        # STATIC. Power Apps has no cross-control .Hover or
+                        # .Pressed read-back — an icon cannot ask the button on
+                        # top of it what state it is in. The hover signal is the
+                        # button's own DangerLight fill appearing behind this.
+                        # Same arrangement as the Competencies admin screen,
+                        # where the row icons are a fixed colour too.
+                        Color: =ColorPalette.DangerText
+                        Height: =18
+                        Icon: =Icon.Trash
+                        Width: =18
+                        X: =583
+                        Y: =13
+                  - btnCompRemoveDTD:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        BorderStyle: =BorderStyle.Solid
+                        BorderThickness: =0
+                        Color: =RGBA(0, 0, 0, 0)
+                        Fill: =RGBA(0, 0, 0, 0)
+                        FocusedBorderColor: =ColorPalette.FocusOnLight
+                        FocusedBorderThickness: =2
+                        Height: =32
+                        HoverColor: =RGBA(0, 0, 0, 0)
+                        HoverFill: =ColorPalette.DangerLight
+                        # Matched on CompId: the row came out of SortByColumns
+                        # and is not the identity the collection holds.
+                        OnSelect: |-
+                          =UpdateContext({ locCompsDirty: true });
+                          RemoveIf(colComps, CompId = ThisItem.CompId)
+                        PressedColor: =RGBA(0, 0, 0, 0)
+                        PressedFill: =ColorPalette.DangerLight
+                        RadiusBottomLeft: =6
+                        RadiusBottomRight: =6
+                        RadiusTopLeft: =6
+                        RadiusTopRight: =6
+                        # Text is the accessible name — the icon underneath
+                        # carries no label, so a screen reader would otherwise
+                        # announce an unnamed button.
+                        Text: =""
+                        Tooltip: |-
+                          ="Remove " & ThisItem.CompName
+                        Width: =32
+                        X: =576
+                        Y: =6
+            - recCompEditLineDTD:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Fill: =ColorPalette.Gray200
+                  Height: =1
+                  Width: =Parent.TemplateWidth
+                  Y: =Parent.TemplateHeight - 1
+
+      # ---- 4. Eligibility — PowerLibs modern-input-label ----
+      # Same field pattern as Personnel: a disabled Classic/TextInput with a
+      # Label astride its top border. Was one label holding four values as a
+      # single string with newlines in it, which is what read as jumbled.
+      #
+      # Four fields on one row, on the SAME grid as Personnel — same column
+      # width, same X arithmetic — so moving between the two tabs does not move
+      # the eye.
+      #
+      # LatestPerformanceRating is the NUMERIC rating, distinct from the
+      # attached appraisal document (FR-006a / OI-8).
+      #
+      # DISABLED, NOT VIEW: DisplayMode.View strips a TextInput's border and
+      # fill, so an empty one renders as nothing at all.
+      - txtEligIdpDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.ListedOnIDP.Value, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: =DisplayMode.Disabled
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 4, Not(locEditApp))
+            Width: =(Parent.Width - 120) / 4
+            X: =24
+            Y: =118
+      - txtEligRatingDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locApp.LatestPerformanceRating), "—",
+                 Text(locApp.LatestPerformanceRating))
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(locEditApp, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 4)
+            Width: =txtEligIdpDTD.Width
+            X: =txtEligIdpDTD.X + (txtEligIdpDTD.Width + 24)
+            Y: =118
+      - txtEligSessionDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =Coalesce(locApp.AttendedInfoSession.Value, "—")
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: =DisplayMode.Disabled
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 4, Not(locEditApp))
+            Width: =txtEligIdpDTD.Width
+            X: =txtEligIdpDTD.X + (txtEligIdpDTD.Width + 24) * 2
+            Y: =118
+      - txtEligDateDTD:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locApp.InfoSessionDate), "—",
+                 Text(locApp.InfoSessionDate, "mm/dd/yyyy"))
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: =DisplayMode.Disabled
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 4, Not(locEditApp))
+            Width: =txtEligIdpDTD.Width
+            X: =txtEligIdpDTD.X + (txtEligIdpDTD.Width + 24) * 3
+            Y: =118
+      - drpEligIdpDTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            Default: =locApp.ListedOnIDP.Value
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =40
+            Items: =Choices(APPLICATIONS.ListedOnIDP)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 4, locEditApp)
+            Width: =txtEligIdpDTD.Width
+            X: =txtEligIdpDTD.X
+            Y: =118
+      # Choices() reads the SharePoint column, so the options cannot drift
+      # from the list definition — same source the applicant's own form uses.
+      # It returns a single-column table, which is the shape a Classic/DropDown
+      # matches Default against, so no ForAll projection is needed here.
+      - drpEligSessionDTD:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            Default: =locApp.AttendedInfoSession.Value
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =40
+            Items: =Choices(APPLICATIONS.AttendedInfoSession)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 4, locEditApp)
+            Width: =txtEligSessionDTD.Width
+            X: =txtEligSessionDTD.X
+            Y: =118
+      # NOT Today(). A picker that defaults to today writes a plausible wrong
+      # date for anyone who opens the field and does not touch it — the trap
+      # recorded as OI-REQ-1 against the Application Screen's own pickers.
+      - dtpEligDateDTD:
+          Control: Classic/DatePicker@2.5.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            DefaultDate: =locApp.InfoSessionDate
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locApp)), locDetailTab = 4, locEditApp)
+            Width: =txtEligDateDTD.Width
+            X: =txtEligDateDTD.X
+            Y: =118
+
+      # LABELS LAST. Z-order is declaration order, and each floating label
+      # straddles the top border of the control beneath it — so every input on
+      # this tab must be declared before every label, or the edit-mode pickers
+      # draw over the labels of the boxes they replace. Personnel gets this
+      # right by accident of build order; here it had to be made explicit.
+      - lblEligIdpDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Listed on IDP"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 4)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtEligIdpDTD.X + 10
+            Y: =txtEligIdpDTD.Y - Self.Height / 2
+      - lblEligRatingDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Latest performance rating"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 4)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtEligRatingDTD.X + 10
+            Y: =txtEligRatingDTD.Y - Self.Height / 2
+      - lblEligSessionDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Attended info session"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 4)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtEligSessionDTD.X + 10
+            Y: =txtEligSessionDTD.Y - Self.Height / 2
+      - lblEligDateDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: |-
+              =If(locEditApp, ColorPalette.Blue600, ColorPalette.TextHelp)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Info session date"
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 4)
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtEligDateDTD.X + 10
+            Y: =txtEligDateDTD.Y - Self.Height / 2
+      # Choices() reads the SharePoint column, so the options cannot drift
+      # from the list definition — same source the applicant's own form uses.
+      # It returns a single-column table, which is the shape a Classic/DropDown
+      # matches Default against, so no ForAll projection is needed here.
+      # ---- 5. Documents ----
+      # OI-APP-1 is still open: the three documents are native SharePoint
+      # attachments, and the attachment control only exists inside a Form data
+      # card — there is no read-only list control for them. Saying so is more
+      # use than an empty panel that looks broken.
+      - lblTabDocumentsDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =Parent.Height - 130
+            Size: =Typography.SizeBody
+            Text: |-
+              ="Résumé, statement of interest and performance appraisal are stored as SharePoint attachments on this application.
+              
+              They cannot be listed here yet: the attachment control exists only inside a Form data card, and this panel is read-only. Open the item in SharePoint to view them.
+              
+              Tracked as OI-APP-1."
+            VerticalAlign: =VerticalAlign.Top
+            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 5)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =118
+
+# ===========================================================================
+# CLEAR-VALIDATION CONFIRMATION — PowerLibs warning-modal-v2-1
+# ===========================================================================
+# Declared LAST: z-order is declaration order, so the scrim and the card sit
+# above everything they cover.
+#
+# Two buttons, unlike the cycle screen's copy of this component — that modal
+# explains a rule and can only be acknowledged; this one asks a question.
+#
+# AMBER, not the component's red. Clearing a validation is reversible in one
+# click and destroys nothing: the packet returns to a queue it was already in
+# an hour ago. Red here would spend alarm the action does not earn, and would
+# leave nothing louder for the things that do.
+#
+# The body names the applicant, and says the change is undoable — the two facts
+# someone needs to answer the question without leaving the modal.
+- recClearScrimDTD:
+    Control: Rectangle@2.3.0
+    Properties:
+      BorderColor: =RGBA(0, 0, 0, 0)
+      Fill: =RGBA(0, 0, 0, 0.3)
+      Height: =Parent.Height
+      Visible: =locClearWarn
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+
+- conClearWarnDTD:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Bold
+      Fill: =ColorPalette.White
+      Height: =248
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: =locClearWarn
+      Width: =520
+      X: =Parent.Width / 2 - Self.Width / 2
+      Y: =Parent.Height / 2 - Self.Height / 2
+    Children:
+      - shpClearHaloDTD:
+          Control: Circle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.WarningLight
+            Height: =56
+            Width: =56
+            X: =24
+            Y: =28
+      - icoClearWarnDTD:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.WarningText
+            Height: =30
+            Icon: =Icon.Warning
+            Width: =30
+            X: =37
+            Y: =41
+      - lblClearTitleDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =26
+            Size: =Typography.SizeHeading
+            Text: ="Clear validation?"
+            Width: =380
+            X: =96
+            Y: =42
+      # One line, no newline characters in the expression — a literal break
+      # inside the string is what broke the cycle modal's body on paste.
+      - lblClearBodyDTD:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =84
+            Size: =Typography.SizeBody
+            Text: |-
+              ="Confirming this will move " &
+               Coalesce(locApp.ApplicantName, "this applicant") &
+               "'s application back to Submitted status and return it to the DTD queue. Nothing else changes, and you can revalidate at any time."
+            VerticalAlign: =VerticalAlign.Top
+            Width: =400
+            X: =96
+            Y: =72
+      - btnClearCancelDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =38
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =UpdateContext({ locClearWarn: false })
+            PressedColor: =Self.Color
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =8
+            Text: ="Keep it validated"
+            Width: =150
+            X: =btnClearConfirmDTD.X - Self.Width - 10
+            Y: =Parent.Height - 62
+      # Same words as the button that opened it, so the thing being confirmed
+      # is the thing that was clicked.
+      - btnClearConfirmDTD:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            Fill: =ColorPalette.Blue600
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =38
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.Blue700
+            OnSelect: |-
+              =UpdateContext({
+                locApp: Patch(APPLICATIONS,
+                  LookUp(APPLICATIONS, ID = locApp.ID),
+                  { ApplicationStatus: { Value: "Submitted" } }),
+                locClearWarn: false
+              });
+              Notify("Validation cleared — the application is waiting on DTD again.",
+                     NotificationType.Success)
+            PressedColor: =Self.Color
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            TabIndex: =9
+            Text: ="Clear validation"
+            Width: =150
+            X: =Parent.Width - 174
+            Y: =Parent.Height - 62
+

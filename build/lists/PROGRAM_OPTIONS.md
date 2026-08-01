@@ -35,5 +35,5 @@ appear as a new choice, but must still display on applications that already chos
 
 **Delete guard (FR-038b):** an option is deletable only when nothing references it —
 `APPLICATION_PROGRAM_CHOICES.ProgramOptionID`, `PLACEMENTS.ProgramOptionID` (both indexed), in any
-cycle. Test with `IsEmpty(Filter(…))`, never `CountRows` — `CountRows` does not delegate to
+cycle. Both are now OPTIONAL lookups, so a program with no options orphans nothing by having none. Test with `IsEmpty(Filter(…))`, never `CountRows` — `CountRows` does not delegate to
 SharePoint and would silently pass after 500 rows.
