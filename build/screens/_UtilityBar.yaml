@@ -84,12 +84,11 @@
           Properties:
             BorderStyle: =BorderStyle.None
             Color: =ColorPalette.TextOnDark
-            DisplayMode: =DisplayMode.Disabled
             Fill: =RGBA(0, 0, 0, 0)
             Font: =Typography.Family
             Height: =28
             HoverFill: =ColorPalette.Navy700
-            OnSelect: =false
+            OnSelect: =Navigate('Supervisor Endorsement Screen')
             PressedFill: =ColorPalette.Navy700
             Size: =Typography.SizeCaption
             Text: ="Reviewers"
@@ -101,12 +100,11 @@
           Properties:
             BorderStyle: =BorderStyle.None
             Color: =ColorPalette.TextOnDark
-            DisplayMode: =DisplayMode.Disabled
             Fill: =RGBA(0, 0, 0, 0)
             Font: =Typography.Family
             Height: =28
             HoverFill: =ColorPalette.Navy700
-            OnSelect: =false
+            OnSelect: =Navigate('Admin Dashboard Screen')
             PressedFill: =ColorPalette.Navy700
             Size: =Typography.SizeCaption
             Text: ="Administrators"

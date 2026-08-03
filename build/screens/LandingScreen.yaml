@@ -3,39 +3,38 @@
 # Classic controls only (Constitution II). Colours = ColorPalette.*, sizes = Typography.*
 #
 # Composition (Constitution VIII — library first):
-#   · application progress — PowerLibs `timeline-progress` (Pro), generated
-#     2026-07-25 via generate_yaml, adapted (see DEVIATIONS)
-#   · everything else is layout the library has no component for
+#   · layout the library has no component for; no PowerLibs components used
 #
 # ---------------------------------------------------------------------------
 # HOW TO TRANSCRIBE (Constitution IV)
 # ---------------------------------------------------------------------------
+# Steps marked (screen) are properties of the SCREEN itself — select the screen
+# in the tree view and set them in the properties pane. They are NOT properties
+# of the utility bar or of any control listed below it.
+#
+# They cannot be pasted, and there is no way to make them pasteable. Studio's
+# Paste YAML inserts CONTROLS into the selected screen, so a paste block has no
+# screen node to carry Fill, OnVisible or OnStart. Only the app-source format
+# written by `pac canvas unpack` has one, and Studio will not paste that.
+#
+# The OnVisible below is also kept comment-free and ready to copy in
+# build/screens/LandingScreen.OnVisible.fx.
+#
 #   1. New screen → Blank. Rename it "Landing Screen".
 #   1b. Paste build/screens/_UtilityBar.yaml FIRST (app chrome, shared).
-#   2. Fill: =ColorPalette.Gray50
-#   3. OnVisible — transcribe by hand:
+#   2. (screen) Fill: =ColorPalette.Gray50
+#   3. (screen) OnVisible — transcribe by hand:
 #        =UpdateContext({
 #           locCycle: If(IsBlank(LookUp(CYCLES, State.Value = "Open")),
 #                        First(Sort(CYCLES, OpenDate, SortOrder.Descending)),
 #                        LookUp(CYCLES, State.Value = "Open"))
-#         });
-#         UpdateContext({
+#        });
+#        UpdateContext({
 #           locApp: LookUp(APPLICATIONS,
 #                     And(CycleID.Id = locCycle.ID, ApplicantEmail = User().Email))
-#         });
-#         UpdateContext({
-#           locTimeStep: Switch(locApp.ReviewStage.Value,
-#             "Pending First-Line",       2,
-#             "Pending Second-Line",      3,
-#             "Pending DTD Validation",   4,
-#             "Committee Review",         5,
-#             "Pending Placement",        6,
-#             "Pending Notification",     6,
-#             "Complete",                6,
-#             1)
-#         })
-#      The three calls must stay separate and in order — each depends on the
-#      previous. Fields inside one UpdateContext cannot reference each other.
+#        })
+#      The two calls must stay separate and in order — locApp depends on
+#      locCycle. Fields inside one UpdateContext cannot reference each other.
 #   4. Data sources (three): CYCLES, APPLICATIONS, PROGRAMS.
 #   5. App → StartScreen = 'Landing Screen'.
 #   6. Preview (F5) — OnVisible does not run on the design surface.
@@ -44,33 +43,9 @@
 # THE ONE-CTA RULE
 # ---------------------------------------------------------------------------
 # Exactly one primary CTA above the fold: btnApplyToday. Its label changes with
-# applicant state (Apply Today / Finish your application) and the whole hero is
-# replaced by the timeline once an application is in flight. That is one slot
+# applicant state (Apply Today / Finish your application). That is one slot
 # with state-dependent content — never two competing buttons.
-# btnSeeDetails is deliberately low-emphasis (outlined, not filled).
 # The role links are utility navigation in small type, not CTAs.
-#
-# ---------------------------------------------------------------------------
-# TWO MUTUALLY EXCLUSIVE PAGE MODES
-# ---------------------------------------------------------------------------
-# locHasLiveApp = an application exists and is still in flight.
-#   FALSE → hero + programmes + supporting panels  (the "should I apply?" page)
-#   TRUE  → timeline only                          (the "where is it?" page)
-# Once someone has applied, the pitch is noise, so the body sections hide. This
-# is also what keeps the page inside one screen height without a scroll host:
-# the timeline is 500px and would otherwise push the role band off-screen.
-# Utility bar, role band and footer are present in both modes.
-#
-# ---------------------------------------------------------------------------
-# DEVIATIONS FROM THE GENERATED timeline-progress
-# ---------------------------------------------------------------------------
-# 1. REMOVED Next / Undo / Reset and the demo status line. An applicant able to
-#    advance their own endorsement state is an integrity problem.
-# 2. varTimeStep → locTimeStep, driven by APPLICATIONS.ReviewStage.
-# 3. Description text Size 8 → Typography.SizeCaption (9); 8pt is below the
-#    Section 508 floor in theme.md.
-# Dot/line geometry, 70px step rhythm, active-state colouring and the green
-# completion state are the component as designed.
 
 # ===========================================================================
 # ① UTILITY BAR — now a shared block: build/screens/_UtilityBar.yaml
@@ -79,7 +54,7 @@
 # ===========================================================================
 
 # ===========================================================================
-# ② HERO — one primary CTA. Hidden once an application is in flight.
+# ② HERO — one primary CTA.
 # ===========================================================================
 - conHeroLD:
     Control: GroupContainer@1.5.0
@@ -92,12 +67,6 @@
       RadiusBottomRight: =10
       RadiusTopLeft: =10
       RadiusTopRight: =10
-      Visible: |-
-        =Not(And(
-          Not(IsBlank(locApp)),
-          Or(locApp.ApplicationStatus.Value = "Submitted",
-             locApp.ApplicationStatus.Value = "Validated")
-        ))
       Width: =Parent.Width - 48
       X: =24
       Y: =72
@@ -214,410 +183,7 @@
             Y: =142
 
 # ===========================================================================
-# ③ REVIEWER STRIP — conditional, data-driven, no self-identification
-# ===========================================================================
-# Reinforcement only. The supervisor's real path is the deep-linked email
-# (T076); this is for someone already in the app. An applicant never sees it.
-- conReviewerStripLD:
-    Control: GroupContainer@1.5.0
-    Variant: ManualLayout
-    Properties:
-      DropShadow: =DropShadow.None
-      Fill: =ColorPalette.WarningLight
-      Height: =52
-      RadiusBottomLeft: =8
-      RadiusBottomRight: =8
-      RadiusTopLeft: =8
-      RadiusTopRight: =8
-      # FirstLine/SecondLineSupervisorEmail are snapshots taken at submit (R1/R5).
-      # Delegable: ApplicantEmail and ReviewStage are indexed; this filters on
-      # the snapshot columns, which are not — acceptable because the result set
-      # is one cycle's applications, but revisit at multi-cycle volume (T082).
-      Visible: |-
-        =Not(IsEmpty(Filter(APPLICATIONS,
-          Or(FirstLineSupervisorEmail = User().Email,
-             SecondLineSupervisorEmail = User().Email))))
-      Width: =Parent.Width - 48
-      X: =24
-      Y: =260
-    Children:
-      - lblReviewerStripLD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.WarningText
-            Font: =Typography.Family
-            FontWeight: =Typography.WeightMedium
-            Height: =24
-            Size: =Typography.SizeBody
-            Text: |-
-              =CountRows(Filter(APPLICATIONS,
-                Or(FirstLineSupervisorEmail = User().Email,
-                   SecondLineSupervisorEmail = User().Email))) &
-              " application(s) are waiting for your endorsement."
-            Width: =Parent.Width - 220
-            X: =20
-            Y: =14
-      - btnReviewerStripLD:
-          Control: Classic/Button@2.2.0
-          Properties:
-            BorderColor: =ColorPalette.WarningText
-            BorderStyle: =BorderStyle.Solid
-            BorderThickness: =1
-            Color: =ColorPalette.WarningText
-            DisplayMode: =DisplayMode.Disabled
-            Fill: =RGBA(0, 0, 0, 0)
-            FocusedBorderThickness: =1
-            Font: =Typography.Family
-            Height: =30
-            OnSelect: =false
-            RadiusBottomLeft: =6
-            RadiusBottomRight: =6
-            RadiusTopLeft: =6
-            RadiusTopRight: =6
-            Size: =Typography.SizeCaption
-            Text: ="Review them"
-            Width: =140
-            X: =Parent.Width - 160
-            Y: =11
-
-# ===========================================================================
-# ④ APPLICATION PROGRESS — PowerLibs timeline-progress. Replaces ② and ⑤.
-# ===========================================================================
-- conTimelineLD:
-    Control: GroupContainer@1.5.0
-    Variant: ManualLayout
-    Properties:
-      DropShadow: =DropShadow.Light
-      Fill: =ColorPalette.White
-      Height: =500
-      RadiusBottomLeft: =12
-      RadiusBottomRight: =12
-      RadiusTopLeft: =12
-      RadiusTopRight: =12
-      Visible: |-
-        =And(
-          Not(IsBlank(locApp)),
-          Or(locApp.ApplicationStatus.Value = "Submitted",
-             locApp.ApplicationStatus.Value = "Validated")
-        )
-      Width: =420
-      X: =24
-      Y: =72
-    Children:
-      - lblTimeTitleLD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextHeading
-            Font: =Typography.Family
-            FontWeight: =Typography.WeightMedium
-            Height: =28
-            Size: =Typography.SizeSubtitle
-            Text: ="Your application"
-            Width: =300
-            X: =20
-            Y: =16
-      - lblTimeSubtitleLD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextHelp
-            Font: =Typography.Family
-            Height: =20
-            Size: =Typography.SizeCaption
-            Text: ="Where it is right now"
-            Width: =300
-            X: =20
-            Y: =42
-      - lblTimeStepLD:
-          Control: Label@2.5.1
-          Properties:
-            Align: =Align.Right
-            Color: |-
-              =If(locTimeStep >= 6, ColorPalette.SuccessText, ColorPalette.Blue600)
-            Font: =Typography.Family
-            FontWeight: =Typography.WeightMedium
-            Height: =28
-            Size: =Typography.SizeCaption
-            Text: |-
-              =If(locTimeStep >= 6, "Decision recorded", "Step " & Min(locTimeStep, 6) & " of 6")
-            Width: =160
-            X: =Parent.Width - 180
-            Y: =16
-      - conTL1DotLD:
-          Control: GroupContainer@1.5.0
-          Variant: ManualLayout
-          Properties:
-            DropShadow: =DropShadow.None
-            Fill: =If(locTimeStep >= 1, ColorPalette.Blue600, ColorPalette.Gray300)
-            Height: =20
-            RadiusBottomLeft: =10
-            RadiusBottomRight: =10
-            RadiusTopLeft: =10
-            RadiusTopRight: =10
-            Width: =20
-            X: =35
-            Y: =80
-      - recTL1LineLD:
-          Control: Rectangle@2.3.0
-          Properties:
-            BorderColor: =RGBA(0, 0, 0, 0)
-            Fill: =If(locTimeStep >= 2, ColorPalette.Blue600, ColorPalette.Gray200)
-            Height: =50
-            Width: =2
-            X: =conTL1DotLD.X + conTL1DotLD.Width / 2 - 1
-            Y: =conTL1DotLD.Y + conTL1DotLD.Height
-      - lblTL1TitleLD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =If(locTimeStep >= 1, ColorPalette.TextHeading, ColorPalette.TextHelp)
-            Font: =Typography.Family
-            FontWeight: |-
-              =If(locTimeStep >= 1, Typography.WeightMedium, Typography.WeightRegular)
-            Height: =20
-            Size: =Typography.SizeBody
-            Text: ="Submitted"
-            Width: =320
-            X: =66
-            Y: =conTL1DotLD.Y
-      - lblTL1DescLD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextHelp
-            Font: =Typography.Family
-            Height: =18
-            Size: =Typography.SizeCaption
-            Text: ="Your application has been received."
-            Width: =320
-            X: =66
-            Y: =lblTL1TitleLD.Y + lblTL1TitleLD.Height
-      - conTL2DotLD:
-          Control: GroupContainer@1.5.0
-          Variant: ManualLayout
-          Properties:
-            DropShadow: =DropShadow.None
-            Fill: =If(locTimeStep >= 2, ColorPalette.Blue600, ColorPalette.Gray300)
-            Height: =20
-            RadiusBottomLeft: =10
-            RadiusBottomRight: =10
-            RadiusTopLeft: =10
-            RadiusTopRight: =10
-            Width: =20
-            X: =35
-            Y: =150
-      - recTL2LineLD:
-          Control: Rectangle@2.3.0
-          Properties:
-            BorderColor: =RGBA(0, 0, 0, 0)
-            Fill: =If(locTimeStep >= 3, ColorPalette.Blue600, ColorPalette.Gray200)
-            Height: =50
-            Width: =2
-            X: =conTL2DotLD.X + conTL2DotLD.Width / 2 - 1
-            Y: =conTL2DotLD.Y + conTL2DotLD.Height
-      - lblTL2TitleLD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =If(locTimeStep >= 2, ColorPalette.TextHeading, ColorPalette.TextHelp)
-            Font: =Typography.Family
-            FontWeight: |-
-              =If(locTimeStep >= 2, Typography.WeightMedium, Typography.WeightRegular)
-            Height: =20
-            Size: =Typography.SizeBody
-            Text: ="First-line endorsement"
-            Width: =320
-            X: =66
-            Y: =conTL2DotLD.Y
-      - lblTL2DescLD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextHelp
-            Font: =Typography.Family
-            Height: =18
-            Size: =Typography.SizeCaption
-            Text: ="With your first-line supervisor for a decision."
-            Width: =320
-            X: =66
-            Y: =lblTL2TitleLD.Y + lblTL2TitleLD.Height
-      - conTL3DotLD:
-          Control: GroupContainer@1.5.0
-          Variant: ManualLayout
-          Properties:
-            DropShadow: =DropShadow.None
-            Fill: =If(locTimeStep >= 3, ColorPalette.Blue600, ColorPalette.Gray300)
-            Height: =20
-            RadiusBottomLeft: =10
-            RadiusBottomRight: =10
-            RadiusTopLeft: =10
-            RadiusTopRight: =10
-            Width: =20
-            X: =35
-            Y: =220
-      - recTL3LineLD:
-          Control: Rectangle@2.3.0
-          Properties:
-            BorderColor: =RGBA(0, 0, 0, 0)
-            Fill: =If(locTimeStep >= 4, ColorPalette.Blue600, ColorPalette.Gray200)
-            Height: =50
-            Width: =2
-            X: =conTL3DotLD.X + conTL3DotLD.Width / 2 - 1
-            Y: =conTL3DotLD.Y + conTL3DotLD.Height
-      - lblTL3TitleLD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =If(locTimeStep >= 3, ColorPalette.TextHeading, ColorPalette.TextHelp)
-            Font: =Typography.Family
-            FontWeight: |-
-              =If(locTimeStep >= 3, Typography.WeightMedium, Typography.WeightRegular)
-            Height: =20
-            Size: =Typography.SizeBody
-            Text: ="Second-line endorsement"
-            Width: =320
-            X: =66
-            Y: =conTL3DotLD.Y
-      - lblTL3DescLD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextHelp
-            Font: =Typography.Family
-            Height: =18
-            Size: =Typography.SizeCaption
-            Text: ="With your second-line supervisor for a decision."
-            Width: =320
-            X: =66
-            Y: =lblTL3TitleLD.Y + lblTL3TitleLD.Height
-      - conTL4DotLD:
-          Control: GroupContainer@1.5.0
-          Variant: ManualLayout
-          Properties:
-            DropShadow: =DropShadow.None
-            Fill: =If(locTimeStep >= 4, ColorPalette.Blue600, ColorPalette.Gray300)
-            Height: =20
-            RadiusBottomLeft: =10
-            RadiusBottomRight: =10
-            RadiusTopLeft: =10
-            RadiusTopRight: =10
-            Width: =20
-            X: =35
-            Y: =290
-      - recTL4LineLD:
-          Control: Rectangle@2.3.0
-          Properties:
-            BorderColor: =RGBA(0, 0, 0, 0)
-            Fill: =If(locTimeStep >= 5, ColorPalette.Blue600, ColorPalette.Gray200)
-            Height: =50
-            Width: =2
-            X: =conTL4DotLD.X + conTL4DotLD.Width / 2 - 1
-            Y: =conTL4DotLD.Y + conTL4DotLD.Height
-      - lblTL4TitleLD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =If(locTimeStep >= 4, ColorPalette.TextHeading, ColorPalette.TextHelp)
-            Font: =Typography.Family
-            FontWeight: |-
-              =If(locTimeStep >= 4, Typography.WeightMedium, Typography.WeightRegular)
-            Height: =20
-            Size: =Typography.SizeBody
-            Text: ="Completeness check"
-            Width: =320
-            X: =66
-            Y: =conTL4DotLD.Y
-      - lblTL4DescLD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextHelp
-            Font: =Typography.Family
-            Height: =18
-            Size: =Typography.SizeCaption
-            Text: ="DTD is confirming your application is complete."
-            Width: =320
-            X: =66
-            Y: =lblTL4TitleLD.Y + lblTL4TitleLD.Height
-      - conTL5DotLD:
-          Control: GroupContainer@1.5.0
-          Variant: ManualLayout
-          Properties:
-            DropShadow: =DropShadow.None
-            Fill: =If(locTimeStep >= 5, ColorPalette.Blue600, ColorPalette.Gray300)
-            Height: =20
-            RadiusBottomLeft: =10
-            RadiusBottomRight: =10
-            RadiusTopLeft: =10
-            RadiusTopRight: =10
-            Width: =20
-            X: =35
-            Y: =360
-      - recTL5LineLD:
-          Control: Rectangle@2.3.0
-          Properties:
-            BorderColor: =RGBA(0, 0, 0, 0)
-            Fill: =If(locTimeStep >= 6, ColorPalette.Blue600, ColorPalette.Gray200)
-            Height: =50
-            Width: =2
-            X: =conTL5DotLD.X + conTL5DotLD.Width / 2 - 1
-            Y: =conTL5DotLD.Y + conTL5DotLD.Height
-      - lblTL5TitleLD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =If(locTimeStep >= 5, ColorPalette.TextHeading, ColorPalette.TextHelp)
-            Font: =Typography.Family
-            FontWeight: |-
-              =If(locTimeStep >= 5, Typography.WeightMedium, Typography.WeightRegular)
-            Height: =20
-            Size: =Typography.SizeBody
-            Text: ="Committee review"
-            Width: =320
-            X: =66
-            Y: =conTL5DotLD.Y
-      - lblTL5DescLD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextHelp
-            Font: =Typography.Family
-            Height: =18
-            Size: =Typography.SizeCaption
-            Text: ="The selection committee is scoring applications."
-            Width: =320
-            X: =66
-            Y: =lblTL5TitleLD.Y + lblTL5TitleLD.Height
-      - conTL6DotLD:
-          Control: GroupContainer@1.5.0
-          Variant: ManualLayout
-          Properties:
-            DropShadow: =DropShadow.None
-            Fill: =If(locTimeStep >= 6, ColorPalette.SuccessText, ColorPalette.Gray300)
-            Height: =20
-            RadiusBottomLeft: =10
-            RadiusBottomRight: =10
-            RadiusTopLeft: =10
-            RadiusTopRight: =10
-            Width: =20
-            X: =35
-            Y: =430
-      - lblTL6TitleLD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =If(locTimeStep >= 6, ColorPalette.SuccessText, ColorPalette.TextHelp)
-            Font: =Typography.Family
-            FontWeight: |-
-              =If(locTimeStep >= 6, Typography.WeightMedium, Typography.WeightRegular)
-            Height: =20
-            Size: =Typography.SizeBody
-            Text: ="Decision"
-            Width: =320
-            X: =66
-            Y: =conTL6DotLD.Y
-      - lblTL6DescLD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextHelp
-            Font: =Typography.Family
-            Height: =18
-            Size: =Typography.SizeCaption
-            Text: ="The outcome has been recorded and you will be notified."
-            Width: =320
-            X: =66
-            Y: =lblTL6TitleLD.Y + lblTL6TitleLD.Height
-
-# ===========================================================================
-# ⑤ BODY — applicant content only. No role switching in this region.
+# ③ BODY — applicant content only. No role switching in this region.
 # ===========================================================================
 - lblProgramsHeaderLD:
     Control: Label@2.5.1
@@ -631,10 +197,7 @@
       Visible: =conHeroLD.Visible
       Width: =Parent.Width - 48
       X: =24
-      # The reviewer strip is conditional and most visitors never see it. Without
-      # this, its empty slot leaves a dead band under the hero. ManualLayout does
-      # not reflow, so the following controls close the gap themselves.
-      Y: =If(conReviewerStripLD.Visible, 328, 268)
+      Y: =268
 
 # A well behind the gallery. Without it the scrollbar sits on the page
 # background with no boundary to belong to, which is what made a fourth
@@ -664,7 +227,7 @@
     Properties:
       DropShadow: =DropShadow.None
       Fill: =ColorPalette.Gray25
-      Height: =If(conReviewerStripLD.Visible, 148, 198)
+      Height: =198
       RadiusBottomLeft: =10
       RadiusBottomRight: =10
       RadiusTopLeft: =10
@@ -950,12 +513,11 @@
                   BorderStyle: =BorderStyle.Solid
                   BorderThickness: =1
                   Color: =ColorPalette.TextBody
-                  DisplayMode: =DisplayMode.Disabled
                   Fill: =ColorPalette.White
                   FocusedBorderThickness: =1
                   Font: =Typography.Family
                   Height: =34
-                  OnSelect: =false
+                  OnSelect: =Navigate('Supervisor Endorsement Screen')
                   RadiusBottomLeft: =8
                   RadiusBottomRight: =8
                   RadiusTopLeft: =8
@@ -1011,12 +573,11 @@
                   BorderStyle: =BorderStyle.Solid
                   BorderThickness: =1
                   Color: =ColorPalette.TextBody
-                  DisplayMode: =DisplayMode.Disabled
                   Fill: =ColorPalette.White
                   FocusedBorderThickness: =1
                   Font: =Typography.Family
                   Height: =34
-                  OnSelect: =false
+                  OnSelect: =Navigate('Admin Dashboard Screen')
                   RadiusBottomLeft: =8
                   RadiusBottomRight: =8
                   RadiusTopLeft: =8

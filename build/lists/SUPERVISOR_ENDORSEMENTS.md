@@ -9,7 +9,7 @@
 | ApplicationID | Lookup (APPLICATIONS) | Yes | Application being endorsed. |
 | SupervisorEmail | Single line of text | Yes | Recording supervisor. |
 | SupervisorLevel | Choice | Yes | First Line, Second Line, **Alternate Second Line [PROPOSED — FR-012a]**. |
-| Decision | Choice | Yes | Approve, Disapprove. |
+| Decision | Choice | Yes | **Recommend, Not Recommend** (renamed from Approve/Disapprove 2026-08-02 — a supervisor recommends, they do not approve; RQ021 means neither value blocks anything). See `_CHOICES.md`. |
 | DispositionStatement | Multiple lines of text | Yes | Required on both approve and disapprove (FR-013). |
 | RecommendedOptions | Multiple lines of text | No | Advisory; does not alter applicant selections (FR-016). |
 | DecisionDate | Date | Yes | When recorded. |

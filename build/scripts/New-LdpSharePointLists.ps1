@@ -223,6 +223,14 @@ $script:Lists = [ordered]@{
         )
     }
 
+    'APPLICATION_DOCUMENTS' = @{
+        Description = 'One row per required supporting document, each holding that document as its own attachment. A row per type gives each slot an identity that a single attachment collection cannot.'
+        Fields      = @(
+            @{ Name = 'DocumentType'; Type = 'Choice'; Required = $true
+               Choices = @('Resume', 'Statement of Interest', 'Performance Appraisal') }
+        )
+    }
+
     'APPLICATION_COMPETENCIES' = @{
         Description = 'An application''s selected competencies (join of APPLICATIONS x COMPETENCIES). The TYPE comes from the competency''s parent and is deliberately not stored here — duplicating it would let the two disagree.'
         Fields      = @()
@@ -242,7 +250,7 @@ $script:Lists = [ordered]@{
             @{ Name = 'SupervisorLevel';      Type = 'Choice'; Required = $true
                Choices         = @('First Line', 'Second Line')
                ProposedChoices = @('Alternate Second Line') }
-            @{ Name = 'Decision';             Type = 'Choice'; Required = $true; Choices = @('Approve', 'Disapprove') }
+            @{ Name = 'Decision';             Type = 'Choice'; Required = $true; Choices = @('Recommend', 'Not Recommend') }
             @{ Name = 'DispositionStatement'; Type = 'Note';   Required = $true }
             @{ Name = 'RecommendedOptions';   Type = 'Note' }
             @{ Name = 'DecisionDate';         Type = 'Date';   Required = $true }
@@ -345,6 +353,7 @@ $script:Lookups = @(
     @{ List = 'PROGRAM_OPTIONS';             Name = 'ProgramID';          Target = 'PROGRAMS';           ShowField = 'ProgramName';   Required = $true }
     @{ List = 'COMPETENCIES';                Name = 'CompetencyTypeID';   Target = 'COMPETENCY_TYPES';   ShowField = 'TypeName';      Required = $true }
     @{ List = 'APPLICATIONS';                Name = 'CycleID';            Target = 'CYCLES';             ShowField = 'CycleName';     Required = $true }
+    @{ List = 'APPLICATION_DOCUMENTS';       Name = 'ApplicationID';      Target = 'APPLICATIONS';       ShowField = 'ApplicantEmail'; Required = $true }
     @{ List = 'APPLICATION_COMPETENCIES';    Name = 'ApplicationID';      Target = 'APPLICATIONS';       ShowField = 'ApplicantEmail'; Required = $true }
     @{ List = 'APPLICATION_COMPETENCIES';    Name = 'CompetencyID';       Target = 'COMPETENCIES';       ShowField = 'CompetencyName'; Required = $true }
     @{ List = 'APPLICATION_PROGRAM_CHOICES'; Name = 'ApplicationID';      Target = 'APPLICATIONS';       ShowField = 'ApplicantEmail'; Required = $true }
@@ -373,6 +382,7 @@ $script:Lookups = @(
 # ---------------------------------------------------------------------------
 $script:Indexes = [ordered]@{
     'APPLICATIONS'                = @('CycleID', 'ApplicantEmail', 'ApplicationStatus', 'ReviewStage', 'PlacementOutcome')
+    'APPLICATION_DOCUMENTS'       = @('ApplicationID', 'DocumentType')
     'APPLICATION_COMPETENCIES'    = @('ApplicationID', 'CompetencyID')
     'APPLICATION_PROGRAM_CHOICES' = @('ApplicationID', 'ProgramID', 'ProgramOptionID')
     'SUPERVISOR_ENDORSEMENTS'     = @('ApplicationID')

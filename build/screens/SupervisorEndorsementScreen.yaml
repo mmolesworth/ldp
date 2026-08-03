@@ -1,0 +1,2065 @@
+# Supervisor Endorsement Screen — screen 6 in LDP_Proposed_Screens.md (UC-2.1)
+# Anchors: RQ018-025, FR-013, FR-016.
+# Classic controls only (Constitution II). Colours = ColorPalette.*, sizes = Typography.*
+#
+# ---------------------------------------------------------------------------
+# HOW TO TRANSCRIBE (Constitution IV)
+# ---------------------------------------------------------------------------
+# Steps marked (screen) are properties of the SCREEN itself — select the screen
+# in the tree view and set them in the properties pane. They are NOT properties
+# of the utility bar or of any control listed below it.
+#
+# They cannot be pasted, and there is no way to make them pasteable. Studio's
+# Paste YAML inserts CONTROLS into the selected screen, so a paste block has no
+# screen node to carry Fill, OnVisible or OnStart. Only the app-source format
+# written by `pac canvas unpack` has one, and Studio will not paste that.
+#
+# The OnVisible below is also kept comment-free and ready to copy in
+# build/screens/SupervisorEndorsementScreen.OnVisible.fx.
+#
+#   1. New screen → Blank. Rename it "Supervisor Endorsement Screen".
+#   1b. Paste build/screens/_UtilityBarSlim.paste.yaml FIRST (app chrome, shared).
+#   2. (screen) Fill: =ColorPalette.Gray50
+#   3. (screen) OnVisible — transcribe by hand (no # prefixes, no leading =):
+#
+#        ClearCollect(colSupAppsSE,
+#            ForAll(
+#                Filter(APPLICATIONS,
+#                    ApplicationStatus.Value <> "Draft",
+#                    ApplicationStatus.Value <> "Withdrawn",
+#                    Or(FirstLineSupervisorEmail = User().Email,
+#                       SecondLineSupervisorEmail = User().Email)) As a,
+#                { App: a, Label: a.ApplicantName }));
+#        UpdateContext({ locTabSE: 1, locDecisionSE: "",
+#                        locStatementCollapsed: false,
+#                        locSuggestOpen: false,
+#                        locQueueOpen: false,
+#                        locCompTypeSE: First(SortByColumns(
+#                            Filter(COMPETENCY_TYPES, State.Value = "Active"),
+#                            "SortOrder", SortOrder.Ascending)).ID,
+#                        locApp: First(colSupAppsSE).App });
+#        ClearCollect(colSuggestSE, Filter(Table({id: 0, program: "", option: ""}), false));
+#        UpdateContext({
+#            locMineSE: LookUp(SUPERVISOR_ENDORSEMENTS,
+#                And(ApplicationID.Id = locApp.ID, SupervisorEmail = User().Email)),
+#            locPriorSE: LookUp(SUPERVISOR_ENDORSEMENTS,
+#                And(ApplicationID.Id = locApp.ID, SupervisorLevel.Value = "First Line"))
+#        })
+#
+#      THE THIRD BLOCK IS DUPLICATED in btnQueueRowSE.OnSelect (the row
+#      picker inside conQueueSE), and must stay identical. Changing the
+#      selected application changes who has endorsed it and what the first
+#      line said, so both have to be re-resolved. A variable cannot be
+#      referenced inside the UpdateContext that defines it, which is why
+#      locApp is set in the second block and read in the third.
+#
+#   4. Data sources (eight): APPLICATIONS, SUPERVISOR_ENDORSEMENTS,
+#      APPLICATION_PROGRAM_CHOICES, APPLICATION_COMPETENCIES, COMPETENCIES,
+#      COMPETENCY_TYPES, APPLICATION_DOCUMENTS, PROGRAM_OPTIONS.
+#   5. Preview (F5) — OnVisible does not run on the design surface.
+#
+# ---------------------------------------------------------------------------
+# WHAT THE SUPERVISOR MAY AND MAY NOT DO
+# ---------------------------------------------------------------------------
+# RQ022 — the application is VIEW-ONLY. Fields on the five tabs are read-only:
+# Personnel and Eligibility use the PowerLibs "Modern Input Label" pattern —
+# Classic/TextInput with DisplayMode.Disabled, Gray300 border, TextBody colour,
+# and a floating caption on the top border. The pattern, colours, spacing and
+# 4-column layout mirror txtPersNameDTD / galDetailTabsDTD on the DTD
+# Applications screen: same application data, same look. The other tabs use
+# plain Labels in galleries. There is no edit toggle and no Patch against
+# APPLICATIONS anywhere on this screen. RQ024 makes that explicit for program
+# choices: a supervisor must not alter the applicant's selections.
+#
+# Default doesn't auto-refresh when locApp changes — Reset() must be called
+# from btnQueueRowSE.OnSelect for every txtXxxSE. This mirrors DTD, which does
+# the same on its Cancel/Edit toggle. Miss a Reset and the stale value
+# survives a queue switch.
+#
+# RQ023/RQ025 — they MAY recommend up to three alternative options, recorded
+# separately and attributed. The "Alternative program suggestions" accordion
+# in the decision rail is COLLAPSED by default (locSuggestOpen = false). When
+# opened it shows an editable gallery (galSuggestRowsSE) of program+option
+# dropdown pairs, bound to colSuggestSE ({id, program, option}). Users add
+# rows via btnAddAltSE (capped at three) and remove rows via the trash icon.
+# Blank rows are filtered on submit; the submit handler concats colSuggestSE
+# into SUPERVISOR_ENDORSEMENTS.RecommendedOptions as "Program" or
+# "Program — Option", newline-delimited. The applicant's own choices are
+# never touched.
+#
+# RQ019 / FR-013 — a statement is required on BOTH answers, not just the
+# negative one. btnSubmitSE is disabled until there is a decision AND a
+# non-blank statement.
+#
+# RQ021 — the packet advances either way. btnSubmitSE sets the same ReviewStage
+# whichever button is chosen; there is no branch on the decision value.
+#
+# ---------------------------------------------------------------------------
+# RECOMMEND / NOT RECOMMEND
+# ---------------------------------------------------------------------------
+# SUPERVISOR_ENDORSEMENTS.Decision was renamed from Approve/Disapprove on
+# 2026-08-02 — see _CHOICES.md. A supervisor cannot grant a place in the
+# programme, and RQ021 means neither answer blocks anything, so the column was
+# always holding an opinion. RQ018 still uses the old words; that is OI-SUP-1.
+#
+# ---------------------------------------------------------------------------
+# WHOSE TURN IT IS
+# ---------------------------------------------------------------------------
+# Three states, and the rail renders one of them:
+#
+#   ALREADY DECIDED   locMineSE exists. UC-2.1 preconditions: "the acting
+#                     supervisor has not yet recorded a disposition". The form
+#                     is replaced by a read-back of what they said.
+#   NOT YET MY TURN   a second-line supervisor while ReviewStage is still
+#                     Pending First-Line. They may READ the application — that
+#                     is not sensitive to them — but not record ahead of the
+#                     first line, because RQ020 says their decision is supposed
+#                     to be informed by it.
+#   MINE TO DECIDE    everything else. The form is live.
+#
+# `Needs Supervisor Assigned` counts as the second line's turn: the packet is
+# waiting on DTD to name someone, and the person reading this screen IS the
+# named someone if the application lists them.
+
+# ===========================================================================
+# REVIEW QUEUE — collapsible accordion card listing every application pending
+# this user's review. Collapsed by default (locQueueOpen = false); the header
+# always shows the queue size and the currently-selected applicant. Expanding
+# reveals a gallery of applicants; picking one sets locApp and auto-collapses
+# the card. Downstream containers reference conQueueSE.Y + conQueueSE.Height
+# so the whole screen shifts down when the accordion opens.
+# ===========================================================================
+- conQueueSE:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: |-
+        =If(locQueueOpen,
+            64 + Min(4, CountRows(colSupAppsSE)) * 64,
+            48)
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: =CountRows(colSupAppsSE) > 0
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =72
+    Children:
+      - lblQueueHeaderSE:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Left
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =48
+            PaddingLeft: =20
+            Size: =Typography.SizeLabel
+            Text: |-
+              ="Your review queue" &
+                If(Not(IsBlank(locApp)),
+                   "  •  " & CountRows(colSupAppsSE) & " assigned", "")
+            VerticalAlign: =VerticalAlign.Middle
+            Width: =Parent.Width - 60
+            X: =0
+            Y: =0
+      - icoQueueChevronSE:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Height: =20
+            Icon: =If(locQueueOpen, Icon.ChevronUp, Icon.ChevronDown)
+            Width: =20
+            X: =Parent.Width - 40
+            Y: =lblQueueHeaderSE.Y + (lblQueueHeaderSE.Height - Self.Height) / 2
+      - btnQueueToggleSE:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =RGBA(0, 0, 0, 0)
+            Fill: =RGBA(0, 0, 0, 0)
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =48
+            HoverColor: =RGBA(0, 0, 0, 0)
+            HoverFill: =RGBA(0, 0, 0, 0.03)
+            OnSelect: |-
+              =UpdateContext({ locQueueOpen: Not(locQueueOpen) })
+            PressedColor: =RGBA(0, 0, 0, 0)
+            PressedFill: =RGBA(0, 0, 0, 0.06)
+            Size: =Typography.SizeLabel
+            Text: ="Toggle review queue"
+            Width: =Parent.Width
+            X: =0
+            Y: =0
+      - recQueueDividerSE:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.Gray200
+            Height: =1
+            Visible: =locQueueOpen
+            Width: =Parent.Width - 40
+            X: =20
+            Y: =lblQueueHeaderSE.Y + lblQueueHeaderSE.Height
+      - galQueueSE:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Height: =Min(4, CountRows(colSupAppsSE)) * 64
+            Items: =colSupAppsSE
+            ShowScrollbar: =true
+            TemplatePadding: =0
+            TemplateSize: =64
+            Visible: =locQueueOpen
+            Width: =Parent.Width - 40
+            X: =20
+            Y: =lblQueueHeaderSE.Y + lblQueueHeaderSE.Height + 8
+          Children:
+            - btnQueueRowSE:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =RGBA(0, 0, 0, 0)
+                  FocusedBorderColor: =ColorPalette.FocusOnLight
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =Parent.TemplateHeight
+                  HoverColor: =RGBA(0, 0, 0, 0)
+                  HoverFill: =ColorPalette.Blue50
+                  OnSelect: |-
+                    =UpdateContext({
+                       locApp: ThisItem.App,
+                       locTabSE: 1,
+                       locStatementCollapsed: false,
+                       locSuggestOpen: false,
+                       locQueueOpen: false
+                     });
+                     ClearCollect(colSuggestSE, Filter(Table({id: 0, program: "", option: ""}), false));
+                     UpdateContext({
+                       locMineSE: LookUp(SUPERVISOR_ENDORSEMENTS,
+                         And(ApplicationID.Id = locApp.ID, SupervisorEmail = User().Email)),
+                       locPriorSE: LookUp(SUPERVISOR_ENDORSEMENTS,
+                         And(ApplicationID.Id = locApp.ID, SupervisorLevel.Value = "First Line"))
+                     });
+                     Reset(txtStatementSE);
+                     Reset(txtNameSE); Reset(txtEmailSE); Reset(txtLocSE);
+                     Reset(txtTitleSE); Reset(txtGradeSE); Reset(txtSeriesSE);
+                     Reset(txtStartSE); Reset(txtScdSE);
+                     Reset(txtSup1SE); Reset(txtSup2SE);
+                     Reset(txtIdpSE); Reset(txtRatingSE);
+                     Reset(txtSessSE); Reset(txtSessDSE)
+                  PressedColor: =RGBA(0, 0, 0, 0)
+                  PressedFill: =ColorPalette.Blue50
+                  Size: =Typography.SizeCaption
+                  Text: =""
+                  Width: =Parent.TemplateWidth
+                  X: =0
+                  Y: =0
+            - lblQueueRowNameSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =If(ThisItem.App.ID = locApp.ID,
+                        ColorPalette.Blue600, ColorPalette.TextHeading)
+                  Font: =Typography.Family
+                  FontWeight: |-
+                    =If(ThisItem.App.ID = locApp.ID,
+                        Typography.WeightBold, Typography.WeightMedium)
+                  Height: =24
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.Label
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =220
+                  X: =16
+                  Y: =8
+            - lblQueueRowTitleSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextBody
+                  Font: =Typography.Family
+                  Height: =24
+                  Size: =Typography.SizeBody
+                  Text: =Coalesce(ThisItem.App.JobTitle, "—")
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =300
+                  X: =240
+                  Y: =8
+            - lblQueueRowMetaSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =24
+                  Size: =Typography.SizeCaption
+                  Text: |-
+                    =Coalesce(ThisItem.App.Grade, "—") & "  ·  " &
+                     Coalesce(ThisItem.App.JobSeries, "—") & "  ·  " &
+                     Coalesce(ThisItem.App.Location, "—")
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =Parent.TemplateWidth - 566
+                  X: =550
+                  Y: =8
+            - lblQueueRow1LineSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =22
+                  Size: =Typography.SizeCaption
+                  Text: |-
+                    ="1st line: " &
+                     Coalesce(ThisItem.App.FirstLineSupervisorEmail, "—")
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =Parent.TemplateWidth / 2 - 24
+                  X: =16
+                  Y: =34
+            - lblQueueRow2LineSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =22
+                  Size: =Typography.SizeCaption
+                  Text: |-
+                    ="2nd line: " &
+                     Coalesce(ThisItem.App.SecondLineSupervisorEmail, "—")
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =Parent.TemplateWidth / 2 - 16
+                  X: =Parent.TemplateWidth / 2
+                  Y: =34
+
+# ===========================================================================
+# HEADER — who, which application, and which of the two roles you hold
+# ===========================================================================
+- conHeaderSE:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.Navy900
+      Height: =88
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =132 + If(locQueueOpen, 16 + Min(4, CountRows(colSupAppsSE)) * 64, 0)
+    Children:
+      - lblHeaderTitleSE:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextOnDark
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =30
+            Size: =Typography.SizeTitle
+            Text: ="Supervisor Recommendation"
+            Width: =420
+            X: =28
+            Y: =16
+      - lblHeaderWhoSE:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.Blue50
+            Font: =Typography.Family
+            Height: =24
+            Size: =Typography.SizeBody
+            Text: |-
+              =If(IsBlank(locApp), "No applications are assigned to you",
+                 locApp.ApplicantName
+                   & If(IsBlank(locApp.SubmittedDate), "",
+                        "  ·  submitted " & Text(locApp.SubmittedDate, "mmmm d, yyyy")))
+            Width: =560
+            X: =28
+            Y: =48
+
+# ===========================================================================
+# THE APPLICATION — five tabs, every one of them read-only (RQ022)
+# ===========================================================================
+- conAppSE:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =400
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: =Not(IsBlank(locApp))
+      Width: =1080
+      X: =24
+      Y: =240 + If(locQueueOpen, 16 + Min(4, CountRows(colSupAppsSE)) * 64, 0)
+    Children:
+      - conAppHeaderSE:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =ColorPalette.Navy900
+            Height: =48
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =Parent.Width
+            X: =0
+            Y: =0
+          Children:
+            - lblAppTitleSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextOnDark
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =26
+                  Size: =Typography.SizeHeading
+                  Text: ="Program Application"
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =(Parent.Height - Self.Height) / 2
+      - galTabsSE:
+          Control: Gallery@2.15.0
+          Variant: Horizontal
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Height: =34
+            Items: |-
+              =Table(
+                { id: 1, label: "Personnel" },
+                { id: 2, label: "Program choices" },
+                { id: 3, label: "Competencies" },
+                { id: 4, label: "Eligibility" },
+                { id: 5, label: "Documents" }
+              )
+            LayoutMinHeight: =0
+            LayoutMinWidth: =0
+            ShowScrollbar: =false
+            TemplatePadding: =0
+            TemplateSize: =160
+            Visible: =Not(IsBlank(locApp))
+            Width: =800
+            X: =24
+            Y: =conAppHeaderSE.Y + conAppHeaderSE.Height + 16
+          Children:
+            - btnTabSE:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  BorderStyle: =BorderStyle.Solid
+                  BorderThickness: =0
+                  Color: |-
+                    =If(ThisItem.id = locTabSE,
+                       ColorPalette.Blue600, ColorPalette.TextHelp)
+                  Fill: =RGBA(0, 0, 0, 0)
+                  FocusedBorderThickness: =0
+                  Font: =Typography.Family
+                  FontWeight: |-
+                    =If(ThisItem.id = locTabSE,
+                       Typography.WeightBold, Typography.WeightRegular)
+                  Height: =Parent.TemplateHeight - 3
+                  HoverColor: =ColorPalette.TextOnDark
+                  HoverFill: =ColorPalette.Blue700
+                  OnSelect: |-
+                    =UpdateContext({ locTabSE: ThisItem.id })
+                  PressedColor: =ColorPalette.TextOnDark
+                  PressedFill: =ColorPalette.Blue700
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.label
+                  Width: =Parent.TemplateWidth
+                  X: =0
+                  Y: =0
+            - recTabLineSE:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Fill: |-
+                    =If(ThisItem.id = locTabSE,
+                       ColorPalette.Blue600, RGBA(0, 0, 0, 0))
+                  Height: =3
+                  Width: =Parent.TemplateWidth
+                  X: =0
+                  Y: =Parent.TemplateHeight - 3
+      - recTabsRuleSE:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.Gray200
+            Height: =1
+            Visible: =Not(IsBlank(locApp))
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =galTabsSE.Y + galTabsSE.Height
+      - conTab1SE:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =RGBA(0, 0, 0, 0)
+            Height: =330
+            Visible: =locTabSE = 1
+            Width: =1040
+            X: =20
+            Y: =recTabsRuleSE.Y + 16
+          Children:
+            - txtNameSE:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Default: |-
+                    =Coalesce(locApp.ApplicantName, "—")
+                  DisabledBorderColor: =ColorPalette.Gray300
+                  DisabledColor: =ColorPalette.TextBody
+                  DisabledFill: =ColorPalette.White
+                  DisplayMode: =DisplayMode.Disabled
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.Blue600
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =40
+                  PaddingLeft: =12
+                  Size: =Typography.SizeBody
+                  Width: =(Parent.Width - 120) / 4
+                  X: =24
+                  Y: =10
+            - lblNameSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Fill: =ColorPalette.White
+                  Font: =Typography.Family
+                  Height: =16
+                  PaddingLeft: =4
+                  PaddingRight: =4
+                  Size: =Typography.SizeCaption
+                  Text: ="Full name"
+                  Width: =Len(Self.Text) * 6 + 16
+                  Wrap: =false
+                  X: =txtNameSE.X + 10
+                  Y: =txtNameSE.Y - Self.Height / 2
+            - txtEmailSE:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Default: |-
+                    =Coalesce(locApp.ApplicantEmail, "—")
+                  DisabledBorderColor: =ColorPalette.Gray300
+                  DisabledColor: =ColorPalette.TextBody
+                  DisabledFill: =ColorPalette.White
+                  DisplayMode: =DisplayMode.Disabled
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.Blue600
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =40
+                  PaddingLeft: =12
+                  Size: =Typography.SizeBody
+                  Width: =txtNameSE.Width
+                  X: =24
+                  Y: =68
+            - lblEmailSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Fill: =ColorPalette.White
+                  Font: =Typography.Family
+                  Height: =16
+                  PaddingLeft: =4
+                  PaddingRight: =4
+                  Size: =Typography.SizeCaption
+                  Text: ="Email"
+                  Width: =Len(Self.Text) * 6 + 16
+                  Wrap: =false
+                  X: =txtEmailSE.X + 10
+                  Y: =txtEmailSE.Y - Self.Height / 2
+            - txtLocSE:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Default: |-
+                    =Coalesce(locApp.Location, "—")
+                  DisabledBorderColor: =ColorPalette.Gray300
+                  DisabledColor: =ColorPalette.TextBody
+                  DisabledFill: =ColorPalette.White
+                  DisplayMode: =DisplayMode.Disabled
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.Blue600
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =40
+                  PaddingLeft: =12
+                  Size: =Typography.SizeBody
+                  Width: =txtNameSE.Width
+                  X: =24
+                  Y: =126
+            - lblLocSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Fill: =ColorPalette.White
+                  Font: =Typography.Family
+                  Height: =16
+                  PaddingLeft: =4
+                  PaddingRight: =4
+                  Size: =Typography.SizeCaption
+                  Text: ="Location"
+                  Width: =Len(Self.Text) * 6 + 16
+                  Wrap: =false
+                  X: =txtLocSE.X + 10
+                  Y: =txtLocSE.Y - Self.Height / 2
+            - txtTitleSE:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Default: |-
+                    =Coalesce(locApp.JobTitle, "—")
+                  DisabledBorderColor: =ColorPalette.Gray300
+                  DisabledColor: =ColorPalette.TextBody
+                  DisabledFill: =ColorPalette.White
+                  DisplayMode: =DisplayMode.Disabled
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.Blue600
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =40
+                  PaddingLeft: =12
+                  Size: =Typography.SizeBody
+                  Width: =txtNameSE.Width
+                  X: =txtNameSE.X + (txtNameSE.Width + 24)
+                  Y: =10
+            - lblTitleSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Fill: =ColorPalette.White
+                  Font: =Typography.Family
+                  Height: =16
+                  PaddingLeft: =4
+                  PaddingRight: =4
+                  Size: =Typography.SizeCaption
+                  Text: ="Job title"
+                  Width: =Len(Self.Text) * 6 + 16
+                  Wrap: =false
+                  X: =txtTitleSE.X + 10
+                  Y: =txtTitleSE.Y - Self.Height / 2
+            - txtGradeSE:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Default: |-
+                    =Coalesce(locApp.Grade, "—")
+                  DisabledBorderColor: =ColorPalette.Gray300
+                  DisabledColor: =ColorPalette.TextBody
+                  DisabledFill: =ColorPalette.White
+                  DisplayMode: =DisplayMode.Disabled
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.Blue600
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =40
+                  PaddingLeft: =12
+                  Size: =Typography.SizeBody
+                  Width: =txtNameSE.Width
+                  X: =txtNameSE.X + (txtNameSE.Width + 24)
+                  Y: =68
+            - lblGradeSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Fill: =ColorPalette.White
+                  Font: =Typography.Family
+                  Height: =16
+                  PaddingLeft: =4
+                  PaddingRight: =4
+                  Size: =Typography.SizeCaption
+                  Text: ="Grade"
+                  Width: =Len(Self.Text) * 6 + 16
+                  Wrap: =false
+                  X: =txtGradeSE.X + 10
+                  Y: =txtGradeSE.Y - Self.Height / 2
+            - txtSeriesSE:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Default: |-
+                    =Coalesce(locApp.JobSeries, "—")
+                  DisabledBorderColor: =ColorPalette.Gray300
+                  DisabledColor: =ColorPalette.TextBody
+                  DisabledFill: =ColorPalette.White
+                  DisplayMode: =DisplayMode.Disabled
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.Blue600
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =40
+                  PaddingLeft: =12
+                  Size: =Typography.SizeBody
+                  Width: =txtNameSE.Width
+                  X: =txtNameSE.X + (txtNameSE.Width + 24)
+                  Y: =126
+            - lblSeriesSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Fill: =ColorPalette.White
+                  Font: =Typography.Family
+                  Height: =16
+                  PaddingLeft: =4
+                  PaddingRight: =4
+                  Size: =Typography.SizeCaption
+                  Text: ="Job series"
+                  Width: =Len(Self.Text) * 6 + 16
+                  Wrap: =false
+                  X: =txtSeriesSE.X + 10
+                  Y: =txtSeriesSE.Y - Self.Height / 2
+            - txtStartSE:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Default: |-
+                    =If(IsBlank(locApp.NCUAStartDate), "—",
+                       Text(locApp.NCUAStartDate, "mmmm d, yyyy"))
+                  DisabledBorderColor: =ColorPalette.Gray300
+                  DisabledColor: =ColorPalette.TextBody
+                  DisabledFill: =ColorPalette.White
+                  DisplayMode: =DisplayMode.Disabled
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.Blue600
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =40
+                  PaddingLeft: =12
+                  Size: =Typography.SizeBody
+                  Width: =txtNameSE.Width
+                  X: =txtNameSE.X + (txtNameSE.Width + 24) * 2
+                  Y: =10
+            - lblStartSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Fill: =ColorPalette.White
+                  Font: =Typography.Family
+                  Height: =16
+                  PaddingLeft: =4
+                  PaddingRight: =4
+                  Size: =Typography.SizeCaption
+                  Text: ="NCUA start date"
+                  Width: =Len(Self.Text) * 6 + 16
+                  Wrap: =false
+                  X: =txtStartSE.X + 10
+                  Y: =txtStartSE.Y - Self.Height / 2
+            - txtScdSE:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Default: |-
+                    =If(IsBlank(locApp.ServiceComputationDate), "—",
+                       Text(locApp.ServiceComputationDate, "mmmm d, yyyy"))
+                  DisabledBorderColor: =ColorPalette.Gray300
+                  DisabledColor: =ColorPalette.TextBody
+                  DisabledFill: =ColorPalette.White
+                  DisplayMode: =DisplayMode.Disabled
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.Blue600
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =40
+                  PaddingLeft: =12
+                  Size: =Typography.SizeBody
+                  Width: =txtNameSE.Width
+                  X: =txtNameSE.X + (txtNameSE.Width + 24) * 2
+                  Y: =68
+            - lblScdSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Fill: =ColorPalette.White
+                  Font: =Typography.Family
+                  Height: =16
+                  PaddingLeft: =4
+                  PaddingRight: =4
+                  Size: =Typography.SizeCaption
+                  Text: ="Service computation date"
+                  Width: =Len(Self.Text) * 6 + 16
+                  Wrap: =false
+                  X: =txtScdSE.X + 10
+                  Y: =txtScdSE.Y - Self.Height / 2
+            - txtSup1SE:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Default: |-
+                    =Coalesce(locApp.FirstLineSupervisorEmail, "—")
+                  DisabledBorderColor: =ColorPalette.Gray300
+                  DisabledColor: =ColorPalette.TextBody
+                  DisabledFill: =ColorPalette.White
+                  DisplayMode: =DisplayMode.Disabled
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.Blue600
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =40
+                  PaddingLeft: =12
+                  Size: =Typography.SizeBody
+                  Width: =txtNameSE.Width
+                  X: =txtNameSE.X + (txtNameSE.Width + 24) * 3
+                  Y: =10
+            - lblSup1SE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Fill: =ColorPalette.White
+                  Font: =Typography.Family
+                  Height: =16
+                  PaddingLeft: =4
+                  PaddingRight: =4
+                  Size: =Typography.SizeCaption
+                  Text: ="First-line supervisor"
+                  Width: =Len(Self.Text) * 6 + 16
+                  Wrap: =false
+                  X: =txtSup1SE.X + 10
+                  Y: =txtSup1SE.Y - Self.Height / 2
+            - txtSup2SE:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Default: |-
+                    =Coalesce(locApp.SecondLineSupervisorEmail, "—")
+                  DisabledBorderColor: =ColorPalette.Gray300
+                  DisabledColor: =ColorPalette.TextBody
+                  DisabledFill: =ColorPalette.White
+                  DisplayMode: =DisplayMode.Disabled
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.Blue600
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =40
+                  PaddingLeft: =12
+                  Size: =Typography.SizeBody
+                  Width: =txtNameSE.Width
+                  X: =txtNameSE.X + (txtNameSE.Width + 24) * 3
+                  Y: =68
+            - lblSup2SE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Fill: =ColorPalette.White
+                  Font: =Typography.Family
+                  Height: =16
+                  PaddingLeft: =4
+                  PaddingRight: =4
+                  Size: =Typography.SizeCaption
+                  Text: ="Second-line supervisor"
+                  Width: =Len(Self.Text) * 6 + 16
+                  Wrap: =false
+                  X: =txtSup2SE.X + 10
+                  Y: =txtSup2SE.Y - Self.Height / 2
+      - conTab2SE:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =RGBA(0, 0, 0, 0)
+            Height: =330
+            Visible: =locTabSE = 2
+            Width: =1040
+            X: =20
+            Y: =recTabsRuleSE.Y + 16
+          Children:
+            - galChoicesSE:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  Height: =240
+                  Items: |-
+                    =Sort(
+                      Filter(APPLICATION_PROGRAM_CHOICES, ApplicationID.Id = locApp.ID),
+                      Rank)
+                  ShowScrollbar: =false
+                  TemplatePadding: =0
+                  TemplateSize: =62
+                  Width: =800
+                  X: =24
+                  Y: =28
+                Children:
+                  - lblChRankSE:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHelp
+                        Font: =Typography.Family
+                        Height: =24
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.Rank & "."
+                        Width: =28
+                        X: =0
+                        Y: =0
+                  - lblChProgSE:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =24
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.ProgramID.Value
+                        Width: =Parent.TemplateWidth - 40
+                        X: =32
+                        Y: =0
+                  - lblChOptSE:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHelp
+                        Font: =Typography.Family
+                        Height: =20
+                        Size: =Typography.SizeBody
+                        Text: |-
+                          =If(IsBlank(ThisItem.ProgramOptionID.Value),
+                             "No secondary option",
+                             ThisItem.ProgramOptionID.Value)
+                        Width: =Parent.TemplateWidth - 40
+                        X: =32
+                        Y: =24
+                  - recChLineSE:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        Fill: =ColorPalette.Gray200
+                        Height: =1
+                        Width: =Parent.TemplateWidth
+                        X: =0
+                        Y: =Parent.TemplateHeight - 1
+      - conTab3SE:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =RGBA(0, 0, 0, 0)
+            Height: =286
+            Visible: =locTabSE = 3
+            Width: =1040
+            X: =20
+            Y: =recTabsRuleSE.Y + 16
+          Children:
+            # PowerLibs Segmented Tabs — one per active competency type,
+            # data-driven. Mirrors galS3TypeTabsAP on ApplicationScreen.
+            - conS3TabsSE:
+                Control: GroupContainer@1.5.0
+                Variant: AutoLayout
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  DropShadow: =DropShadow.None
+                  Fill: =ColorPalette.Gray50
+                  Height: =40
+                  LayoutDirection: =LayoutDirection.Horizontal
+                  PaddingBottom: =5
+                  PaddingLeft: =5
+                  PaddingRight: =5
+                  PaddingTop: =5
+                  RadiusBottomLeft: =8
+                  RadiusBottomRight: =8
+                  RadiusTopLeft: =8
+                  RadiusTopRight: =8
+                  Width: |-
+                    =Min(Parent.Width - 300,
+                         170 * Max(1, CountRows(Filter(COMPETENCY_TYPES, State.Value = "Active"))))
+                  X: =24
+                  Y: =16
+                Children:
+                  - galS3TypeTabsSE:
+                      Control: Gallery@2.15.0
+                      Variant: Horizontal
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        Height: =Parent.Height - 10
+                        Items: |-
+                          =SortByColumns(
+                            Filter(COMPETENCY_TYPES, State.Value = "Active"),
+                            "SortOrder", SortOrder.Ascending)
+                        LayoutMinHeight: =0
+                        LayoutMinWidth: =0
+                        ShowScrollbar: =false
+                        TemplatePadding: =0
+                        TemplateSize: |-
+                          =galS3TypeTabsSE.Width / Max(1, galS3TypeTabsSE.AllItemsCount)
+                        Width: =Parent.Width - 10
+                      Children:
+                        - btnS3TypeTabSE:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: |-
+                                =If(ThisItem.ID = locCompTypeSE,
+                                    ColorPalette.Blue600, RGBA(0, 0, 0, 0))
+                              BorderStyle: =BorderStyle.Solid
+                              BorderThickness: |-
+                                =If(ThisItem.ID = locCompTypeSE, 1, 0)
+                              Color: |-
+                                =If(ThisItem.ID = locCompTypeSE,
+                                    ColorPalette.TextOnDark, ColorPalette.TextHeading)
+                              Fill: |-
+                                =If(ThisItem.ID = locCompTypeSE,
+                                    ColorPalette.Blue600, RGBA(0, 0, 0, 0))
+                              FocusedBorderColor: =ColorPalette.FocusOnLight
+                              FocusedBorderThickness: |-
+                                =If(ThisItem.ID = locCompTypeSE, 1, 0)
+                              Font: =Typography.Family
+                              FontWeight: |-
+                                =If(ThisItem.ID = locCompTypeSE,
+                                    Typography.WeightBold, Typography.WeightRegular)
+                              Height: =Parent.TemplateHeight - 2
+                              HoverBorderColor: =Self.BorderColor
+                              HoverColor: |-
+                                =If(ThisItem.ID = locCompTypeSE,
+                                    ColorPalette.TextOnDark, ColorPalette.Blue600)
+                              HoverFill: |-
+                                =If(ThisItem.ID = locCompTypeSE,
+                                    ColorPalette.Blue700, ColorPalette.Blue50)
+                              OnSelect: |-
+                                =UpdateContext({ locCompTypeSE: ThisItem.ID })
+                              PressedBorderColor: =Self.BorderColor
+                              PressedColor: =Self.Color
+                              PressedFill: |-
+                                =If(ThisItem.ID = locCompTypeSE,
+                                    ColorPalette.Blue700, ColorPalette.Blue50)
+                              RadiusBottomLeft: =5
+                              RadiusBottomRight: =5
+                              RadiusTopLeft: =5
+                              RadiusTopRight: =5
+                              Size: =Typography.SizeBody
+                              Text: =ThisItem.TypeName
+                              Width: =Parent.TemplateWidth - 4
+                              X: =2
+                              Y: =1
+            - lblS3CountSE:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Right
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =22
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =CountRows(
+                       Filter(APPLICATION_COMPETENCIES,
+                         ApplicationID.Id = locApp.ID,
+                         LookUp(COMPETENCIES, ID = CompetencyID.Id).CompetencyTypeID.Id = locCompTypeSE)
+                     ) & " selected"
+                  Visible: =Not(IsBlank(locCompTypeSE))
+                  Width: =260
+                  X: =Parent.Width - 284
+                  Y: =17
+            - galS3CompsSE:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  BorderColor: =ColorPalette.Gray200
+                  Height: =216
+                  Items: |-
+                    =SortByColumns(
+                      Filter(
+                        ForAll(
+                          Filter(APPLICATION_COMPETENCIES, ApplicationID.Id = locApp.ID) As ac,
+                          { CompName: ac.CompetencyID.Value,
+                            CompDesc: LookUp(COMPETENCIES, ID = ac.CompetencyID.Id).Description,
+                            TypeID: LookUp(COMPETENCIES, ID = ac.CompetencyID.Id).CompetencyTypeID.Id }),
+                        TypeID = locCompTypeSE),
+                      "CompName", SortOrder.Ascending)
+                  ShowScrollbar: =true
+                  TemplatePadding: =0
+                  TemplateSize: =65
+                  Width: =Parent.Width - 48
+                  X: =24
+                  Y: =60
+                Children:
+                  - lblS3CompNameSE:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =Parent.TemplateHeight - 12
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.CompName
+                        VerticalAlign: =VerticalAlign.Top
+                        Width: =240
+                        X: =0
+                        Y: =8
+                  - lblS3CompDescSE:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextBody
+                        Font: =Typography.Family
+                        Height: =55
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.CompDesc
+                        VerticalAlign: =VerticalAlign.Top
+                        Width: =Parent.TemplateWidth - 260
+                        X: =252
+                        Y: =8
+                  - recS3CompLineSE:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        Fill: =ColorPalette.Gray200
+                        Height: =1
+                        Width: =Parent.TemplateWidth
+                        X: =0
+                        Y: =Parent.TemplateHeight - 1
+            - lblS3NoCompsSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =40
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    ="No " & LookUp(COMPETENCY_TYPES, ID = locCompTypeSE).TypeName &
+                      " competencies were recorded."
+                  Visible: |-
+                    =And(Not(IsBlank(locCompTypeSE)),
+                         CountRows(galS3CompsSE.AllItems) = 0)
+                  Width: =Parent.Width - 48
+                  X: =24
+                  Y: =70
+      - conTab4SE:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =RGBA(0, 0, 0, 0)
+            Height: =330
+            Visible: =locTabSE = 4
+            Width: =1040
+            X: =20
+            Y: =recTabsRuleSE.Y + 16
+          Children:
+            - txtIdpSE:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Default: |-
+                    =Coalesce(locApp.ListedOnIDP.Value, "—")
+                  DisabledBorderColor: =ColorPalette.Gray300
+                  DisabledColor: =ColorPalette.TextBody
+                  DisabledFill: =ColorPalette.White
+                  DisplayMode: =DisplayMode.Disabled
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.Blue600
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =40
+                  PaddingLeft: =12
+                  Size: =Typography.SizeBody
+                  Width: =(Parent.Width - 120) / 4
+                  X: =24
+                  Y: =10
+            - lblIdpSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Fill: =ColorPalette.White
+                  Font: =Typography.Family
+                  Height: =16
+                  PaddingLeft: =4
+                  PaddingRight: =4
+                  Size: =Typography.SizeCaption
+                  Text: ="Listed on IDP"
+                  Width: =Len(Self.Text) * 6 + 16
+                  Wrap: =false
+                  X: =txtIdpSE.X + 10
+                  Y: =txtIdpSE.Y - Self.Height / 2
+            - txtRatingSE:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Default: |-
+                    =If(IsBlank(locApp.LatestPerformanceRating), "—",
+                       Text(locApp.LatestPerformanceRating))
+                  DisabledBorderColor: =ColorPalette.Gray300
+                  DisabledColor: =ColorPalette.TextBody
+                  DisabledFill: =ColorPalette.White
+                  DisplayMode: =DisplayMode.Disabled
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.Blue600
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =40
+                  PaddingLeft: =12
+                  Size: =Typography.SizeBody
+                  Width: =txtIdpSE.Width
+                  X: =txtIdpSE.X + (txtIdpSE.Width + 24)
+                  Y: =10
+            - lblRatingSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Fill: =ColorPalette.White
+                  Font: =Typography.Family
+                  Height: =16
+                  PaddingLeft: =4
+                  PaddingRight: =4
+                  Size: =Typography.SizeCaption
+                  Text: ="Latest performance rating"
+                  Width: =Len(Self.Text) * 6 + 16
+                  Wrap: =false
+                  X: =txtRatingSE.X + 10
+                  Y: =txtRatingSE.Y - Self.Height / 2
+            - txtSessSE:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Default: |-
+                    =Coalesce(locApp.AttendedInfoSession.Value, "—")
+                  DisabledBorderColor: =ColorPalette.Gray300
+                  DisabledColor: =ColorPalette.TextBody
+                  DisabledFill: =ColorPalette.White
+                  DisplayMode: =DisplayMode.Disabled
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.Blue600
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =40
+                  PaddingLeft: =12
+                  Size: =Typography.SizeBody
+                  Width: =txtIdpSE.Width
+                  X: =txtIdpSE.X + (txtIdpSE.Width + 24) * 2
+                  Y: =10
+            - lblSessSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Fill: =ColorPalette.White
+                  Font: =Typography.Family
+                  Height: =16
+                  PaddingLeft: =4
+                  PaddingRight: =4
+                  Size: =Typography.SizeCaption
+                  Text: ="Attended info session"
+                  Width: =Len(Self.Text) * 6 + 16
+                  Wrap: =false
+                  X: =txtSessSE.X + 10
+                  Y: =txtSessSE.Y - Self.Height / 2
+            - txtSessDSE:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Default: |-
+                    =If(IsBlank(locApp.InfoSessionDate), "—",
+                       Text(locApp.InfoSessionDate, "mmmm d, yyyy"))
+                  DisabledBorderColor: =ColorPalette.Gray300
+                  DisabledColor: =ColorPalette.TextBody
+                  DisabledFill: =ColorPalette.White
+                  DisplayMode: =DisplayMode.Disabled
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.Blue600
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =40
+                  PaddingLeft: =12
+                  Size: =Typography.SizeBody
+                  Width: =txtIdpSE.Width
+                  X: =txtIdpSE.X + (txtIdpSE.Width + 24) * 3
+                  Y: =10
+            - lblSessDSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Fill: =ColorPalette.White
+                  Font: =Typography.Family
+                  Height: =16
+                  PaddingLeft: =4
+                  PaddingRight: =4
+                  Size: =Typography.SizeCaption
+                  Text: ="Info session date"
+                  Width: =Len(Self.Text) * 6 + 16
+                  Wrap: =false
+                  X: =txtSessDSE.X + 10
+                  Y: =txtSessDSE.Y - Self.Height / 2
+      - conTab5SE:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =RGBA(0, 0, 0, 0)
+            Height: =330
+            Visible: =locTabSE = 5
+            Width: =1040
+            X: =20
+            Y: =recTabsRuleSE.Y + 16
+          Children:
+            - galDocsSE:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  Height: =180
+                  Items: =Filter(APPLICATION_DOCUMENTS, ApplicationID.Id = locApp.ID)
+                  ShowScrollbar: =false
+                  TemplatePadding: =0
+                  TemplateSize: =44
+                  Width: =800
+                  X: =24
+                  Y: =0
+                Children:
+                  - lblDocTypeSE:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =40
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.DocumentType.Value
+                        Width: =400
+                        X: =0
+                        Y: =0
+                  - recDocLineSE:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        Fill: =ColorPalette.Gray200
+                        Height: =1
+                        Width: =Parent.TemplateWidth
+                        X: =0
+                        Y: =Parent.TemplateHeight - 1
+
+# ===========================================================================
+# WHAT THE FIRST LINE SAID — RQ020
+# ===========================================================================
+# Directly under the application, not in the rail: it is evidence to read
+# alongside the packet, not part of the form being filled in. A first-line
+# supervisor sees their own entry here after they submit.
+- conPriorSE:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =96
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: =Not(IsBlank(locApp))
+      Width: =1080
+      X: =24
+      Y: =656 + If(locQueueOpen, 16 + Min(4, CountRows(colSupAppsSE)) * 64, 0)
+    Children:
+      - lblPriorTitleSE:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =24
+            Size: =Typography.SizeHeading
+            Text: ="First-line decision"
+            Width: =300
+            X: =20
+            Y: =12
+      - lblPriorVerdictSE:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Right
+            Color: |-
+              =If(locPriorSE.Decision.Value = "Recommend",
+                 ColorPalette.SuccessText, ColorPalette.WarningText)
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =24
+            Size: =Typography.SizeBody
+            Text: |-
+              =locPriorSE.Decision.Value & "  ·  "
+                & Text(locPriorSE.DecisionDate, "mmmm d, yyyy")
+            Visible: =Not(IsBlank(locPriorSE))
+            Width: =360
+            X: =Parent.Width - 380
+            Y: =12
+      - lblPriorBodySE:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =44
+            Size: =Typography.SizeBody
+            Text: |-
+              =If(IsBlank(locPriorSE),
+                 "Not recorded yet.",
+                 locPriorSE.DispositionStatement)
+            VerticalAlign: =VerticalAlign.Top
+            Width: =Parent.Width - 40
+            X: =20
+            Y: =42
+
+# ===========================================================================
+# DECISION RAIL — three mutually exclusive states, see WHOSE TURN IT IS
+# ===========================================================================
+- conDecisionSE:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: |-
+        =60 +
+         If(Not(IsBlank(locMineSE)),
+              410,
+              If(conFormSE.Visible,
+                 conFormSE.Height,
+                 200))
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: =Not(IsBlank(locApp))
+      Width: =Parent.Width - 1152
+      X: =1128
+      Y: =240 + If(locQueueOpen, 16 + Min(4, CountRows(colSupAppsSE)) * 64, 0)
+    Children:
+      - conRailBannerSE:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =ColorPalette.Navy900
+            Height: =48
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =Parent.Width
+            X: =0
+            Y: =0
+          Children:
+            - lblRailTitleSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextOnDark
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =26
+                  Size: =Typography.SizeHeading
+                  Text: ="Your recommendation"
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =(Parent.Height - Self.Height) / 2
+      - conFormSE:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =RGBA(0, 0, 0, 0)
+            Height: =btnSubmitSE.Y + btnSubmitSE.Height + 12
+            Visible: |-
+              =And(IsBlank(locMineSE),
+                 If(locApp.FirstLineSupervisorEmail = User().Email,
+                 locApp.ReviewStage.Value = "Pending First-Line",
+                 Or(locApp.ReviewStage.Value = "Pending Second-Line",
+                    locApp.ReviewStage.Value = "Needs Supervisor Assigned")))
+            Width: =Parent.Width
+            X: =0
+            Y: =60
+          Children:
+            - btnRecSE:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =If(locDecisionSE = "Recommend", ColorPalette.SuccessText, ColorPalette.Gray300)
+                  BorderStyle: =BorderStyle.Solid
+                  BorderThickness: =If(locDecisionSE = "Recommend", 2, 1)
+                  Color: =If(locDecisionSE = "Recommend", ColorPalette.SuccessText, ColorPalette.TextBody)
+                  Fill: =If(locDecisionSE = "Recommend", ColorPalette.SuccessLight, ColorPalette.White)
+                  FocusedBorderColor: =ColorPalette.FocusOnLight
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  FontWeight: =If(locDecisionSE = "Recommend", Typography.WeightBold, Typography.WeightRegular)
+                  Height: =40
+                  HoverColor: =Self.Color
+                  HoverFill: =If(locDecisionSE = "Recommend", ColorPalette.SuccessLight, ColorPalette.Gray25)
+                  OnSelect: |-
+                    =UpdateContext({ locDecisionSE: "Recommend" })
+                  PressedColor: =Self.Color
+                  PressedFill: =ColorPalette.SuccessLight
+                  RadiusBottomLeft: =8
+                  RadiusBottomRight: =8
+                  RadiusTopLeft: =8
+                  RadiusTopRight: =8
+                  Size: =Typography.SizeBody
+                  Text: ="Recommend"
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =0
+            - btnNotRecSE:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =If(locDecisionSE = "Not Recommend", ColorPalette.WarningText, ColorPalette.Gray300)
+                  BorderStyle: =BorderStyle.Solid
+                  BorderThickness: =If(locDecisionSE = "Not Recommend", 2, 1)
+                  Color: =If(locDecisionSE = "Not Recommend", ColorPalette.WarningText, ColorPalette.TextBody)
+                  Fill: =If(locDecisionSE = "Not Recommend", ColorPalette.WarningLight, ColorPalette.White)
+                  FocusedBorderColor: =ColorPalette.FocusOnLight
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  FontWeight: =If(locDecisionSE = "Not Recommend", Typography.WeightBold, Typography.WeightRegular)
+                  Height: =40
+                  HoverColor: =Self.Color
+                  HoverFill: =If(locDecisionSE = "Not Recommend", ColorPalette.WarningLight, ColorPalette.Gray25)
+                  OnSelect: |-
+                    =UpdateContext({ locDecisionSE: "Not Recommend" })
+                  PressedColor: =Self.Color
+                  PressedFill: =ColorPalette.WarningLight
+                  RadiusBottomLeft: =8
+                  RadiusBottomRight: =8
+                  RadiusTopLeft: =8
+                  RadiusTopRight: =8
+                  Size: =Typography.SizeBody
+                  Text: ="Do Not Recommend"
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =48
+            - lblStatementTitleSE:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Left
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =32
+                  PaddingLeft: =0
+                  Size: =Typography.SizeLabel
+                  Text: ="Your recommendation statement*"
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =Parent.Width - 80
+                  X: =20
+                  Y: =104
+            - icoStatementChevronSE:
+                Control: Classic/Icon@2.5.0
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Height: =20
+                  Icon: =If(locStatementCollapsed, Icon.ChevronDown, Icon.ChevronUp)
+                  Width: =20
+                  X: =Parent.Width - 40
+                  Y: =110
+            - btnStatementToggleSE:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =RGBA(0, 0, 0, 0)
+                  FocusedBorderColor: =ColorPalette.FocusOnLight
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =32
+                  HoverColor: =RGBA(0, 0, 0, 0)
+                  HoverFill: =RGBA(0, 0, 0, 0)
+                  OnSelect: |-
+                    =UpdateContext({
+                       locStatementCollapsed: Not(locStatementCollapsed),
+                       locSuggestOpen: If(locStatementCollapsed, false, locSuggestOpen)
+                     })
+                  PressedColor: =RGBA(0, 0, 0, 0)
+                  PressedFill: =RGBA(0, 0, 0, 0)
+                  Size: =Typography.SizeLabel
+                  Text: ="Your recommendation statement*"
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =104
+            - txtStatementSE:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextHeading
+                  Default: =""
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.FocusOnLight
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =116
+                  HintText: ="Explain your recommendation."
+                  HoverBorderColor: =ColorPalette.Blue400
+                  Mode: =TextMode.MultiLine
+                  Size: =Typography.SizeBody
+                  Visible: =Not(locStatementCollapsed)
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =148
+            - lblSuggestTitleSE:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Left
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =32
+                  PaddingLeft: =0
+                  Size: =Typography.SizeLabel
+                  Text: ="Alternative program suggestions (optional)"
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =Parent.Width - 80
+                  X: =20
+                  Y: =If(locStatementCollapsed, 146, 274)
+            - icoSuggestChevronSE:
+                Control: Classic/Icon@2.5.0
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Height: =20
+                  Icon: =If(locSuggestOpen, Icon.ChevronUp, Icon.ChevronDown)
+                  Width: =20
+                  X: =Parent.Width - 40
+                  Y: =lblSuggestTitleSE.Y + 6
+            - btnSuggestToggleSE:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =RGBA(0, 0, 0, 0)
+                  FocusedBorderColor: =ColorPalette.FocusOnLight
+                  FocusedBorderThickness: =2
+                  Font: =Typography.Family
+                  Height: =32
+                  HoverColor: =RGBA(0, 0, 0, 0)
+                  HoverFill: =RGBA(0, 0, 0, 0)
+                  OnSelect: |-
+                    =UpdateContext({
+                       locSuggestOpen: Not(locSuggestOpen),
+                       locStatementCollapsed: If(Not(locSuggestOpen), true, locStatementCollapsed)
+                     })
+                  PressedColor: =RGBA(0, 0, 0, 0)
+                  PressedFill: =RGBA(0, 0, 0, 0)
+                  Size: =Typography.SizeLabel
+                  Text: ="Alternative program suggestions (optional)"
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =lblSuggestTitleSE.Y
+            - conSuggestBlockSE:
+                Control: GroupContainer@1.5.0
+                Variant: AutoLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Fill: =RGBA(0, 0, 0, 0)
+                  Height: |-
+                    =4 + If(CountRows(colSuggestSE) = 0, 36,
+                            If(CountRows(colSuggestSE) < 3,
+                               CountRows(colSuggestSE) * 44 + 12 + 36,
+                               CountRows(colSuggestSE) * 44))
+                  LayoutAlignItems: =LayoutAlignItems.Stretch
+                  LayoutDirection: =LayoutDirection.Vertical
+                  LayoutGap: =If(CountRows(colSuggestSE) > 0, 12, 0)
+                  LayoutJustifyContent: =LayoutJustifyContent.Start
+                  LayoutMinHeight: =0
+                  LayoutMinWidth: =0
+                  PaddingBottom: =4
+                  PaddingLeft: =2
+                  PaddingRight: =2
+                  PaddingTop: =0
+                  Visible: =locSuggestOpen
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =lblSuggestTitleSE.Y + lblSuggestTitleSE.Height
+                Children:
+                  - galSuggestRowsSE:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        BorderThickness: =0
+                        FillPortions: =0
+                        Height: =CountRows(colSuggestSE) * 44
+                        Items: =colSuggestSE
+                        LayoutMinHeight: =0
+                        LayoutMinWidth: =0
+                        ShowScrollbar: =false
+                        TemplatePadding: =0
+                        TemplateSize: =44
+                        Visible: =CountRows(colSuggestSE) > 0
+                      Children:
+                        - drpRowPrgSE:
+                            Control: Classic/DropDown@2.3.1
+                            Properties:
+                              AllowEmptySelection: =true
+                              BorderColor: =ColorPalette.Gray300
+                              BorderThickness: =1
+                              ChevronBackground: =ColorPalette.Blue600
+                              ChevronFill: =ColorPalette.TextOnDark
+                              Default: =ThisItem.program
+                              FocusedBorderThickness: =1
+                              Font: =Typography.Family
+                              Height: =36
+                              Items: |-
+                                =ForAll(
+                                  Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName),
+                                  ProgramName)
+                              OnChange: |-
+                                =Patch(colSuggestSE, ThisItem,
+                                       { program: drpRowPrgSE.Selected.Value,
+                                         option: "" });
+                                 Reset(drpRowOptSE)
+                              SelectionColor: =ColorPalette.TextOnDark
+                              SelectionFill: =ColorPalette.Blue600
+                              Size: =Typography.SizeCaption
+                              Width: =(Parent.TemplateWidth - 48) * 0.45
+                              X: =0
+                              Y: =0
+                        - drpRowOptSE:
+                            Control: Classic/DropDown@2.3.1
+                            Properties:
+                              AllowEmptySelection: =true
+                              BorderColor: =ColorPalette.Gray300
+                              BorderThickness: =1
+                              ChevronBackground: =ColorPalette.Blue600
+                              ChevronFill: =ColorPalette.TextOnDark
+                              Default: =ThisItem.option
+                              FocusedBorderThickness: =1
+                              Font: =Typography.Family
+                              Height: =36
+                              Items: |-
+                                =ForAll(
+                                  Sort(
+                                    Filter(PROGRAM_OPTIONS,
+                                      ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpRowPrgSE.Selected.Value).ID,
+                                      State.Value = "Active"),
+                                    OptionName),
+                                  OptionName)
+                              OnChange: |-
+                                =Patch(colSuggestSE, ThisItem,
+                                       { option: drpRowOptSE.Selected.Value })
+                              SelectionColor: =ColorPalette.TextOnDark
+                              SelectionFill: =ColorPalette.Blue600
+                              Size: =Typography.SizeCaption
+                              Visible: |-
+                                =Not(IsEmpty(Filter(PROGRAM_OPTIONS,
+                                  ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpRowPrgSE.Selected.Value).ID,
+                                  State.Value = "Active")))
+                              Width: =(Parent.TemplateWidth - 48) * 0.55
+                              X: =drpRowPrgSE.X + drpRowPrgSE.Width + 8
+                              Y: =0
+                        - icoRowRemoveSE:
+                            Control: Classic/Icon@2.5.0
+                            Properties:
+                              Color: =ColorPalette.TextHelp
+                              Height: =24
+                              HoverColor: =ColorPalette.Danger
+                              Icon: =Icon.Trash
+                              OnSelect: |-
+                                =Remove(colSuggestSE, ThisItem)
+                              Tooltip: ="Remove this alternative"
+                              Width: =24
+                              X: =Parent.TemplateWidth - 32
+                              Y: =Parent.TemplateHeight / 2 - 12
+                  - btnAddAltSE:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =ColorPalette.Blue400
+                        BorderStyle: =BorderStyle.Solid
+                        BorderThickness: =1
+                        Color: =ColorPalette.Blue400
+                        Fill: =ColorPalette.White
+                        FillPortions: =0
+                        FocusedBorderColor: =ColorPalette.FocusOnLight
+                        FocusedBorderThickness: =1
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =36
+                        HoverColor: =Self.Color
+                        HoverFill: =ColorPalette.Blue50
+                        LayoutMinHeight: =0
+                        LayoutMinWidth: =0
+                        OnSelect: |-
+                          =Collect(colSuggestSE,
+                                   { id: CountRows(colSuggestSE) + 1,
+                                     program: "",
+                                     option: "" })
+                        PressedColor: =Self.Color
+                        PressedFill: =ColorPalette.Blue50
+                        RadiusBottomLeft: =8
+                        RadiusBottomRight: =8
+                        RadiusTopLeft: =8
+                        RadiusTopRight: =8
+                        Size: =Typography.SizeBody
+                        Text: ="+ Add another program"
+                        Visible: =CountRows(colSuggestSE) < 3
+            - btnSubmitSE:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =ColorPalette.TextOnDark
+                  DisplayMode: |-
+                    =If(Or(IsBlank(locDecisionSE),
+                          IsBlank(Trim(txtStatementSE.Text))),
+                       DisplayMode.Disabled, DisplayMode.Edit)
+                  Fill: =ColorPalette.Blue600
+                  FocusedBorderColor: =ColorPalette.FocusOnDark
+                  FocusedBorderThickness: =3
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =44
+                  HoverColor: =Self.Color
+                  HoverFill: =ColorPalette.Blue700
+                  OnSelect: |-
+                    =Patch(SUPERVISOR_ENDORSEMENTS, Defaults(SUPERVISOR_ENDORSEMENTS),
+                       {
+                         ApplicationID: {
+                           '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                           Id: locApp.ID,
+                           Value: locApp.ApplicantEmail
+                         },
+                         SupervisorEmail: User().Email,
+                         SupervisorLevel: {
+                           Value: If(locApp.FirstLineSupervisorEmail = User().Email, "First Line", "Second Line")
+                         },
+                         Decision: { Value: locDecisionSE },
+                         DispositionStatement: txtStatementSE.Text,
+                         RecommendedOptions:
+                           Concat(
+                             Filter(colSuggestSE, Not(IsBlank(program))),
+                             program &
+                             If(IsBlank(option), "", " — " & option),
+                             Char(10)),
+                         DecisionDate: Today()
+                       });
+                     UpdateContext({
+                       locApp: Patch(APPLICATIONS, locApp,
+                         { ReviewStage: { Value:
+                             If(locApp.FirstLineSupervisorEmail = User().Email,
+                                If(IsBlank(Trim(locApp.SecondLineSupervisorEmail)),
+                                   "Needs Supervisor Assigned",
+                                   "Pending Second-Line"),
+                                "Pending DTD Validation") } })
+                     });
+                     UpdateContext({
+                       locMineSE: LookUp(SUPERVISOR_ENDORSEMENTS,
+                         And(ApplicationID.Id = locApp.ID, SupervisorEmail = User().Email)),
+                       locPriorSE: LookUp(SUPERVISOR_ENDORSEMENTS,
+                         And(ApplicationID.Id = locApp.ID, SupervisorLevel.Value = "First Line"))
+                     });
+                     Notify("Your decision has been recorded.", NotificationType.Success)
+                  PressedColor: =Self.Color
+                  PressedFill: =ColorPalette.Blue700
+                  RadiusBottomLeft: =8
+                  RadiusBottomRight: =8
+                  RadiusTopLeft: =8
+                  RadiusTopRight: =8
+                  Size: =Typography.SizeHeading
+                  Text: ="Submit decision"
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: |-
+                    =If(Not(locSuggestOpen),
+                        lblSuggestTitleSE.Y + 44,
+                        conSuggestBlockSE.Y + conSuggestBlockSE.Height + 12)
+      - conDoneSE:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =RGBA(0, 0, 0, 0)
+            Height: =410
+            Visible: =Not(IsBlank(locMineSE))
+            Width: =Parent.Width
+            X: =0
+            Y: =60
+          Children:
+            - lblDoneVerdictSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =If(locMineSE.Decision.Value = "Recommend",
+                       ColorPalette.SuccessText, ColorPalette.WarningText)
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =28
+                  Size: =Typography.SizeHeading
+                  Text: =locMineSE.Decision.Value
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =0
+            - lblDoneWhenSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =20
+                  Size: =Typography.SizeCaption
+                  Text: ="Recorded " & Text(locMineSE.DecisionDate, "mmmm d, yyyy")
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =30
+            - lblDoneStatementSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextBody
+                  Font: =Typography.Family
+                  Height: =150
+                  Size: =Typography.SizeBody
+                  Text: =locMineSE.DispositionStatement
+                  VerticalAlign: =VerticalAlign.Top
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =60
+            - lblDoneOptionsSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =110
+                  Size: =Typography.SizeCaption
+                  Text: |-
+                    =If(IsBlank(locMineSE.RecommendedOptions), "",
+                       "Options you suggested:" & Char(10) & locMineSE.RecommendedOptions)
+                  VerticalAlign: =VerticalAlign.Top
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =218
+            - lblDoneLockSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =56
+                  Size: =Typography.SizeCaption
+                  Text: |-
+                    ="A decision is recorded once. If this is wrong, contact the "
+                      & "Division of Talent Development."
+                  VerticalAlign: =VerticalAlign.Top
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =340
+      - conWaitSE:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =RGBA(0, 0, 0, 0)
+            Height: =200
+            Visible: |-
+              =And(IsBlank(locMineSE),
+                 Not(If(locApp.FirstLineSupervisorEmail = User().Email,
+                 locApp.ReviewStage.Value = "Pending First-Line",
+                 Or(locApp.ReviewStage.Value = "Pending Second-Line",
+                    locApp.ReviewStage.Value = "Needs Supervisor Assigned"))))
+            Width: =Parent.Width
+            X: =0
+            Y: =60
+          Children:
+            - icoWaitSE:
+                Control: Classic/Icon@2.5.0
+                Properties:
+                  Color: =ColorPalette.TextSecondary
+                  Height: =28
+                  Icon: =Icon.Clock
+                  Width: =28
+                  X: =20
+                  Y: =0
+            - lblWaitSE:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextBody
+                  Font: =Typography.Family
+                  Height: =150
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    ="The first-line supervisor has not recorded a decision yet. "
+                      & "You will be able to record yours once they do — their "
+                      & "statement is meant to inform it (RQ020)."
+                  VerticalAlign: =VerticalAlign.Top
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =38
+
+# ===========================================================================
+# NOTHING ASSIGNED — the honest empty state
+# ===========================================================================
+# A supervisor who follows a stale email link, or whose applicant withdrew,
+# lands here. Without this the screen is three empty cards.
+- conNoneSE:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =200
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: =IsBlank(locApp)
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =240 + If(locQueueOpen, 16 + Min(4, CountRows(colSupAppsSE)) * 64, 0)
+    Children:
+      - icoNoneSE:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            Color: =ColorPalette.TextSecondary
+            Height: =32
+            Icon: =Icon.Information
+            Width: =32
+            X: =28
+            Y: =28
+      - lblNoneTitleSE:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =30
+            Size: =Typography.SizeHeading
+            Text: ="No applications are waiting for you"
+            Width: =Parent.Width - 120
+            X: =76
+            Y: =28
+      - lblNoneBodySE:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =80
+            Size: =Typography.SizeBody
+            Text: |-
+              ="Applications appear here once the applicant submits and names you "
+                & "as their first- or second-line supervisor. Use the logo above to go back."
+            VerticalAlign: =VerticalAlign.Top
+            Width: =Parent.Width - 120
+            X: =76
+            Y: =68
+

@@ -158,3 +158,28 @@ Learned from real paste failures; PowerLibs does not document these. Check here 
   `Screens:` node or a screen name with spaces fails. Create + rename the screen by hand, set its
   `Fill`/`OnVisible` in the property panel, then paste the controls. Screen YAML files therefore
   carry a transcription header, not a `Screens:` wrapper.
+
+## Control versions — one per type, app-wide (PA2107)
+
+Power Apps refuses a paste when two instances of the same control type name different versions:
+
+    error PA2107 : Another instance of control type 'Classic/DatePicker' has already been
+    referenced using a different version '2.5.0'.
+
+This is **app-wide, not per screen** — a version pasted from one screen constrains every other
+screen pasted into the same app. Copying a control block from one screen to another carries its
+version with it, which is exactly how it happens.
+
+Studio also warns separately when a pinned version is behind the current one (PA2105) and silently
+uses the current one instead, so a stale pin is worth fixing rather than keeping.
+
+Check before pasting:
+
+    grep -rho "Control: [A-Za-z/]*@[0-9][0-9.]*" build/screens/*.yaml | sort -u | \
+      sed 's/@.*//' | sort | uniq -d
+
+Any output names a type pinned at two versions. Bump all of them to the newest.
+
+**Current pins (2026-08-01):** Circle 2.3.0 · Classic/Button 2.2.0 · Classic/DatePicker 2.6.0 ·
+Classic/DropDown 2.3.1 · Classic/Icon 2.5.0 · Classic/TextInput 2.3.2 · Classic/Toggle 2.1.0 ·
+Gallery 2.15.0 · GroupContainer 1.5.0 · Image 2.2.3 · Label 2.5.1 · Rectangle 2.3.0

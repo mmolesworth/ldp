@@ -12,7 +12,7 @@ status values — they are TBD pending Appendix B (D-2, Constitution I).
 | `APPLICATIONS.ListedOnIDP` | Yes, No | data-model |
 | `APPLICATIONS.AttendedInfoSession` | Yes, No | data-model |
 | `SUPERVISOR_ENDORSEMENTS.SupervisorLevel` | First Line, Second Line, Alternate Second Line **[PROPOSED — FR-012a]** | RQ + FR-012a |
-| `SUPERVISOR_ENDORSEMENTS.Decision` | Approve, Disapprove | RQ018 |
+| `SUPERVISOR_ENDORSEMENTS.Decision` | Recommend, Not Recommend | RQ018 — **renamed 2026-08-02, see below** |
 | `RATING_SHEETS.State` | Draft, Published, Superseded | revised 2026-07-28 — one Published per program |
 | `CRITERION_CATALOG.State` | Draft, Published, Retired | RQ112 + Retired added 2026-07-28 |
 | `CRITERION_ANCHORS.Score` | 0, 1, 3, 5 (fixed; no criterion-specific scale) | RQ110 |
@@ -156,3 +156,29 @@ not the status.
 
 **No `ValidatedBy` / `ValidatedDate`.** The state is the whole record. Add them if "who, and when"
 ever becomes a question worth answering.
+
+---
+
+## 2026-08-02 — `SUPERVISOR_ENDORSEMENTS.Decision`: approval became recommendation
+
+`Approve` / `Disapprove` → **`Recommend` / `Not Recommend`**.
+
+**A supervisor is not approving anything.** They have no authority to grant a place in the
+programme; DTD and the selection committee decide that. The word claimed a power the role does not
+have.
+
+**RQ021 already proved it.** *"The system shall advance an application to the next reviewer
+regardless of whether a supervisor approved or disapproved it."* If a disapproval never blocks
+anything, it was never a disapproval — the column has always held an OPINION, wearing a word that
+overstates it. The same is true on the applicant's side: `ApplicationStatus` reaches
+`Pending DTD Validation` either way.
+
+**Cost of doing it now vs later.** No screen reads this column yet — checked 2026-08-02, no file in
+`build/screens/` references `SUPERVISOR_ENDORSEMENTS`. The Supervisor Endorsement screen is the
+first, which is what made this the moment to fix the vocabulary rather than build on top of it.
+
+Migrated by `build/scripts/Update-LdpEndorsementDecision.ps1`, add-then-migrate-then-prune so no row
+is ever holding a value its column does not offer.
+
+**RQ018 is now stale.** It reads *"an endorsement decision of approve or disapprove"*. The
+requirement text is the customer's, not ours, so it has not been edited — see OI-SUP-1.

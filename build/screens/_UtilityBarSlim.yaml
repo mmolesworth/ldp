@@ -1,0 +1,143 @@
+# Utility Bar (slim) — shared app chrome for TASK screens
+# Logo (home link) · app name · signed-in user. No role links.
+# Classic controls only (Constitution II). Colours = ColorPalette.*, sizes = Typography.*
+#
+# ---------------------------------------------------------------------------
+# WHY A SECOND VARIANT
+# ---------------------------------------------------------------------------
+# _UtilityBar.yaml carries `Reviewers` and `Administrators`. LANDING_DESIGN.md ①
+# is explicit that those exist as "the fast path for both secondary roles" — a
+# LANDING-page job. An applicant part-way through their own application has
+# already routed; neither link is for them.
+#
+# On a task screen the links are worse than redundant. The Application Screen
+# contains no Navigate() of its own, so the utility bar is the only way off it —
+# and there is no unsaved-changes guard. `gblFormDirty` already knows whether
+# work is pending; nothing consults it before navigating away. Removing the
+# links removes the hazard rather than mitigating it.
+#
+# Brand and identity stay. "Signed in as" matters MORE here than on the landing
+# page: the Application Screen's email field is editable and the record is keyed
+# on ApplicantEmail, so seeing the signed-in identity beside the form is useful
+# (see OI-APP-5).
+#
+# ---------------------------------------------------------------------------
+# WHERE TO USE WHICH
+# ---------------------------------------------------------------------------
+#   _UtilityBar.yaml      Landing Screen — routing is the point
+#   _UtilityBarSlim.yaml  Application Screen and any other applicant task screen
+#
+# Admin screens use _AdminShell.yaml and neither of these.
+#
+# ---------------------------------------------------------------------------
+# THIS IS A SHARED PASTE BLOCK
+# ---------------------------------------------------------------------------
+# Paste it FIRST on the screen, before that screen's own controls. It is not a
+# canvas component, so each screen holds its own copy — change this file and you
+# must re-paste it everywhere it is used.
+#
+# Studio auto-suffixes duplicate names on the second and later screens
+# (conUtilityBar_1, _2 …). That is FINE: nothing references these controls by
+# name. Do not "fix" the suffixes.
+#
+# TWO FILES IS THE INTERIM ANSWER, NOT THE INTENDED ONE. T083 converts the
+# shared blocks to real canvas components, at which point this becomes one
+# component with a `ShowRoleLinks` property and this file is deleted. Until
+# then, a change to the brand or the signed-in label has to be made in BOTH
+# files or they drift.
+#
+# ---------------------------------------------------------------------------
+# GEOMETRY
+# ---------------------------------------------------------------------------
+# Identical to _UtilityBar.yaml — same 52px height, same brand position — so a
+# screen can be switched between the two without moving anything below it. Only
+# lblUtilitySignedIn moves: with no buttons to its right it right-aligns to the
+# edge instead of stopping 538px short. The logo shifts the brand from X=24 to
+# X=60; both bars must be changed together if the mark is ever replaced.
+
+- conUtilityBar:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Group: UtilityBar
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =ColorPalette.Navy900
+      Height: =52
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+    Children:
+      # The logo IS the home link — the oldest convention on the web, and it
+      # spends no horizontal space on a text link. Icon.CameraAperture is
+      # borrowed from icoShellLogo in _AdminShell.yaml and is a placeholder for
+      # a real mark; the two must change together.
+      #
+      # Classic/Icon carries its own OnSelect, so no transparent button over the
+      # top. TabIndex 0 because an icon is not in the tab order otherwise, and
+      # this is the only way off a task screen.
+      #
+      # If a screen has unsaved work it sets gblFormDirty, and this raises that
+      # screen's confirm modal instead of navigating. Everywhere else the flag
+      # is false and it just navigates.
+      #
+      # THE FLAGS MUST BE GLOBAL. They were context variables until 2026-08-02,
+      # which broke every screen except the Application Screen. A context
+      # variable exists only on the screen that declares it, and Power Fx
+      # rejects an unknown name OUTRIGHT rather than reading it as blank — the
+      # second paste of this bar failed to compile on icoUtilityLogo_1.
+      #
+      # A screen that sets gblFormDirty OWES two things: a confirm modal bound
+      # to gblConfirmExitAP, and an OnHidden clearing both. Without the modal
+      # this click raises a flag nothing is watching and the user is stuck;
+      # without OnHidden the flag outlives the screen and does the same on the
+      # next one.
+      - icoUtilityLogo:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            Color: =ColorPalette.TextOnDark
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =2
+            Height: =32
+            HoverColor: =ColorPalette.Blue400
+            Icon: =Icon.CameraAperture
+            OnSelect: |-
+              =If(gblFormDirty,
+                 Set(gblConfirmExitAP, true),
+                 Navigate('Landing Screen'))
+            PaddingBottom: =4
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =4
+            PressedColor: =ColorPalette.Blue600
+            TabIndex: =0
+            Tooltip: ="NCUA Leader Development Program — home"
+            Width: =32
+            X: =16
+            Y: =10
+      - lblUtilityBrand:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextOnDark
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =24
+            Size: =Typography.SizeBody
+            Text: ="NCUA Leader Development Program"
+            Width: =420
+            X: =60
+            Y: =14
+      # Identity, not a login prompt. Right-aligned to the bar's own edge —
+      # there are no buttons to clear here, unlike the full variant.
+      - lblUtilitySignedIn:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Right
+            Color: =ColorPalette.TextOnDarkMuted
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Signed in as " & User().FullName
+            Width: =360
+            X: =Parent.Width - 384
+            Y: =16

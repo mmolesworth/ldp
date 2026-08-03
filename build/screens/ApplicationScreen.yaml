@@ -8,30 +8,101 @@
 # ---------------------------------------------------------------------------
 # HOW TO TRANSCRIBE (Constitution IV)
 # ---------------------------------------------------------------------------
-#   1. New screen → Blank. Rename it "Application Screen".
-#   2. Fill: =ColorPalette.Gray50
-#   3. Paste build/screens/_UtilityBar.yaml FIRST, then everything below.
-#   4. Data sources (five): APPLICATIONS, APPLICATION_PROGRAM_CHOICES,
-#      PROGRAM_OPTIONS, PROGRAMS, CYCLES.  (four, plus APPLICATIONS)
-#   5. OnVisible — transcribe by hand (no # prefixes, no leading =):
+# Steps marked (screen) are properties of the SCREEN itself — select the screen
+# in the tree view and set them in the properties pane. They are NOT properties
+# of the utility bar or of any control listed below it.
 #
+# They cannot be pasted, and there is no way to make them pasteable. Studio's
+# Paste YAML inserts CONTROLS into the selected screen, so a paste block has no
+# screen node to carry Fill, OnVisible or OnStart. Only the app-source format
+# written by `pac canvas unpack` has one, and Studio will not paste that.
+#
+# The OnVisible below is also kept comment-free and ready to copy in
+# build/screens/ApplicationScreen.OnVisible.fx.
+#
+#   1. New screen → Blank. Rename it "Application Screen".
+#   2. (screen) Fill: =ColorPalette.Gray50
+#   3. Paste build/screens/_UtilityBar.yaml FIRST, then everything below.
+#   4. Data sources (eight): APPLICATIONS, APPLICATION_PROGRAM_CHOICES,
+#      APPLICATION_COMPETENCIES, PROGRAM_OPTIONS, PROGRAMS, CYCLES,
+#      COMPETENCIES, COMPETENCY_TYPES.
+#      The last three arrived with the step 3 rebuild on 2026-08-01.
+#   5. (screen) OnVisible — transcribe by hand (no # prefixes, no leading =):
+#
+#      Set(gblFormDirty, false);
+#      Set(gblConfirmExitAP, false);
 #      UpdateContext({
 #          locCycle: If(IsBlank(LookUp(CYCLES, State.Value = "Open")),
 #                       First(Sort(CYCLES, OpenDate, SortOrder.Descending)),
 #                       LookUp(CYCLES, State.Value = "Open")),
-#          locStep: 1
+#          locStep: 1,
+#          locDropRank2: false,
+#          locDropRank3: false,
+#          locCompTypeAP: First(SortByColumns(
+#                             Filter(COMPETENCY_TYPES, State.Value = "Active"),
+#                             "SortOrder", SortOrder.Ascending)).ID
 #      });
 #      UpdateContext({
 #          locApp: LookUp(APPLICATIONS,
 #                    And(CycleID.Id = locCycle.ID, ApplicantEmail = User().Email))
 #      });
-#      ClearCollect(colRanked,
-#          ForAll(Filter(APPLICATION_PROGRAM_CHOICES, ApplicationID.Id = locApp.ID) As c,
-#              { OptionID: c.ProgramOptionID.Id,
-#                OptionName: LookUp(PROGRAM_OPTIONS, ID = c.ProgramOptionID.Id).OptionName,
-#                Rank: c.Rank }))
+#      ClearCollect(colAppComps,
+#          ForAll(Filter(APPLICATION_COMPETENCIES, ApplicationID.Id = locApp.ID) As ac,
+#              { CompId:    ac.CompetencyID.Id,
+#                CompName:  ac.CompetencyID.Value,
+#                TypeId:    LookUp(COMPETENCIES, ID = ac.CompetencyID.Id).CompetencyTypeID.Id,
+#                TypeName:  LookUp(COMPETENCIES, ID = ac.CompetencyID.Id).CompetencyTypeID.Value,
+#                TypeOrder: LookUp(COMPETENCY_TYPES,
+#                             ID = LookUp(COMPETENCIES,
+#                                    ID = ac.CompetencyID.Id).CompetencyTypeID.Id).SortOrder }))
 #
-#   6. Preview (F5) — OnVisible does not run on the design surface.
+#   THREE BLOCKS, IN THIS ORDER. locApp needs locCycle; colAppComps needs
+#   locApp. A variable cannot be referenced inside the UpdateContext that
+#   defines it, which is why these cannot be merged.
+#
+#   colRanked is GONE (2026-08-01). It was collected here and read by nothing;
+#   the six step-2 dropdowns now restore from APPLICATION_PROGRAM_CHOICES via
+#   their own Default expressions.
+#
+#   The three false flags matter. locDropRank2/3 suppress a rank's Default so a
+#   removed choice stays removed; if they survive from a previous visit they
+#   would blank a draft's choices on load, and the next save would delete them.
+#
+#   5b. (screen) OnHidden — transcribe by hand:
+#
+#      Set(gblFormDirty, false);
+#      Set(gblConfirmExitAP, false)
+#
+#      NOT OPTIONAL. gblFormDirty is global so the shared utility bar can read
+#      it from any screen. Global means it also OUTLIVES this screen: leave with
+#      it true and the logo on the next screen raises a confirm modal that only
+#      exists here, so the click does nothing at all and the user is stuck.
+#      OnHidden runs on every exit path, including ones added later.
+#
+#   6. STEP 5 ATTACHMENTS — build by hand, three times. Canvas exposes
+#      attachments only through a Form control's data card, which has no YAML
+#      representation, so this cannot be pasted (Constitution IV).
+#
+#      For each of Resume / Statement of Interest / Performance Appraisal:
+#        a. Insert > Forms > Edit, inside conStep5AP.
+#        b. DataSource = APPLICATION_DOCUMENTS.
+#        c. Item = LookUp(APPLICATION_DOCUMENTS,
+#                    And(ApplicationID.Id = locApp.ID,
+#                        DocumentType.Value = "Resume"))      <- per slot
+#        d. Fields: remove every card EXCEPT Attachments.
+#        e. DefaultMode = FormMode.Edit.
+#        f. Size and place it beside the matching txtDoc*AP box:
+#             Resume     X = 650, Y = 104, Width = Parent.Width - 700, Height = 52
+#             Statement  X = 650, Y = 174, same size
+#             Appraisal  X = 650, Y = 244, same size
+#        g. The Attachments card's OnAddFile / OnRemoveFile:
+#             SubmitForm(<that form>); Set(gblFormDirty, true)
+#
+#      The card gives attach, remove and download for free. The trash button
+#      beside each box is a harder reset — it deletes the ROW and recreates an
+#      empty one, for when a slot is wrong rather than a file.
+#
+#   7. Preview (F5) — OnVisible does not run on the design surface.
 #
 # ---------------------------------------------------------------------------
 # NAVIGATION MODEL — RQ105a (PROPOSED, supersedes RQ105)
@@ -319,8 +390,8 @@
             Font: =Typography.Family
             FontWeight: |-
               =If(locStep = 1, Typography.WeightMedium, Typography.WeightRegular)
-            Height: =20
-            Size: =Typography.SizeCaption
+            Height: =22
+            Size: =Typography.SizeBody
             Text: ="Personnel"
             Width: =140
             X: =conStep1Circle.X + conStep1Circle.Width / 2 - 70
@@ -334,8 +405,8 @@
             Font: =Typography.Family
             FontWeight: |-
               =If(locStep = 2, Typography.WeightMedium, Typography.WeightRegular)
-            Height: =20
-            Size: =Typography.SizeCaption
+            Height: =22
+            Size: =Typography.SizeBody
             Text: ="Program choices"
             Width: =140
             X: =conStep2Circle.X + conStep2Circle.Width / 2 - 70
@@ -349,8 +420,8 @@
             Font: =Typography.Family
             FontWeight: |-
               =If(locStep = 3, Typography.WeightMedium, Typography.WeightRegular)
-            Height: =20
-            Size: =Typography.SizeCaption
+            Height: =22
+            Size: =Typography.SizeBody
             Text: ="Competencies"
             Width: =140
             X: =conStep3Circle.X + conStep3Circle.Width / 2 - 70
@@ -364,8 +435,8 @@
             Font: =Typography.Family
             FontWeight: |-
               =If(locStep = 4, Typography.WeightMedium, Typography.WeightRegular)
-            Height: =20
-            Size: =Typography.SizeCaption
+            Height: =22
+            Size: =Typography.SizeBody
             Text: ="Eligibility"
             Width: =140
             X: =conStep4Circle.X + conStep4Circle.Width / 2 - 70
@@ -379,8 +450,8 @@
             Font: =Typography.Family
             FontWeight: |-
               =If(locStep = 5, Typography.WeightMedium, Typography.WeightRegular)
-            Height: =20
-            Size: =Typography.SizeCaption
+            Height: =22
+            Size: =Typography.SizeBody
             Text: ="Documents"
             Width: =140
             X: =conStep5Circle.X + conStep5Circle.Width / 2 - 70
@@ -394,8 +465,8 @@
             Font: =Typography.Family
             FontWeight: |-
               =If(locStep = 6, Typography.WeightMedium, Typography.WeightRegular)
-            Height: =20
-            Size: =Typography.SizeCaption
+            Height: =22
+            Size: =Typography.SizeBody
             Text: ="Review"
             Width: =140
             X: =conStep6Circle.X + conStep6Circle.Width / 2 - 70
@@ -409,12 +480,21 @@
       Font: =Typography.Family
       Height: =20
       Size: =Typography.SizeCaption
+      # THREE CASES, not two. A blank locCycle makes locCycle.State.Value
+      # blank, and blank <> "Open" is TRUE — so an unloaded cycle was
+      # indistinguishable from a closed one and produced "This cycle is ."
+      # with nothing between "is" and the stop. That empty state name is the
+      # tell, and it means OnVisible has not run: it never runs on the design
+      # surface, so F5 is required.
       Text: |-
-        =If(locCycle.State.Value <> "Open",
-           "This cycle is " & locCycle.State.Value & ". Your application is read-only and cannot be submitted.",
-           "Your application has been submitted and can no longer be edited.")
+        =If(IsBlank(locCycle),
+           "No application cycle is loaded yet.",
+           If(locCycle.State.Value <> "Open",
+              "This cycle is " & locCycle.State.Value & ". Your application is read-only and cannot be submitted.",
+              "Your application has been submitted and can no longer be edited."))
       Visible: |-
-        =Or(locCycle.State.Value <> "Open",
+        =Or(IsBlank(locCycle),
+            locCycle.State.Value <> "Open",
             And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft"))
       Width: =Parent.Width - 220
       X: =24
@@ -439,10 +519,31 @@
       X: =24
       Y: =212
     Children:
+      # HEADER BAND. Navy900, matching the utility bar and the DTD detail
+      # panel. Declared first — z-order is declaration order — and a
+      # GroupContainer rather than a Rectangle because only Button,
+      # GroupContainer and Image support Radius, and the top corners must match
+      # the card's own 12px.
+      #
+      # This treatment repeats on steps 2-6.
+      - conS1HeaderAP:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =ColorPalette.Navy900
+            Height: =64
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =Parent.Width
+            X: =0
+            Y: =0
       - lblS1TitleAP:
           Control: Label@2.5.1
           Properties:
-            Color: =ColorPalette.TextHeading
+            Color: =ColorPalette.TextOnDark
             Font: =Typography.Family
             FontWeight: =Typography.WeightBold
             Height: =26
@@ -450,31 +551,25 @@
             Text: ="Personnel information"
             Width: =Parent.Width - 48
             X: =24
-            Y: =20
-      # RQ002/RQ003 — read-only when the directory has a record, editable when
-      # it does not. D-1 seam: the directory stands in for HR Links.
+            Y: =10
+      # SizeBody, up from SizeCaption. "Confirm" not "Enter": the D-1
+      # integration will pre-fill these, and the sentence about it has been
+      # dropped — an applicant does not need to know why a field is empty.
       - lblS1SourceAP:
           Control: Label@2.5.1
           Properties:
-            Color: =ColorPalette.TextHelp
-            Font: =Typography.Family
-            Height: =18
-            Size: =Typography.SizeCaption
-            Text: ="Enter your details below. These will be filled in automatically once the personnel system integration is in place (D-1)."
-            Width: =Parent.Width - 48
-            X: =24
-            Y: =50
-      - lblS1NameLabelAP:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextBody
+            Color: =ColorPalette.Blue50
             Font: =Typography.Family
             Height: =20
-            Size: =Typography.SizeLabel
-            Text: ="Full name (required)"
-            Width: =320
+            Size: =Typography.SizeBody
+            Text: ="Confirm your personnel details below."
+            Width: =Parent.Width - 48
             X: =24
-            Y: =148
+            Y: =36
+      # COLUMN-MAJOR. Each column is a group that belongs together: identity,
+      # position, service dates, supervisors. Reading down a column is the
+      # point, so the tallest column sets the row count and the short ones
+      # simply end.
       - txtNameAP:
           Control: Classic/TextInput@2.3.2
           Properties:
@@ -483,9 +578,9 @@
             Color: =ColorPalette.TextBody
             Default: |-
               =If(IsBlank(locApp), "", locApp.ApplicantName)
-            # Disabled, NOT View: DisplayMode.View strips a TextInput's border
-            # and fill, so an empty one renders as nothing at all and the step
-            # looks broken. Disabled stays visible and greyed.
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
             DisplayMode: |-
               =If(Or(locCycle.State.Value <> "Open",
                      And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
@@ -494,22 +589,41 @@
             FocusedBorderColor: =ColorPalette.Blue600
             FocusedBorderThickness: =2
             Font: =Typography.Family
-            Height: =32
+            Height: =40
+            OnChange: |-
+              =Set(gblFormDirty, true)
+            PaddingLeft: =12
             Size: =Typography.SizeBody
-            Width: =320
+            Width: =(Parent.Width - 120) / 4
             X: =24
-            Y: =170
-      - lblS1LocLabelAP:
-          Control: Label@2.5.1
+            Y: =110
+      - txtEmailAP:
+          Control: Classic/TextInput@2.3.2
           Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
             Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locApp), User().Email, locApp.ApplicantEmail)
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
             Font: =Typography.Family
-            Height: =20
-            Size: =Typography.SizeLabel
-            Text: ="Location"
-            Width: =320
-            X: =360
-            Y: =148
+            Height: =40
+            OnChange: |-
+              =Set(gblFormDirty, true)
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Width: =txtNameAP.Width
+            X: =24
+            Y: =180
       - txtLocationAP:
           Control: Classic/TextInput@2.3.2
           Properties:
@@ -518,6 +632,9 @@
             Color: =ColorPalette.TextBody
             Default: |-
               =If(IsBlank(locApp), "", locApp.Location)
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
             DisplayMode: |-
               =If(Or(locCycle.State.Value <> "Open",
                      And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
@@ -526,86 +643,14 @@
             FocusedBorderColor: =ColorPalette.Blue600
             FocusedBorderThickness: =2
             Font: =Typography.Family
-            Height: =32
+            Height: =40
+            OnChange: |-
+              =Set(gblFormDirty, true)
+            PaddingLeft: =12
             Size: =Typography.SizeBody
-            Width: =320
-            X: =360
-            Y: =170
-      - lblS1GradeLabelAP:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextBody
-            Font: =Typography.Family
-            Height: =20
-            Size: =Typography.SizeLabel
-            Text: ="Grade"
-            Width: =200
-            X: =696
-            Y: =148
-      - txtGradeAP:
-          Control: Classic/TextInput@2.3.2
-          Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderThickness: =1
-            Color: =ColorPalette.TextBody
-            Default: |-
-              =If(IsBlank(locApp), "", locApp.Grade)
-            DisplayMode: |-
-              =If(Or(locCycle.State.Value <> "Open",
-                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
-                 DisplayMode.Disabled, DisplayMode.Edit)
-            Fill: =ColorPalette.White
-            FocusedBorderColor: =ColorPalette.Blue600
-            FocusedBorderThickness: =2
-            Font: =Typography.Family
-            Height: =32
-            Size: =Typography.SizeBody
-            Width: =200
-            X: =696
-            Y: =170
-      - lblS1SeriesLabelAP:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextBody
-            Font: =Typography.Family
-            Height: =20
-            Size: =Typography.SizeLabel
-            Text: ="Job series"
-            Width: =320
+            Width: =txtNameAP.Width
             X: =24
-            Y: =218
-      - txtSeriesAP:
-          Control: Classic/TextInput@2.3.2
-          Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderThickness: =1
-            Color: =ColorPalette.TextBody
-            Default: |-
-              =If(IsBlank(locApp), "", locApp.JobSeries)
-            DisplayMode: |-
-              =If(Or(locCycle.State.Value <> "Open",
-                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
-                 DisplayMode.Disabled, DisplayMode.Edit)
-            Fill: =ColorPalette.White
-            FocusedBorderColor: =ColorPalette.Blue600
-            FocusedBorderThickness: =2
-            Font: =Typography.Family
-            Height: =32
-            Size: =Typography.SizeBody
-            Width: =320
-            X: =24
-            Y: =240
-      - lblS1JobLabelAP:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextBody
-            Font: =Typography.Family
-            Height: =20
-            Size: =Typography.SizeLabel
-            Text: ="Job title"
-            Width: =536
-            X: =360
-            Y: =218
+            Y: =250
       - txtJobTitleAP:
           Control: Classic/TextInput@2.3.2
           Properties:
@@ -614,6 +659,9 @@
             Color: =ColorPalette.TextBody
             Default: |-
               =If(IsBlank(locApp), "", locApp.JobTitle)
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
             DisplayMode: |-
               =If(Or(locCycle.State.Value <> "Open",
                      And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
@@ -622,27 +670,317 @@
             FocusedBorderColor: =ColorPalette.Blue600
             FocusedBorderThickness: =2
             Font: =Typography.Family
-            Height: =32
+            Height: =40
+            OnChange: |-
+              =Set(gblFormDirty, true)
+            PaddingLeft: =12
             Size: =Typography.SizeBody
-            Width: =536
-            X: =360
-            Y: =240
-      # R1/R5 — shown so the applicant knows who will review it. Snapshotted
-      # onto the application at submit, not here.
-      - lblS1ChainAP:
+            Width: =txtNameAP.Width
+            X: =txtNameAP.X + (txtNameAP.Width + 24)
+            Y: =110
+      - txtGradeAP:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locApp), "", locApp.Grade)
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            OnChange: |-
+              =Set(gblFormDirty, true)
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Width: =txtNameAP.Width
+            X: =txtNameAP.X + (txtNameAP.Width + 24)
+            Y: =180
+      - txtSeriesAP:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locApp), "", locApp.JobSeries)
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            OnChange: |-
+              =Set(gblFormDirty, true)
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Width: =txtNameAP.Width
+            X: =txtNameAP.X + (txtNameAP.Width + 24)
+            Y: =250
+      - dtpStartAP:
+          Control: Classic/DatePicker@2.6.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            # NOT Today(). Blank stays blank — see OI-REQ-1.
+            DefaultDate: =locApp.NCUAStartDate
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            OnChange: |-
+              =Set(gblFormDirty, true)
+            Size: =Typography.SizeBody
+            Width: =txtNameAP.Width
+            X: =txtNameAP.X + (txtNameAP.Width + 24) * 2
+            Y: =110
+      - dtpScdAP:
+          Control: Classic/DatePicker@2.6.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            # NOT Today(). Blank stays blank — see OI-REQ-1.
+            DefaultDate: =locApp.ServiceComputationDate
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            OnChange: |-
+              =Set(gblFormDirty, true)
+            Size: =Typography.SizeBody
+            Width: =txtNameAP.Width
+            X: =txtNameAP.X + (txtNameAP.Width + 24) * 2
+            Y: =180
+      - txtSup1AP:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locApp), "", locApp.FirstLineSupervisorEmail)
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            OnChange: |-
+              =Set(gblFormDirty, true)
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Width: =txtNameAP.Width
+            X: =txtNameAP.X + (txtNameAP.Width + 24) * 3
+            Y: =110
+      - txtSup2AP:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Default: |-
+              =If(IsBlank(locApp), "", locApp.SecondLineSupervisorEmail)
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.Blue600
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =40
+            OnChange: |-
+              =Set(gblFormDirty, true)
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Width: =txtNameAP.Width
+            X: =txtNameAP.X + (txtNameAP.Width + 24) * 3
+            Y: =180
+      # LABELS LAST: each straddles the top border of its control, and
+      # z-order is declaration order — a picker declared later would cover one.
+      - lblS1NameAP:
           Control: Label@2.5.1
           Properties:
-            Color: =ColorPalette.TextBody
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
             Font: =Typography.Family
-            Height: =44
-            Size: =Typography.SizeBody
-            Text: |-
-              ="Your supervisor chain is read from the personnel system when that integration is in place (D-1). Until then DTD assigns reviewers after you submit."
-            Width: =Parent.Width - 48
-            X: =24
-            Y: =300
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Full name (required)"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtNameAP.X + 10
+            Y: =txtNameAP.Y - Self.Height / 2
+      - lblS1EmailAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Email"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtEmailAP.X + 10
+            Y: =txtEmailAP.Y - Self.Height / 2
+      - lblS1LocationAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Location"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtLocationAP.X + 10
+            Y: =txtLocationAP.Y - Self.Height / 2
+      - lblS1JobTitleAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Job title"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtJobTitleAP.X + 10
+            Y: =txtJobTitleAP.Y - Self.Height / 2
+      - lblS1GradeAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Grade"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtGradeAP.X + 10
+            Y: =txtGradeAP.Y - Self.Height / 2
+      - lblS1SeriesAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Job series"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtSeriesAP.X + 10
+            Y: =txtSeriesAP.Y - Self.Height / 2
+      - lblS1StartAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="NCUA start date"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =dtpStartAP.X + 10
+            Y: =dtpStartAP.Y - Self.Height / 2
+      - lblS1ScdAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Service computation date"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =dtpScdAP.X + 10
+            Y: =dtpScdAP.Y - Self.Height / 2
+      - lblS1Sup1AP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="First-line supervisor"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtSup1AP.X + 10
+            Y: =txtSup1AP.Y - Self.Height / 2
+      - lblS1Sup2AP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Second-line supervisor"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtSup2AP.X + 10
+            Y: =txtSup2AP.Y - Self.Height / 2
 
-# ===========================================================================
 # STEP 2 — Program choices (RQ005, FR-004)
 # ===========================================================================
 - conStep2AP:
@@ -661,10 +999,28 @@
       X: =24
       Y: =212
     Children:
+      # HEADER BAND — same treatment as step 1. Declared first (z-order is
+      # declaration order) and a GroupContainer rather than a Rectangle,
+      # because only Button, GroupContainer and Image support Radius and the
+      # top corners must match the card's 12px.
+      - conS2HeaderAP:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =ColorPalette.Navy900
+            Height: =64
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =Parent.Width
+            X: =0
+            Y: =0
       - lblS2TitleAP:
           Control: Label@2.5.1
           Properties:
-            Color: =ColorPalette.TextHeading
+            Color: =ColorPalette.TextOnDark
             Font: =Typography.Family
             FontWeight: =Typography.WeightBold
             Height: =26
@@ -672,18 +1028,18 @@
             Text: ="Program choices"
             Width: =Parent.Width - 48
             X: =24
-            Y: =20
+            Y: =10
       - lblS2HintAP:
           Control: Label@2.5.1
           Properties:
-            Color: =ColorPalette.TextHelp
+            Color: =ColorPalette.Blue50
             Font: =Typography.Family
-            Height: =18
-            Size: =Typography.SizeCaption
-            Text: ="Choose one to three options, highest preference first. Pick a program, then an option within it. At least one choice is required."
+            Height: =20
+            Size: =Typography.SizeBody
+            Text: ="Choose one to three options, highest preference first. Some programs require choosing a secondary option."
             Width: =Parent.Width - 48
             X: =24
-            Y: =50
+            Y: =36
       - lblChoice1AP:
           Control: Label@2.5.1
           Properties:
@@ -699,41 +1055,68 @@
       - drpProgram1AP:
           Control: Classic/DropDown@2.3.1
           Properties:
+            AllowEmptySelection: =true
             BorderColor: =ColorPalette.Gray300
             BorderThickness: =1
             ChevronBackground: =ColorPalette.Blue600
             ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =LookUp(APPLICATION_PROGRAM_CHOICES,
+                And(ApplicationID.Id = locApp.ID, Rank = 1)).ProgramID.Value
             FocusedBorderThickness: =1
             Font: =Typography.Family
             Height: =32
             # <> "Retired", NOT = "Active": PROGRAMS.State is blank on rows
             # created before the column existed and nothing backfills it, so an
             # equality test offers the applicant an empty list. See OI-DATA-2.
+            # SINGLE-COLUMN TEXT. A Classic/DropDown displays and matches
+            # Default against the column named by its Value property, and Value
+            # is an output YAML cannot set (PA2108) — over a table of RECORDS
+            # it picks a column of its own choosing, which is why this rendered
+            # blank. ForAll projects one text column, so display and Default are
+            # the same thing.
+            #
+            # <> "Retired", not = "Active": PROGRAMS.State is blank on rows
+            # created before the column existed (OI-DATA-2).
             Items: |-
-              =Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName)
+              =ForAll(
+                Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName),
+                ProgramName)
+            OnChange: |-
+              =Set(gblFormDirty, true)
             SelectionColor: =ColorPalette.TextOnDark
             SelectionFill: =ColorPalette.Blue600
             Size: =Typography.SizeBody
-            Width: =300
+            Width: =360
             X: =24
             Y: =114
       # Options filtered to the chosen program. ProgramID is indexed.
       - drpOption1AP:
           Control: Classic/DropDown@2.3.1
           Properties:
+            AllowEmptySelection: =true
             BorderColor: =ColorPalette.Gray300
             BorderThickness: =1
             ChevronBackground: =ColorPalette.Blue600
             ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =LookUp(APPLICATION_PROGRAM_CHOICES,
+                And(ApplicationID.Id = locApp.ID, Rank = 1)).ProgramOptionID.Value
             FocusedBorderThickness: =1
             Font: =Typography.Family
             Height: =32
             Items: |-
-              =Sort(
-                Filter(PROGRAM_OPTIONS,
-                  ProgramID.Id = drpProgram1AP.Selected.ID,
-                  State.Value = "Active"),
+              =ForAll(
+                Sort(
+                  Filter(PROGRAM_OPTIONS,
+                    ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram1AP.Selected.Value).ID,
+                    Or(State.Value = "Active",
+                       OptionName = LookUp(APPLICATION_PROGRAM_CHOICES,
+                And(ApplicationID.Id = locApp.ID, Rank = 1)).ProgramOptionID.Value)),
+                  OptionName),
                 OptionName)
+            OnChange: |-
+              =Set(gblFormDirty, true)
             SelectionColor: =ColorPalette.TextOnDark
             SelectionFill: =ColorPalette.Blue600
             Size: =Typography.SizeBody
@@ -748,10 +1131,10 @@
             # drift between the picker and the validation.
             Visible: |-
               =Not(IsEmpty(Filter(PROGRAM_OPTIONS,
-                 ProgramID.Id = drpProgram1AP.Selected.ID,
+                 ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram1AP.Selected.Value).ID,
                  State.Value = "Active")))
-            Width: =Parent.Width - 372
-            X: =340
+            Width: =588
+            X: =400
             Y: =114
       - lblNoOption1AP:
           Control: Label@2.5.1
@@ -760,16 +1143,16 @@
             Font: =Typography.Family
             Height: =32
             Size: =Typography.SizeBody
-            Text: ="This program has no options — the program itself is the choice."
+            Text: ="This program has no secondary options."
             VerticalAlign: =VerticalAlign.Middle
             # The mirror of the dropdown's Visible: shown exactly when the
             # dropdown is not, and only once a program has been picked. An
             # empty gap here reads as something failing to load.
             Visible: |-
-              =And(Not(IsBlank(drpProgram1AP.Selected.ID)),
+              =And(Not(IsBlank(drpProgram1AP.Selected.Value)),
                  Not(drpOption1AP.Visible))
-            Width: =Parent.Width - 372
-            X: =340
+            Width: =588
+            X: =400
             Y: =114
       - lblChoice2AP:
           Control: Label@2.5.1
@@ -786,40 +1169,69 @@
       - drpProgram2AP:
           Control: Classic/DropDown@2.3.1
           Properties:
+            AllowEmptySelection: =true
             BorderColor: =ColorPalette.Gray300
             BorderThickness: =1
             ChevronBackground: =ColorPalette.Blue600
             ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =If(locDropRank2, Blank(),
+                LookUp(APPLICATION_PROGRAM_CHOICES,
+                  And(ApplicationID.Id = locApp.ID, Rank = 2)).ProgramID.Value)
             FocusedBorderThickness: =1
             Font: =Typography.Family
             Height: =32
             # <> "Retired", NOT = "Active": PROGRAMS.State is blank on rows
             # created before the column existed and nothing backfills it, so an
             # equality test offers the applicant an empty list. See OI-DATA-2.
+            # SINGLE-COLUMN TEXT. A Classic/DropDown displays and matches
+            # Default against the column named by its Value property, and Value
+            # is an output YAML cannot set (PA2108) — over a table of RECORDS
+            # it picks a column of its own choosing, which is why this rendered
+            # blank. ForAll projects one text column, so display and Default are
+            # the same thing.
+            #
+            # <> "Retired", not = "Active": PROGRAMS.State is blank on rows
+            # created before the column existed (OI-DATA-2).
             Items: |-
-              =Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName)
+              =ForAll(
+                Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName),
+                ProgramName)
+            OnChange: |-
+              =Set(gblFormDirty, true)
             SelectionColor: =ColorPalette.TextOnDark
             SelectionFill: =ColorPalette.Blue600
             Size: =Typography.SizeBody
-            Width: =300
+            Width: =360
             X: =24
             Y: =192
       - drpOption2AP:
           Control: Classic/DropDown@2.3.1
           Properties:
+            AllowEmptySelection: =true
             BorderColor: =ColorPalette.Gray300
             BorderThickness: =1
             ChevronBackground: =ColorPalette.Blue600
             ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =If(locDropRank2, Blank(),
+                LookUp(APPLICATION_PROGRAM_CHOICES,
+                  And(ApplicationID.Id = locApp.ID, Rank = 2)).ProgramOptionID.Value)
             FocusedBorderThickness: =1
             Font: =Typography.Family
             Height: =32
             Items: |-
-              =Sort(
-                Filter(PROGRAM_OPTIONS,
-                  ProgramID.Id = drpProgram2AP.Selected.ID,
-                  State.Value = "Active"),
+              =ForAll(
+                Sort(
+                  Filter(PROGRAM_OPTIONS,
+                    ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram2AP.Selected.Value).ID,
+                    Or(State.Value = "Active",
+                       OptionName = LookUp(APPLICATION_PROGRAM_CHOICES,
+                And(ApplicationID.Id = locApp.ID, Rank = 2)).ProgramOptionID.Value)),
+                  OptionName),
                 OptionName)
+            OnChange: |-
+              =Set(gblFormDirty, true)
             SelectionColor: =ColorPalette.TextOnDark
             SelectionFill: =ColorPalette.Blue600
             Size: =Typography.SizeBody
@@ -834,10 +1246,10 @@
             # drift between the picker and the validation.
             Visible: |-
               =Not(IsEmpty(Filter(PROGRAM_OPTIONS,
-                 ProgramID.Id = drpProgram2AP.Selected.ID,
+                 ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram2AP.Selected.Value).ID,
                  State.Value = "Active")))
-            Width: =Parent.Width - 372
-            X: =340
+            Width: =588
+            X: =400
             Y: =192
       - lblNoOption2AP:
           Control: Label@2.5.1
@@ -846,16 +1258,16 @@
             Font: =Typography.Family
             Height: =32
             Size: =Typography.SizeBody
-            Text: ="This program has no options — the program itself is the choice."
+            Text: ="This program has no secondary options."
             VerticalAlign: =VerticalAlign.Middle
             # The mirror of the dropdown's Visible: shown exactly when the
             # dropdown is not, and only once a program has been picked. An
             # empty gap here reads as something failing to load.
             Visible: |-
-              =And(Not(IsBlank(drpProgram2AP.Selected.ID)),
+              =And(Not(IsBlank(drpProgram2AP.Selected.Value)),
                  Not(drpOption2AP.Visible))
-            Width: =Parent.Width - 372
-            X: =340
+            Width: =588
+            X: =400
             Y: =192
       - lblChoice3AP:
           Control: Label@2.5.1
@@ -872,40 +1284,69 @@
       - drpProgram3AP:
           Control: Classic/DropDown@2.3.1
           Properties:
+            AllowEmptySelection: =true
             BorderColor: =ColorPalette.Gray300
             BorderThickness: =1
             ChevronBackground: =ColorPalette.Blue600
             ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =If(locDropRank3, Blank(),
+                LookUp(APPLICATION_PROGRAM_CHOICES,
+                  And(ApplicationID.Id = locApp.ID, Rank = 3)).ProgramID.Value)
             FocusedBorderThickness: =1
             Font: =Typography.Family
             Height: =32
             # <> "Retired", NOT = "Active": PROGRAMS.State is blank on rows
             # created before the column existed and nothing backfills it, so an
             # equality test offers the applicant an empty list. See OI-DATA-2.
+            # SINGLE-COLUMN TEXT. A Classic/DropDown displays and matches
+            # Default against the column named by its Value property, and Value
+            # is an output YAML cannot set (PA2108) — over a table of RECORDS
+            # it picks a column of its own choosing, which is why this rendered
+            # blank. ForAll projects one text column, so display and Default are
+            # the same thing.
+            #
+            # <> "Retired", not = "Active": PROGRAMS.State is blank on rows
+            # created before the column existed (OI-DATA-2).
             Items: |-
-              =Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName)
+              =ForAll(
+                Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName),
+                ProgramName)
+            OnChange: |-
+              =Set(gblFormDirty, true)
             SelectionColor: =ColorPalette.TextOnDark
             SelectionFill: =ColorPalette.Blue600
             Size: =Typography.SizeBody
-            Width: =300
+            Width: =360
             X: =24
             Y: =270
       - drpOption3AP:
           Control: Classic/DropDown@2.3.1
           Properties:
+            AllowEmptySelection: =true
             BorderColor: =ColorPalette.Gray300
             BorderThickness: =1
             ChevronBackground: =ColorPalette.Blue600
             ChevronFill: =ColorPalette.TextOnDark
+            Default: |-
+              =If(locDropRank3, Blank(),
+                LookUp(APPLICATION_PROGRAM_CHOICES,
+                  And(ApplicationID.Id = locApp.ID, Rank = 3)).ProgramOptionID.Value)
             FocusedBorderThickness: =1
             Font: =Typography.Family
             Height: =32
             Items: |-
-              =Sort(
-                Filter(PROGRAM_OPTIONS,
-                  ProgramID.Id = drpProgram3AP.Selected.ID,
-                  State.Value = "Active"),
+              =ForAll(
+                Sort(
+                  Filter(PROGRAM_OPTIONS,
+                    ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram3AP.Selected.Value).ID,
+                    Or(State.Value = "Active",
+                       OptionName = LookUp(APPLICATION_PROGRAM_CHOICES,
+                And(ApplicationID.Id = locApp.ID, Rank = 3)).ProgramOptionID.Value)),
+                  OptionName),
                 OptionName)
+            OnChange: |-
+              =Set(gblFormDirty, true)
             SelectionColor: =ColorPalette.TextOnDark
             SelectionFill: =ColorPalette.Blue600
             Size: =Typography.SizeBody
@@ -920,10 +1361,10 @@
             # drift between the picker and the validation.
             Visible: |-
               =Not(IsEmpty(Filter(PROGRAM_OPTIONS,
-                 ProgramID.Id = drpProgram3AP.Selected.ID,
+                 ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram3AP.Selected.Value).ID,
                  State.Value = "Active")))
-            Width: =Parent.Width - 372
-            X: =340
+            Width: =588
+            X: =400
             Y: =270
       - lblNoOption3AP:
           Control: Label@2.5.1
@@ -932,18 +1373,146 @@
             Font: =Typography.Family
             Height: =32
             Size: =Typography.SizeBody
-            Text: ="This program has no options — the program itself is the choice."
+            Text: ="This program has no secondary options."
             VerticalAlign: =VerticalAlign.Middle
             # The mirror of the dropdown's Visible: shown exactly when the
             # dropdown is not, and only once a program has been picked. An
             # empty gap here reads as something failing to load.
             Visible: |-
-              =And(Not(IsBlank(drpProgram3AP.Selected.ID)),
+              =And(Not(IsBlank(drpProgram3AP.Selected.Value)),
                  Not(drpOption3AP.Visible))
-            Width: =Parent.Width - 372
-            X: =340
+            Width: =588
+            X: =400
             Y: =270
       # FR-004 — the same option cannot be chosen twice.
+      # Clearing a choice needs more than picking the blank entry that
+      # AllowEmptySelection adds: Reset restores a control's Default, and the
+      # Default here is the SAVED row — so a reset would put the choice back.
+      # locDropRankN suppresses that Default, and Reset then re-reads it as
+      # blank. UpdateContext runs BEFORE the Resets for exactly that reason.
+      #
+      # Nothing is written until Save. Choice 1 has no Remove — it is required.
+      #
+      # Icon plus a transparent button on top: Classic/Button has no Icon
+      # property. Same pair as the DTD Competencies tab, and Icon.Trash is the
+      # built-in — gblNavIcons carries DocumentEdit, Archive, ArchiveArrowBack
+      # and Eye but nothing for delete.
+      #
+      # NO AccessibleLabel: it is not a valid property on Classic/Button, only
+      # on inputs such as Classic/DatePicker. The Tooltip is the only name this
+      # control has, which is an OI-A11Y-1 gap rather than something to fake.
+      - icoClearChoice2AP:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            # TextHelp — the palette's muted text grey, 4.76:1 on white. The
+            # Gray tokens are surface colours: Gray300 is 1.48:1 and Gray200
+            # 1.24:1, both far under the 3:1 WCAG 1.4.11 wants for a
+            # non-text control, so an icon drawn in either would be decorative
+            # rather than visible.
+            #
+            # The hover fill stays DangerLight: quiet at rest, and the red
+            # only appears at the moment the action is about to happen.
+            Color: =ColorPalette.TextHelp
+            Height: =18
+            Icon: =Icon.Trash
+            Visible: |-
+              =Not(IsBlank(drpProgram2AP.Selected.Value))
+            Width: =18
+            X: =1011
+            Y: =199
+      - btnClearChoice2AP:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =RGBA(0, 0, 0, 0)
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =RGBA(0, 0, 0, 0)
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =2
+            Height: =32
+            HoverColor: =RGBA(0, 0, 0, 0)
+            HoverFill: =ColorPalette.DangerLight
+            OnSelect: |-
+              =UpdateContext({ locDropRank2: true }); Set(gblFormDirty, true);
+              Reset(drpProgram2AP);
+              Reset(drpOption2AP)
+            PressedColor: =RGBA(0, 0, 0, 0)
+            PressedFill: =ColorPalette.DangerLight
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeCaption
+            Text: =""
+            Tooltip: |-
+              ="Remove program choice 2"
+            Visible: |-
+              =Not(IsBlank(drpProgram2AP.Selected.Value))
+            Width: =32
+            X: =1004
+            Y: =192
+      - icoClearChoice3AP:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            # TextHelp — the palette's muted text grey, 4.76:1 on white. The
+            # Gray tokens are surface colours: Gray300 is 1.48:1 and Gray200
+            # 1.24:1, both far under the 3:1 WCAG 1.4.11 wants for a
+            # non-text control, so an icon drawn in either would be decorative
+            # rather than visible.
+            #
+            # The hover fill stays DangerLight: quiet at rest, and the red
+            # only appears at the moment the action is about to happen.
+            Color: =ColorPalette.TextHelp
+            Height: =18
+            Icon: =Icon.Trash
+            Visible: |-
+              =Not(IsBlank(drpProgram3AP.Selected.Value))
+            Width: =18
+            X: =1011
+            Y: =277
+      - btnClearChoice3AP:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =RGBA(0, 0, 0, 0)
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =RGBA(0, 0, 0, 0)
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =2
+            Height: =32
+            HoverColor: =RGBA(0, 0, 0, 0)
+            HoverFill: =ColorPalette.DangerLight
+            OnSelect: |-
+              =UpdateContext({ locDropRank3: true }); Set(gblFormDirty, true);
+              Reset(drpProgram3AP);
+              Reset(drpOption3AP)
+            PressedColor: =RGBA(0, 0, 0, 0)
+            PressedFill: =ColorPalette.DangerLight
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeCaption
+            Text: =""
+            Tooltip: |-
+              ="Remove program choice 3"
+            Visible: |-
+              =Not(IsBlank(drpProgram3AP.Selected.Value))
+            Width: =32
+            X: =1004
+            Y: =270
       - lblS2DupAP:
           Control: Label@2.5.1
           Properties:
@@ -959,15 +1528,18 @@
             # be (program, blank) and Coalesce makes those two blanks equal.
             Visible: |-
               =Or(
-                And(Not(IsBlank(drpProgram1AP.Selected.ID)),
-                    drpProgram1AP.Selected.ID = drpProgram2AP.Selected.ID,
-                    Coalesce(drpOption1AP.Selected.ID, 0) = Coalesce(drpOption2AP.Selected.ID, 0)),
-                And(Not(IsBlank(drpProgram1AP.Selected.ID)),
-                    drpProgram1AP.Selected.ID = drpProgram3AP.Selected.ID,
-                    Coalesce(drpOption1AP.Selected.ID, 0) = Coalesce(drpOption3AP.Selected.ID, 0)),
-                And(Not(IsBlank(drpProgram2AP.Selected.ID)),
-                    drpProgram2AP.Selected.ID = drpProgram3AP.Selected.ID,
-                    Coalesce(drpOption2AP.Selected.ID, 0) = Coalesce(drpOption3AP.Selected.ID, 0))
+                And(Not(IsBlank(drpProgram1AP.Selected.Value)),
+                    drpProgram1AP.Selected.Value = drpProgram2AP.Selected.Value,
+                    Coalesce(drpOption1AP.Selected.Value, "") =
+                      Coalesce(drpOption2AP.Selected.Value, "")),
+                And(Not(IsBlank(drpProgram1AP.Selected.Value)),
+                    drpProgram1AP.Selected.Value = drpProgram3AP.Selected.Value,
+                    Coalesce(drpOption1AP.Selected.Value, "") =
+                      Coalesce(drpOption3AP.Selected.Value, "")),
+                And(Not(IsBlank(drpProgram2AP.Selected.Value)),
+                    drpProgram2AP.Selected.Value = drpProgram3AP.Selected.Value,
+                    Coalesce(drpOption2AP.Selected.Value, "") =
+                      Coalesce(drpOption3AP.Selected.Value, ""))
               )
             Width: =Parent.Width - 48
             X: =24
@@ -992,221 +1564,371 @@
       X: =24
       Y: =212
     Children:
+      # HEADER BAND — same treatment as steps 1 and 2.
+      - conS3HeaderAP:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =ColorPalette.Navy900
+            Height: =64
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =Parent.Width
+            X: =0
+            Y: =0
       - lblS3TitleAP:
           Control: Label@2.5.1
           Properties:
-            Color: =ColorPalette.TextHeading
+            Color: =ColorPalette.TextOnDark
             Font: =Typography.Family
             FontWeight: =Typography.WeightBold
             Height: =26
             Size: =Typography.SizeHeading
-            Text: ="Competencies and ECQs"
+            Text: ="Competencies"
             Width: =Parent.Width - 48
             X: =24
-            Y: =20
-      # Constitution I — the value lists do not exist. Items: =Table() is an
-      # empty table, so each dropdown renders with no options until Appendix B
-      # (D-2) arrives and the real lists replace it.
-      - lblS3PendingAP:
+            Y: =10
+      - lblS3HintAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.Blue50
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeBody
+            Text: ="Choose competencies and Executive Core Qualifications"
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =36
+
+      # ---- type strip: PowerLibs shadcn-tabs-1, data-driven ----
+      # Identical to the DTD Competencies tab. Types come from
+      # COMPETENCY_TYPES and the per-type ceiling from SelectionCount, so a
+      # fourth type added on the admin screen works here with no YAML change.
+      # Nothing below knows the words OPM, Technical or ECQ.
+      #
+      # This replaces ten hardcoded dropdowns (3 OPM, 3 technical, 4 ECQ) whose
+      # Items were an empty Table() and which wrote to three text columns that
+      # no longer exist. See OI-APP-4.
+      - conS3TabsAP:
+          Control: GroupContainer@1.5.0
+          Variant: AutoLayout
+          Properties:
+            BorderStyle: =BorderStyle.None
+            DropShadow: =DropShadow.None
+            Fill: =ColorPalette.White
+            Height: =40
+            LayoutDirection: =LayoutDirection.Horizontal
+            PaddingBottom: =5
+            PaddingLeft: =5
+            PaddingRight: =5
+            PaddingTop: =5
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Width: |-
+              =Min(Parent.Width - 300,
+                170 * Max(1, CountRows(Filter(COMPETENCY_TYPES, State.Value = "Active"))))
+            X: =24
+            Y: =80
+          Children:
+            - galS3TypeTabsAP:
+                Control: Gallery@2.15.0
+                Variant: Horizontal
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Height: =Parent.Height - 10
+                  Items: |-
+                    =SortByColumns(
+                      Filter(COMPETENCY_TYPES, State.Value = "Active"),
+                      "SortOrder", SortOrder.Ascending)
+                  LayoutMinHeight: =0
+                  LayoutMinWidth: =0
+                  ShowScrollbar: =false
+                  TemplatePadding: =0
+                  TemplateSize: |-
+                    =galS3TypeTabsAP.Width / Max(1, galS3TypeTabsAP.AllItemsCount)
+                  Width: =Parent.Width - 10
+                Children:
+                  - btnS3TypeTabAP:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: |-
+                          =If(ThisItem.ID = locCompTypeAP,
+                             ColorPalette.Gray200, RGBA(0, 0, 0, 0))
+                        BorderStyle: =BorderStyle.Solid
+                        BorderThickness: |-
+                          =If(ThisItem.ID = locCompTypeAP, 1, 0)
+                        Color: =ColorPalette.TextHeading
+                        Fill: |-
+                          =If(ThisItem.ID = locCompTypeAP,
+                             ColorPalette.Blue50, RGBA(0, 0, 0, 0))
+                        FocusedBorderThickness: |-
+                          =If(ThisItem.ID = locCompTypeAP, 1, 0)
+                        Font: =Typography.Family
+                        FontWeight: |-
+                          =If(ThisItem.ID = locCompTypeAP,
+                             Typography.WeightBold, Typography.WeightRegular)
+                        # 1px of room top and bottom so the border is not
+                        # clipped against the gallery bound.
+                        Height: =Parent.TemplateHeight - 2
+                        HoverBorderColor: =Self.BorderColor
+                        HoverColor: =Self.Color
+                        HoverFill: |-
+                          =If(ThisItem.ID = locCompTypeAP,
+                             ColorPalette.Blue50, ColorPalette.Gray200)
+                        OnSelect: |-
+                          =UpdateContext({ locCompTypeAP: ThisItem.ID });
+                          Reset(drpAddCompAP)
+                        PressedBorderColor: =Self.BorderColor
+                        PressedColor: =Self.Color
+                        PressedFill: |-
+                          =If(ThisItem.ID = locCompTypeAP,
+                             ColorPalette.Blue50, ColorPalette.Gray200)
+                        RadiusBottomLeft: =5
+                        RadiusBottomRight: =5
+                        RadiusTopLeft: =5
+                        RadiusTopRight: =5
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.TypeName
+                        Width: =Parent.TemplateWidth - 4
+                        X: =2
+                        Y: =1
+      - lblS3CountAP:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Right
+            Color: |-
+              =If(CountRows(Filter(colAppComps, TypeId = locCompTypeAP)) >= Coalesce(LookUp(COMPETENCY_TYPES, ID = locCompTypeAP).SelectionCount, 0),
+                 ColorPalette.WarningText, ColorPalette.TextHelp)
+            Font: =Typography.Family
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: |-
+              =CountRows(Filter(colAppComps, TypeId = locCompTypeAP)) & " of " & Coalesce(LookUp(COMPETENCY_TYPES, ID = locCompTypeAP).SelectionCount, 0) & " selected"
+            Visible: =Not(IsBlank(locCompTypeAP))
+            Width: =260
+            X: =Parent.Width - 284
+            Y: =90
+
+      # ---- add row, above the list ----
+      - drpAddCompAP:
+          Control: Classic/DropDown@2.3.1
+          Properties:
+            AllowEmptySelection: =true
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            ChevronBackground: =ColorPalette.Blue600
+            ChevronFill: =ColorPalette.TextOnDark
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =32
+            # Already-chosen competencies are excluded rather than offered and
+            # rejected. Single-column text, like every dropdown in this app: a
+            # Classic/DropDown over records matches against a column YAML
+            # cannot name (PA2108).
+            Items: |-
+              =ForAll(
+                Sort(
+                  Filter(COMPETENCIES,
+                    CompetencyTypeID.Id = locCompTypeAP,
+                    State.Value = "Active",
+                    Not(ID in colAppComps.CompId)),
+                  CompetencyName),
+                CompetencyName)
+            OnChange: |-
+              =Set(gblFormDirty, true)
+            SelectionColor: =ColorPalette.TextOnDark
+            SelectionFill: =ColorPalette.Blue600
+            Size: =Typography.SizeBody
+            Visible: |-
+              =And(Not(IsBlank(locCompTypeAP)), CountRows(Filter(colAppComps, TypeId = locCompTypeAP)) < Coalesce(LookUp(COMPETENCY_TYPES, ID = locCompTypeAP).SelectionCount, 0))
+            Width: =560
+            X: =24
+            Y: =136
+      - btnAddCompAP:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            DisplayMode: |-
+              =If(Or(IsBlank(drpAddCompAP.Selected.Value),
+                     locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.Blue600
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =32
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.Blue700
+            OnSelect: |-
+              =Collect(colAppComps,
+                {
+                  CompId: LookUp(COMPETENCIES,
+                    And(CompetencyTypeID.Id = locCompTypeAP,
+                        CompetencyName = drpAddCompAP.Selected.Value)).ID,
+                  CompName: drpAddCompAP.Selected.Value,
+                  TypeId: locCompTypeAP,
+                  TypeName: LookUp(COMPETENCY_TYPES, ID = locCompTypeAP).TypeName,
+                  TypeOrder: LookUp(COMPETENCY_TYPES, ID = locCompTypeAP).SortOrder
+                });
+              Set(gblFormDirty, true);
+              Reset(drpAddCompAP)
+            PressedColor: =Self.Color
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeBody
+            Text: ="Add"
+            Visible: |-
+              =And(Not(IsBlank(locCompTypeAP)), CountRows(Filter(colAppComps, TypeId = locCompTypeAP)) < Coalesce(LookUp(COMPETENCY_TYPES, ID = locCompTypeAP).SelectionCount, 0))
+            Width: =100
+            X: =596
+            Y: =136
+      # Takes the add row's place at the ceiling so the list does not jump.
+      - lblS3FullAP:
           Control: Label@2.5.1
           Properties:
             Color: =ColorPalette.WarningText
             Font: =Typography.Family
             Height: =32
-            Size: =Typography.SizeCaption
-            Text: ="These ten lists are empty until Appendix B is published. The structure is final; only the values are missing."
+            Size: =Typography.SizeBody
+            Text: |-
+              ="You have chosen the maximum of " & Coalesce(LookUp(COMPETENCY_TYPES, ID = locCompTypeAP).SelectionCount, 0) & " for " &
+               LookUp(COMPETENCY_TYPES, ID = locCompTypeAP).TypeName & ". Remove one to choose a different competency."
+            VerticalAlign: =VerticalAlign.Middle
+            Visible: |-
+              =And(Not(IsBlank(locCompTypeAP)), CountRows(Filter(colAppComps, TypeId = locCompTypeAP)) >= Coalesce(LookUp(COMPETENCY_TYPES, ID = locCompTypeAP).SelectionCount, 0))
             Width: =Parent.Width - 48
             X: =24
-            Y: =50
-      - lblS3OpmAP:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextHeading
-            Font: =Typography.Family
-            FontWeight: =Typography.WeightMedium
-            Height: =22
-            Size: =Typography.SizeBody
-            Text: ="Three OPM competencies"
-            Width: =Parent.Width - 48
-            X: =24
-            Y: =92
-      - drpOpm1AP:
-          Control: Classic/DropDown@2.3.1
-          Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderThickness: =1
-            ChevronBackground: =ColorPalette.Blue600
-            ChevronFill: =ColorPalette.TextOnDark
-            FocusedBorderThickness: =1
-            Font: =Typography.Family
-            Height: =32
-            Items: =Table()
-            Size: =Typography.SizeBody
-            Width: =(Parent.Width - 80) / 3
-            X: =24
-            Y: =118
-      - drpOpm2AP:
-          Control: Classic/DropDown@2.3.1
-          Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderThickness: =1
-            ChevronBackground: =ColorPalette.Blue600
-            ChevronFill: =ColorPalette.TextOnDark
-            FocusedBorderThickness: =1
-            Font: =Typography.Family
-            Height: =32
-            Items: =Table()
-            Size: =Typography.SizeBody
-            Width: =drpOpm1AP.Width
-            X: =drpOpm1AP.X + drpOpm1AP.Width + 16
-            Y: =118
-      - drpOpm3AP:
-          Control: Classic/DropDown@2.3.1
-          Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderThickness: =1
-            ChevronBackground: =ColorPalette.Blue600
-            ChevronFill: =ColorPalette.TextOnDark
-            FocusedBorderThickness: =1
-            Font: =Typography.Family
-            Height: =32
-            Items: =Table()
-            Size: =Typography.SizeBody
-            Width: =drpOpm1AP.Width
-            X: =drpOpm2AP.X + drpOpm1AP.Width + 16
-            Y: =118
-      - lblS3TechAP:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextHeading
-            Font: =Typography.Family
-            FontWeight: =Typography.WeightMedium
-            Height: =22
-            Size: =Typography.SizeBody
-            Text: ="Three technical competencies"
-            Width: =Parent.Width - 48
-            X: =24
-            Y: =166
-      - drpTech1AP:
-          Control: Classic/DropDown@2.3.1
-          Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderThickness: =1
-            ChevronBackground: =ColorPalette.Blue600
-            ChevronFill: =ColorPalette.TextOnDark
-            FocusedBorderThickness: =1
-            Font: =Typography.Family
-            Height: =32
-            Items: =Table()
-            Size: =Typography.SizeBody
-            Width: =drpOpm1AP.Width
-            X: =24
-            Y: =192
-      - drpTech2AP:
-          Control: Classic/DropDown@2.3.1
-          Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderThickness: =1
-            ChevronBackground: =ColorPalette.Blue600
-            ChevronFill: =ColorPalette.TextOnDark
-            FocusedBorderThickness: =1
-            Font: =Typography.Family
-            Height: =32
-            Items: =Table()
-            Size: =Typography.SizeBody
-            Width: =drpOpm1AP.Width
-            X: =drpOpm2AP.X
-            Y: =192
-      - drpTech3AP:
-          Control: Classic/DropDown@2.3.1
-          Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderThickness: =1
-            ChevronBackground: =ColorPalette.Blue600
-            ChevronFill: =ColorPalette.TextOnDark
-            FocusedBorderThickness: =1
-            Font: =Typography.Family
-            Height: =32
-            Items: =Table()
-            Size: =Typography.SizeBody
-            Width: =drpOpm1AP.Width
-            X: =drpOpm3AP.X
-            Y: =192
-      - lblS3EcqAP:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextHeading
-            Font: =Typography.Family
-            FontWeight: =Typography.WeightMedium
-            Height: =22
-            Size: =Typography.SizeBody
-            Text: ="Four Executive Core Qualifications"
-            Width: =Parent.Width - 48
-            X: =24
-            Y: =240
-      - drpEcq1AP:
-          Control: Classic/DropDown@2.3.1
-          Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderThickness: =1
-            ChevronBackground: =ColorPalette.Blue600
-            ChevronFill: =ColorPalette.TextOnDark
-            FocusedBorderThickness: =1
-            Font: =Typography.Family
-            Height: =32
-            Items: =Table()
-            Size: =Typography.SizeBody
-            Width: =(Parent.Width - 96) / 4
-            X: =24
-            Y: =266
-      - drpEcq2AP:
-          Control: Classic/DropDown@2.3.1
-          Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderThickness: =1
-            ChevronBackground: =ColorPalette.Blue600
-            ChevronFill: =ColorPalette.TextOnDark
-            FocusedBorderThickness: =1
-            Font: =Typography.Family
-            Height: =32
-            Items: =Table()
-            Size: =Typography.SizeBody
-            Width: =drpEcq1AP.Width
-            X: =drpEcq1AP.X + drpEcq1AP.Width + 16
-            Y: =266
-      - drpEcq3AP:
-          Control: Classic/DropDown@2.3.1
-          Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderThickness: =1
-            ChevronBackground: =ColorPalette.Blue600
-            ChevronFill: =ColorPalette.TextOnDark
-            FocusedBorderThickness: =1
-            Font: =Typography.Family
-            Height: =32
-            Items: =Table()
-            Size: =Typography.SizeBody
-            Width: =drpEcq1AP.Width
-            X: =drpEcq2AP.X + drpEcq1AP.Width + 16
-            Y: =266
-      - drpEcq4AP:
-          Control: Classic/DropDown@2.3.1
-          Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderThickness: =1
-            ChevronBackground: =ColorPalette.Blue600
-            ChevronFill: =ColorPalette.TextOnDark
-            FocusedBorderThickness: =1
-            Font: =Typography.Family
-            Height: =32
-            Items: =Table()
-            Size: =Typography.SizeBody
-            Width: =drpEcq1AP.Width
-            X: =drpEcq3AP.X + drpEcq1AP.Width + 16
-            Y: =266
+            Y: =136
 
-# ===========================================================================
+      # ---- what has been chosen for this type ----
+      - galS3CompsAP:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            Height: =Parent.Height - 210
+            Items: |-
+              =SortByColumns(
+                Filter(colAppComps, TypeId = locCompTypeAP),
+                "CompName", SortOrder.Ascending)
+            ShowScrollbar: =true
+            TemplatePadding: =0
+            TemplateSize: =44
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =186
+          Children:
+            - conS3CompRowAP:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Fill: =ColorPalette.White
+                  Height: =Parent.TemplateHeight
+                  Width: =Parent.TemplateWidth
+                Children:
+                  - lblS3CompNameAP:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        Height: =Parent.Height
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.CompName
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =560
+                        X: =0
+                        Y: =0
+                  - icoS3CompRemoveAP:
+                      Control: Classic/Icon@2.5.0
+                      Properties:
+                        BorderStyle: =BorderStyle.None
+                        Color: =ColorPalette.TextHelp
+                        Height: =18
+                        Icon: =Icon.Trash
+                        Width: =18
+                        X: =583
+                        Y: =13
+                  - btnS3CompRemoveAP:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        BorderStyle: =BorderStyle.Solid
+                        BorderThickness: =0
+                        Color: =RGBA(0, 0, 0, 0)
+                        DisplayMode: |-
+                          =If(Or(locCycle.State.Value <> "Open",
+                                 And(Not(IsBlank(locApp)),
+                                     locApp.ApplicationStatus.Value <> "Draft")),
+                             DisplayMode.Disabled, DisplayMode.Edit)
+                        Fill: =RGBA(0, 0, 0, 0)
+                        FocusedBorderColor: =ColorPalette.FocusOnLight
+                        FocusedBorderThickness: =2
+                        Height: =32
+                        HoverColor: =RGBA(0, 0, 0, 0)
+                        HoverFill: =ColorPalette.DangerLight
+                        # Matched on CompId: the row came out of SortByColumns
+                        # and is not the identity the collection holds.
+                        OnSelect: |-
+                          =RemoveIf(colAppComps, CompId = ThisItem.CompId);
+                          Set(gblFormDirty, true)
+                        PressedColor: =RGBA(0, 0, 0, 0)
+                        PressedFill: =ColorPalette.DangerLight
+                        RadiusBottomLeft: =6
+                        RadiusBottomRight: =6
+                        RadiusTopLeft: =6
+                        RadiusTopRight: =6
+                        Size: =Typography.SizeCaption
+                        Text: =""
+                        Tooltip: |-
+                          ="Remove " & ThisItem.CompName
+                        Width: =32
+                        X: =576
+                        Y: =6
+            - recS3CompLineAP:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Fill: =ColorPalette.Gray200
+                  Height: =1
+                  Width: =Parent.TemplateWidth
+                  Y: =Parent.TemplateHeight - 1
+      - lblS3NoCompsAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =40
+            Size: =Typography.SizeBody
+            Text: |-
+              ="No " & LookUp(COMPETENCY_TYPES, ID = locCompTypeAP).TypeName & " competencies chosen yet."
+            Visible: |-
+              =And(Not(IsBlank(locCompTypeAP)),
+                 CountRows(galS3CompsAP.AllItems) = 0)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =198
+
 # STEP 4 — Eligibility and background (Appendix A fields; FR-006a)
+# NCUA start date and Service computation date are on STEP 1, in their own
+# column beside the supervisors. See OI-REQ-1 — neither has a requirement
+# behind it at all.
 # ===========================================================================
 - conStep4AP:
     Control: GroupContainer@1.5.0
@@ -1224,10 +1946,25 @@
       X: =24
       Y: =212
     Children:
+      # HEADER BAND — same treatment as steps 1-3.
+      - conS4HeaderAP:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =ColorPalette.Navy900
+            Height: =64
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =Parent.Width
+            X: =0
+            Y: =0
       - lblS4TitleAP:
           Control: Label@2.5.1
           Properties:
-            Color: =ColorPalette.TextHeading
+            Color: =ColorPalette.TextOnDark
             Font: =Typography.Family
             FontWeight: =Typography.WeightBold
             Height: =26
@@ -1235,48 +1972,53 @@
             Text: ="Eligibility and background"
             Width: =Parent.Width - 48
             X: =24
-            Y: =20
-      - lblS4IdpAP:
+            Y: =10
+      - lblS4HintAP:
           Control: Label@2.5.1
           Properties:
-            Color: =ColorPalette.TextBody
+            Color: =ColorPalette.Blue50
             Font: =Typography.Family
             Height: =20
-            Size: =Typography.SizeLabel
-            Text: ="Listed on your IDP"
-            Width: =300
+            Size: =Typography.SizeBody
+            Text: ="Confirm your eligibility and information session details."
+            Width: =Parent.Width - 48
             X: =24
-            Y: =60
+            Y: =36
+
+      # FOUR FIELDS, ONE ROW, on the same grid and in the same order as the DTD
+      # review panel's Eligibility tab — so the two read alike. PowerLibs
+      # modern-input-label throughout: the control, with a Label astride its top
+      # border, filled white so it punches a notch in the line.
+      #
+      # Choices() reads the SharePoint column, so the Yes/No options cannot
+      # drift from the list definition. It returns a single-column table, which
+      # is the shape a Classic/DropDown matches Default against — no ForAll
+      # projection needed here, unlike the program pickers.
       - drpIdpAP:
           Control: Classic/DropDown@2.3.1
           Properties:
+            AllowEmptySelection: =true
             BorderColor: =ColorPalette.Gray300
             BorderThickness: =1
             ChevronBackground: =ColorPalette.Blue600
             ChevronFill: =ColorPalette.TextOnDark
+            Default: =locApp.ListedOnIDP.Value
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
             FocusedBorderThickness: =1
             Font: =Typography.Family
-            Height: =32
+            Height: =40
             Items: =Choices(APPLICATIONS.ListedOnIDP)
+            OnChange: |-
+              =Set(gblFormDirty, true)
             SelectionColor: =ColorPalette.TextOnDark
             SelectionFill: =ColorPalette.Blue600
             Size: =Typography.SizeBody
-            Width: =300
+            Width: =(Parent.Width - 120) / 4
             X: =24
-            Y: =82
-      # FR-006a / OI-8 — a number, deliberately distinct from the appraisal
-      # document attached at step 5. Both are required.
-      - lblS4RatingAP:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextBody
-            Font: =Typography.Family
-            Height: =20
-            Size: =Typography.SizeLabel
-            Text: ="Latest performance rating (required)"
-            Width: =300
-            X: =360
-            Y: =60
+            Y: =110
       - txtRatingAP:
           Control: Classic/TextInput@2.3.2
           Properties:
@@ -1285,118 +2027,140 @@
             Color: =ColorPalette.TextBody
             Default: |-
               =If(IsBlank(locApp), "", Text(locApp.LatestPerformanceRating))
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
             Fill: =ColorPalette.White
             FocusedBorderColor: =ColorPalette.Blue600
             FocusedBorderThickness: =2
             Font: =Typography.Family
-            Format: =TextFormat.Number
-            Height: =32
+            Height: =40
+            OnChange: |-
+              =Set(gblFormDirty, true)
+            PaddingLeft: =12
             Size: =Typography.SizeBody
-            Width: =300
-            X: =360
-            Y: =82
-      - lblS4SessionAP:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextBody
-            Font: =Typography.Family
-            Height: =20
-            Size: =Typography.SizeLabel
-            Text: ="Attended an information session"
-            Width: =300
-            X: =24
-            Y: =130
+            Width: =drpIdpAP.Width
+            X: =drpIdpAP.X + (drpIdpAP.Width + 24)
+            Y: =110
       - drpSessionAP:
           Control: Classic/DropDown@2.3.1
           Properties:
+            AllowEmptySelection: =true
             BorderColor: =ColorPalette.Gray300
             BorderThickness: =1
             ChevronBackground: =ColorPalette.Blue600
             ChevronFill: =ColorPalette.TextOnDark
+            Default: =locApp.AttendedInfoSession.Value
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
             FocusedBorderThickness: =1
             Font: =Typography.Family
-            Height: =32
+            Height: =40
             Items: =Choices(APPLICATIONS.AttendedInfoSession)
+            OnChange: |-
+              =Set(gblFormDirty, true)
             SelectionColor: =ColorPalette.TextOnDark
             SelectionFill: =ColorPalette.Blue600
             Size: =Typography.SizeBody
-            Width: =300
-            X: =24
-            Y: =152
-      # Conditional — the date only means anything if they attended.
-      - lblS4SessionDateAP:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextBody
-            Font: =Typography.Family
-            Height: =20
-            Size: =Typography.SizeLabel
-            Text: ="Session date"
-            Visible: =drpSessionAP.Selected.Value = "Yes"
-            Width: =300
-            X: =360
-            Y: =130
+            Width: =drpIdpAP.Width
+            X: =drpIdpAP.X + (drpIdpAP.Width + 24) * 2
+            Y: =110
+      # Only asked once the session question is answered Yes — a date for a
+      # session nobody attended is not a thing to collect.
       - dtpSessionAP:
           Control: Classic/DatePicker@2.6.0
           Properties:
             AccessibleLabel: ="Information session date"
             BorderColor: =ColorPalette.Gray300
-            DefaultDate: |-
-              =If(IsBlank(locApp), Today(), Coalesce(locApp.InfoSessionDate, Today()))
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            # NOT Today() — see OI-REQ-1. Blank stays blank.
+            DefaultDate: =locApp.InfoSessionDate
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =ColorPalette.White
             Font: =Typography.Family
-            Height: =32
+            Height: =40
+            OnChange: |-
+              =Set(gblFormDirty, true)
+            Size: =Typography.SizeBody
             Visible: =drpSessionAP.Selected.Value = "Yes"
-            Width: =300
-            X: =360
-            Y: =152
-      - lblS4StartAP:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextBody
-            Font: =Typography.Family
-            Height: =20
-            Size: =Typography.SizeLabel
-            Text: ="NCUA start date"
-            Width: =300
-            X: =24
-            Y: =200
-      - dtpStartAP:
-          Control: Classic/DatePicker@2.6.0
-          Properties:
-            AccessibleLabel: ="NCUA start date"
-            BorderColor: =ColorPalette.Gray300
-            DefaultDate: |-
-              =If(IsBlank(locApp), Today(), Coalesce(locApp.NCUAStartDate, Today()))
-            Font: =Typography.Family
-            Height: =32
-            Width: =300
-            X: =24
-            Y: =222
-      - lblS4ScdAP:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextBody
-            Font: =Typography.Family
-            Height: =20
-            Size: =Typography.SizeLabel
-            Text: ="Service computation date"
-            Width: =300
-            X: =360
-            Y: =200
-      - dtpScdAP:
-          Control: Classic/DatePicker@2.6.0
-          Properties:
-            AccessibleLabel: ="Service computation date"
-            BorderColor: =ColorPalette.Gray300
-            DefaultDate: |-
-              =If(IsBlank(locApp), Today(), Coalesce(locApp.ServiceComputationDate, Today()))
-            Font: =Typography.Family
-            Height: =32
-            Width: =300
-            X: =360
-            Y: =222
+            Width: =drpIdpAP.Width
+            X: =drpIdpAP.X + (drpIdpAP.Width + 24) * 3
+            Y: =110
 
-# ===========================================================================
+      # LABELS LAST: each straddles the top border of its control, and z-order
+      # is declaration order.
+      - lblS4IdpAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Listed on your IDP"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =drpIdpAP.X + 10
+            Y: =drpIdpAP.Y - Self.Height / 2
+      - lblS4RatingAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Latest performance rating (required)"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtRatingAP.X + 10
+            Y: =txtRatingAP.Y - Self.Height / 2
+      - lblS4SessionAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Attended an information session"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =drpSessionAP.X + 10
+            Y: =drpSessionAP.Y - Self.Height / 2
+      - lblS4SessionDateAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Information session date"
+            Visible: =drpSessionAP.Selected.Value = "Yes"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =dtpSessionAP.X + 10
+            Y: =dtpSessionAP.Y - Self.Height / 2
+
 # STEP 5 — Supporting documents (RQ009, FR-006) — OI-APP-1 BLOCKER
 # ===========================================================================
 - conStep5AP:
@@ -1415,10 +2179,25 @@
       X: =24
       Y: =212
     Children:
+      # HEADER BAND — same treatment as steps 1-4.
+      - conS5HeaderAP:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =ColorPalette.Navy900
+            Height: =64
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =Parent.Width
+            X: =0
+            Y: =0
       - lblS5TitleAP:
           Control: Label@2.5.1
           Properties:
-            Color: =ColorPalette.TextHeading
+            Color: =ColorPalette.TextOnDark
             Font: =Typography.Family
             FontWeight: =Typography.WeightBold
             Height: =26
@@ -1426,42 +2205,348 @@
             Text: ="Supporting documents"
             Width: =Parent.Width - 48
             X: =24
-            Y: =20
-      - lblS5BlockerAP:
+            Y: =10
+      - lblS5HintAP:
           Control: Label@2.5.1
           Properties:
-            Color: =ColorPalette.WarningText
+            Color: =ColorPalette.Blue50
             Font: =Typography.Family
-            Height: =104
-            Size: =Typography.SizeCaption
-            Text: ="OI-APP-1 — three independent document slots cannot be built on the current data model. SharePoint item attachments are a single unnamed collection, so there is no way to tell a resume from a statement of interest, and the control enforces neither PDF/Word nor a size limit. Canvas apps also expose attachments only inside a Form control's data card, so no attachment control can be pasted here."
-            Width: =Parent.Width - 48
-            X: =24
-            Y: =54
-      - lblS5OptionsAP:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextBody
-            Font: =Typography.Family
-            Height: =120
+            Height: =20
             Size: =Typography.SizeBody
-            Text: ="Option A — keep attachments and distinguish the three documents by a filename convention, validated in a Power Automate flow. Cheapest, weakest guarantee. Option B — replace attachments with a document library keyed to the application ID, one row per document with its own type, size and content-type validation. Strongest, changes the data model. Option C — three link columns pointing at files stored elsewhere. Avoids the problem, moves it to another system."
+            Text: ="Attach your resume, statement of interest and latest performance appraisal."
             Width: =Parent.Width - 48
             X: =24
-            Y: =166
-      - lblS5InterimAP:
+            Y: =36
+      # ---- THREE DOCUMENT SLOTS ----
+      # One APPLICATION_DOCUMENTS row per type, each holding its own attachment.
+      # Item attachments on APPLICATIONS are a single unnamed collection, so
+      # there is no way to tell a resume from a statement of interest; a row per
+      # type gives each slot an identity.
+      #
+      # THE UPLOAD CONTROL IS NOT HERE, AND CANNOT BE. Canvas exposes
+      # attachments only through a Form control's data card, which has no YAML
+      # form — it must be inserted in Studio. Constitution IV, unavoidably.
+      # Build steps are in the header block at the top of this file.
+      #
+      # Each slot below is the modern-input-label pair used on every other step:
+      # a disabled Classic/TextInput showing the file state, with a Label
+      # astride its top border naming the slot. The gap to the right of each box
+      # is where the Attachments control goes.
+      #
+      # Remove is the Attachments control's own X. The trash button here deletes
+      # the ROW, which is a harder reset — used when a slot is wrong rather than
+      # when a file is.
+      - txtDocResumeAP:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            # CountRows on the row's attachments. If Studio reports that
+            # Attachments is not readable outside a Form, fall back to
+            # If(IsBlank(<row>), "Slot missing", "Ready for upload") — the row
+            # existing is the part this screen can always see.
+            Default: |-
+              =If(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Resume"))),
+                 "Not set up yet",
+                 If(CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Resume")).Attachments) = 0,
+                    "No file attached",
+                    First(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Resume")).Attachments).DisplayName))
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: =DisplayMode.Disabled
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Width: =560
+            X: =24
+            Y: =110
+      - icoDocResumeAP:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextHelp
+            Height: =18
+            Icon: =Icon.Trash
+            Visible: |-
+              =And(Not(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Resume")))),
+                 CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Resume")).Attachments) > 0)
+            Width: =18
+            X: =603
+            Y: =121
+      - btnDocResumeAP:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =RGBA(0, 0, 0, 0)
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =RGBA(0, 0, 0, 0)
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =2
+            Height: =32
+            HoverColor: =RGBA(0, 0, 0, 0)
+            HoverFill: =ColorPalette.DangerLight
+            # Removes the ROW, attachment and all, then puts an empty slot back
+            # so the Attachments control still has something to bind to.
+            OnSelect: |-
+              =Remove(APPLICATION_DOCUMENTS, LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Resume")));
+              Patch(APPLICATION_DOCUMENTS, Defaults(APPLICATION_DOCUMENTS),
+                {
+                  ApplicationID: {
+                    '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                    Id: locApp.ID,
+                    Value: locApp.ApplicantEmail
+                  },
+                  DocumentType: { Value: "Resume" }
+                });
+              Set(gblFormDirty, true)
+            PressedColor: =RGBA(0, 0, 0, 0)
+            PressedFill: =ColorPalette.DangerLight
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeCaption
+            Text: =""
+            Tooltip: |-
+              ="Remove the resume"
+            Visible: |-
+              =And(Not(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Resume")))),
+                 CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Resume")).Attachments) > 0)
+            Width: =32
+            X: =596
+            Y: =114
+      - txtDocStatementAP:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            # CountRows on the row's attachments. If Studio reports that
+            # Attachments is not readable outside a Form, fall back to
+            # If(IsBlank(<row>), "Slot missing", "Ready for upload") — the row
+            # existing is the part this screen can always see.
+            Default: |-
+              =If(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Statement of Interest"))),
+                 "Not set up yet",
+                 If(CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Statement of Interest")).Attachments) = 0,
+                    "No file attached",
+                    First(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Statement of Interest")).Attachments).DisplayName))
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: =DisplayMode.Disabled
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Width: =560
+            X: =24
+            Y: =180
+      - icoDocStatementAP:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextHelp
+            Height: =18
+            Icon: =Icon.Trash
+            Visible: |-
+              =And(Not(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Statement of Interest")))),
+                 CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Statement of Interest")).Attachments) > 0)
+            Width: =18
+            X: =603
+            Y: =191
+      - btnDocStatementAP:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =RGBA(0, 0, 0, 0)
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =RGBA(0, 0, 0, 0)
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =2
+            Height: =32
+            HoverColor: =RGBA(0, 0, 0, 0)
+            HoverFill: =ColorPalette.DangerLight
+            # Removes the ROW, attachment and all, then puts an empty slot back
+            # so the Attachments control still has something to bind to.
+            OnSelect: |-
+              =Remove(APPLICATION_DOCUMENTS, LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Statement of Interest")));
+              Patch(APPLICATION_DOCUMENTS, Defaults(APPLICATION_DOCUMENTS),
+                {
+                  ApplicationID: {
+                    '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                    Id: locApp.ID,
+                    Value: locApp.ApplicantEmail
+                  },
+                  DocumentType: { Value: "Statement of Interest" }
+                });
+              Set(gblFormDirty, true)
+            PressedColor: =RGBA(0, 0, 0, 0)
+            PressedFill: =ColorPalette.DangerLight
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeCaption
+            Text: =""
+            Tooltip: |-
+              ="Remove the statement of interest"
+            Visible: |-
+              =And(Not(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Statement of Interest")))),
+                 CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Statement of Interest")).Attachments) > 0)
+            Width: =32
+            X: =596
+            Y: =184
+      - txtDocAppraisalAP:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            # CountRows on the row's attachments. If Studio reports that
+            # Attachments is not readable outside a Form, fall back to
+            # If(IsBlank(<row>), "Slot missing", "Ready for upload") — the row
+            # existing is the part this screen can always see.
+            Default: |-
+              =If(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Performance Appraisal"))),
+                 "Not set up yet",
+                 If(CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Performance Appraisal")).Attachments) = 0,
+                    "No file attached",
+                    First(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Performance Appraisal")).Attachments).DisplayName))
+            DisabledBorderColor: =ColorPalette.Gray300
+            DisabledColor: =ColorPalette.TextBody
+            DisabledFill: =ColorPalette.White
+            DisplayMode: =DisplayMode.Disabled
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =40
+            PaddingLeft: =12
+            Size: =Typography.SizeBody
+            Width: =560
+            X: =24
+            Y: =250
+      - icoDocAppraisalAP:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextHelp
+            Height: =18
+            Icon: =Icon.Trash
+            Visible: |-
+              =And(Not(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Performance Appraisal")))),
+                 CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Performance Appraisal")).Attachments) > 0)
+            Width: =18
+            X: =603
+            Y: =261
+      - btnDocAppraisalAP:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =RGBA(0, 0, 0, 0)
+            DisplayMode: |-
+              =If(Or(locCycle.State.Value <> "Open",
+                     And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                 DisplayMode.Disabled, DisplayMode.Edit)
+            Fill: =RGBA(0, 0, 0, 0)
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =2
+            Height: =32
+            HoverColor: =RGBA(0, 0, 0, 0)
+            HoverFill: =ColorPalette.DangerLight
+            # Removes the ROW, attachment and all, then puts an empty slot back
+            # so the Attachments control still has something to bind to.
+            OnSelect: |-
+              =Remove(APPLICATION_DOCUMENTS, LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Performance Appraisal")));
+              Patch(APPLICATION_DOCUMENTS, Defaults(APPLICATION_DOCUMENTS),
+                {
+                  ApplicationID: {
+                    '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                    Id: locApp.ID,
+                    Value: locApp.ApplicantEmail
+                  },
+                  DocumentType: { Value: "Performance Appraisal" }
+                });
+              Set(gblFormDirty, true)
+            PressedColor: =RGBA(0, 0, 0, 0)
+            PressedFill: =ColorPalette.DangerLight
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeCaption
+            Text: =""
+            Tooltip: |-
+              ="Remove the performance appraisal"
+            Visible: |-
+              =And(Not(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Performance Appraisal")))),
+                 CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Performance Appraisal")).Attachments) > 0)
+            Width: =32
+            X: =596
+            Y: =254
+      # LABELS LAST — each straddles the top border of its box.
+      - lblDocResumeAP:
           Control: Label@2.5.1
           Properties:
             Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
             Font: =Typography.Family
-            Height: =60
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
             Size: =Typography.SizeCaption
-            Text: ="Interim, for something usable now — insert a Form control bound to APPLICATIONS in Studio, keep only its Attachments data card, and place it in this panel. That gives attach, download and remove against one shared collection, which is RQ009 minus the three-slot identity and the file-type and size guards."
-            Width: =Parent.Width - 48
-            X: =24
-            Y: =294
+            Text: ="Resume"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtDocResumeAP.X + 10
+            Y: =txtDocResumeAP.Y - Self.Height / 2
+      - lblDocStatementAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Statement of Interest"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtDocStatementAP.X + 10
+            Y: =txtDocStatementAP.Y - Self.Height / 2
+      - lblDocAppraisalAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Fill: =ColorPalette.White
+            Font: =Typography.Family
+            Height: =16
+            PaddingLeft: =4
+            PaddingRight: =4
+            Size: =Typography.SizeCaption
+            Text: ="Performance Appraisal"
+            Width: =Len(Self.Text) * 6 + 16
+            Wrap: =false
+            X: =txtDocAppraisalAP.X + 10
+            Y: =txtDocAppraisalAP.Y - Self.Height / 2
 
-# ===========================================================================
 # STEP 6 — Review and submit (RQ012, RQ013; FR-009, FR-010)
 # ===========================================================================
 - conStep6AP:
@@ -1480,10 +2565,25 @@
       X: =24
       Y: =212
     Children:
+      # HEADER BAND — same treatment as steps 1-5, completing the set.
+      - conS6HeaderAP:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =ColorPalette.Navy900
+            Height: =64
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =Parent.Width
+            X: =0
+            Y: =0
       - lblS6TitleAP:
           Control: Label@2.5.1
           Properties:
-            Color: =ColorPalette.TextHeading
+            Color: =ColorPalette.TextOnDark
             Font: =Typography.Family
             FontWeight: =Typography.WeightBold
             Height: =26
@@ -1491,230 +2591,364 @@
             Text: ="Review and submit"
             Width: =Parent.Width - 48
             X: =24
-            Y: =20
+            Y: =10
       # RQ107 / FR-009 — the whole application is validated here, at submission.
       - lblS6HintAP:
           Control: Label@2.5.1
           Properties:
-            Color: =ColorPalette.TextHelp
+            Color: =ColorPalette.Blue50
             Font: =Typography.Family
-            Height: =18
-            Size: =Typography.SizeCaption
-            Text: ="Everything is checked here, not step by step. Use the links to go back and fix anything missing."
+            Height: =20
+            Size: =Typography.SizeBody
+            Text: ="Review everything below before submitting."
             Width: =Parent.Width - 48
             X: =24
-            Y: =50
+            Y: =36
       # Each row: status + jump link. These are the ONLY direct jumps in the
       # wizard (RQ105a).
+      # Size 16 is a LITERAL, not a token. The palette stops at SizeHeading 14
+      # and its only larger value is SizeHero 20, reserved for the landing
+      # headline. If this size is worth keeping, it wants a token in
+      # build/theme/theme.md rather than five literals here.
+      #
+      # The five rows are centred as a block: 202px tall (5 rows of 34 at
+      # 42 apart), positioned against the area below the header — the same
+      # arithmetic the Submit button uses, so the two centre on the same line.
+      #
+      # No jump buttons. They were removed on 2026-08-01 — the stepper at the
+      # top of the screen is the only way back, which keeps one navigation
+      # model rather than two.
+      # TWO PANELS. Left: a status row per step, name at the left and its state
+      # right-aligned against the divider — a table someone scans down. Right:
+      # what submitting actually does, then the button.
+      #
+      # The right half used to be empty. Filling it with the consequences of an
+      # irreversible action is more use than whitespace, and it puts the
+      # explanation beside the button rather than after the click.
+      #
+      # Status is an ICON PLUS TEXT, never colour alone (WCAG 1.4.1).
+      - recS6DividerAP:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.Gray200
+            Height: =240
+            Width: =1
+            X: =Parent.Width * 0.56
+            Y: =92
+      - icoS6Check1AP:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: |-
+              =If(Or(IsBlank(Trim(txtNameAP.Text)),
+                    IsBlank(Trim(txtEmailAP.Text)),
+                    IsBlank(Trim(txtLocationAP.Text)),
+                    IsBlank(Trim(txtJobTitleAP.Text)),
+                    IsBlank(Trim(txtGradeAP.Text)),
+                    IsBlank(Trim(txtSeriesAP.Text)),
+                    IsBlank(dtpStartAP.SelectedDate),
+                    IsBlank(dtpScdAP.SelectedDate),
+                    IsBlank(Trim(txtSup1AP.Text)),
+                    IsBlank(Trim(txtSup2AP.Text))),
+                 ColorPalette.DangerText, ColorPalette.SuccessText)
+            Height: =20
+            Icon: |-
+              =If(Or(IsBlank(Trim(txtNameAP.Text)),
+                    IsBlank(Trim(txtEmailAP.Text)),
+                    IsBlank(Trim(txtLocationAP.Text)),
+                    IsBlank(Trim(txtJobTitleAP.Text)),
+                    IsBlank(Trim(txtGradeAP.Text)),
+                    IsBlank(Trim(txtSeriesAP.Text)),
+                    IsBlank(dtpStartAP.SelectedDate),
+                    IsBlank(dtpScdAP.SelectedDate),
+                    IsBlank(Trim(txtSup1AP.Text)),
+                    IsBlank(Trim(txtSup2AP.Text))),
+                 Icon.Warning, Icon.Check)
+            Width: =20
+            X: =32
+            Y: =105
       - lblS6Check1AP:
           Control: Label@2.5.1
           Properties:
-            Color: |-
-              =If(IsBlank(Trim(txtNameAP.Text)), ColorPalette.DangerText, ColorPalette.SuccessText)
+            Color: =ColorPalette.TextHeading
             Font: =Typography.Family
-            Height: =22
-            Size: =Typography.SizeBody
-            Text: |-
-              =If(IsBlank(Trim(txtNameAP.Text)),
-                 "Incomplete — your name is required",
-                 "Complete — personnel information")
-            Width: =Parent.Width - 200
-            X: =24
-            Y: =88
-      - btnS6Jump1AP:
-          Control: Classic/Button@2.2.0
+            Height: =30
+            Size: =16
+            Text: ="1. Personnel"
+            Width: =300
+            X: =64
+            Y: =100
+      - lblS6Status1AP:
+          Control: Label@2.5.1
           Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderStyle: =BorderStyle.Solid
-            BorderThickness: =1
-            Color: =ColorPalette.TextBody
-            Fill: =ColorPalette.White
-            FocusedBorderThickness: =1
+            Align: =Align.Right
+            Color: |-
+              =If(Or(IsBlank(Trim(txtNameAP.Text)),
+                    IsBlank(Trim(txtEmailAP.Text)),
+                    IsBlank(Trim(txtLocationAP.Text)),
+                    IsBlank(Trim(txtJobTitleAP.Text)),
+                    IsBlank(Trim(txtGradeAP.Text)),
+                    IsBlank(Trim(txtSeriesAP.Text)),
+                    IsBlank(dtpStartAP.SelectedDate),
+                    IsBlank(dtpScdAP.SelectedDate),
+                    IsBlank(Trim(txtSup1AP.Text)),
+                    IsBlank(Trim(txtSup2AP.Text))),
+                 ColorPalette.DangerText, ColorPalette.SuccessText)
             Font: =Typography.Family
-            Height: =26
-            HoverFill: =ColorPalette.Blue50
-            OnSelect: |-
-              =UpdateContext({ locStep: 1 })
-            PressedFill: =ColorPalette.White
-            RadiusBottomLeft: =6
-            RadiusBottomRight: =6
-            RadiusTopLeft: =6
-            RadiusTopRight: =6
-            Size: =Typography.SizeCaption
-            Text: ="Go to step 1"
-            Width: =120
-            X: =Parent.Width - 144
-            Y: =86
+            FontWeight: =Typography.WeightMedium
+            Height: =30
+            Size: =Typography.SizeHeading
+            Text: |-
+              =If(Or(IsBlank(Trim(txtNameAP.Text)),
+                    IsBlank(Trim(txtEmailAP.Text)),
+                    IsBlank(Trim(txtLocationAP.Text)),
+                    IsBlank(Trim(txtJobTitleAP.Text)),
+                    IsBlank(Trim(txtGradeAP.Text)),
+                    IsBlank(Trim(txtSeriesAP.Text)),
+                    IsBlank(dtpStartAP.SelectedDate),
+                    IsBlank(dtpScdAP.SelectedDate),
+                    IsBlank(Trim(txtSup1AP.Text)),
+                    IsBlank(Trim(txtSup2AP.Text))),
+                 "Every field required", "Complete")
+            Width: =280
+            X: =Parent.Width * 0.56 - 300
+            Y: =100
+      - icoS6Check2AP:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: |-
+              =If(Or(IsBlank(drpProgram1AP.Selected.Value),
+                    And(drpOption1AP.Visible, IsBlank(drpOption1AP.Selected.Value)),
+                    And(Not(IsBlank(drpProgram2AP.Selected.Value)),
+                        drpOption2AP.Visible, IsBlank(drpOption2AP.Selected.Value)),
+                    And(Not(IsBlank(drpProgram3AP.Selected.Value)),
+                        drpOption3AP.Visible, IsBlank(drpOption3AP.Selected.Value))),
+                 ColorPalette.DangerText, ColorPalette.SuccessText)
+            Height: =20
+            Icon: |-
+              =If(Or(IsBlank(drpProgram1AP.Selected.Value),
+                    And(drpOption1AP.Visible, IsBlank(drpOption1AP.Selected.Value)),
+                    And(Not(IsBlank(drpProgram2AP.Selected.Value)),
+                        drpOption2AP.Visible, IsBlank(drpOption2AP.Selected.Value)),
+                    And(Not(IsBlank(drpProgram3AP.Selected.Value)),
+                        drpOption3AP.Visible, IsBlank(drpOption3AP.Selected.Value))),
+                 Icon.Warning, Icon.Check)
+            Width: =20
+            X: =32
+            Y: =149
       - lblS6Check2AP:
           Control: Label@2.5.1
           Properties:
-            Color: |-
-              =If(
-                Or(IsBlank(drpProgram1AP.Selected.ID),
-                   And(drpOption1AP.Visible, IsBlank(drpOption1AP.Selected.ID))),
-                ColorPalette.DangerText, ColorPalette.SuccessText)
+            Color: =ColorPalette.TextHeading
             Font: =Typography.Family
-            Height: =22
-            Size: =Typography.SizeBody
-            Text: |-
-              =If(
-                IsBlank(drpProgram1AP.Selected.ID),
-                "Incomplete — at least one program choice is required",
-                If(And(drpOption1AP.Visible, IsBlank(drpOption1AP.Selected.ID)),
-                   "Incomplete — choose an option for your first-choice program",
-                   "Complete — program choices"))
-            Width: =Parent.Width - 200
-            X: =24
-            Y: =120
-      - btnS6Jump2AP:
-          Control: Classic/Button@2.2.0
+            Height: =30
+            Size: =16
+            Text: ="2. Program choices"
+            Width: =300
+            X: =64
+            Y: =144
+      - lblS6Status2AP:
+          Control: Label@2.5.1
           Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderStyle: =BorderStyle.Solid
-            BorderThickness: =1
-            Color: =ColorPalette.TextBody
-            Fill: =ColorPalette.White
-            FocusedBorderThickness: =1
+            Align: =Align.Right
+            Color: |-
+              =If(Or(IsBlank(drpProgram1AP.Selected.Value),
+                    And(drpOption1AP.Visible, IsBlank(drpOption1AP.Selected.Value)),
+                    And(Not(IsBlank(drpProgram2AP.Selected.Value)),
+                        drpOption2AP.Visible, IsBlank(drpOption2AP.Selected.Value)),
+                    And(Not(IsBlank(drpProgram3AP.Selected.Value)),
+                        drpOption3AP.Visible, IsBlank(drpOption3AP.Selected.Value))),
+                 ColorPalette.DangerText, ColorPalette.SuccessText)
             Font: =Typography.Family
-            Height: =26
-            HoverFill: =ColorPalette.Blue50
-            OnSelect: |-
-              =UpdateContext({ locStep: 2 })
-            PressedFill: =ColorPalette.White
-            RadiusBottomLeft: =6
-            RadiusBottomRight: =6
-            RadiusTopLeft: =6
-            RadiusTopRight: =6
-            Size: =Typography.SizeCaption
-            Text: ="Go to step 2"
-            Width: =120
-            X: =Parent.Width - 144
-            Y: =118
+            FontWeight: =Typography.WeightMedium
+            Height: =30
+            Size: =Typography.SizeHeading
+            Text: |-
+              =If(Or(IsBlank(drpProgram1AP.Selected.Value),
+                    And(drpOption1AP.Visible, IsBlank(drpOption1AP.Selected.Value)),
+                    And(Not(IsBlank(drpProgram2AP.Selected.Value)),
+                        drpOption2AP.Visible, IsBlank(drpOption2AP.Selected.Value)),
+                    And(Not(IsBlank(drpProgram3AP.Selected.Value)),
+                        drpOption3AP.Visible, IsBlank(drpOption3AP.Selected.Value))),
+                 "One choice required", "Complete")
+            Width: =280
+            X: =Parent.Width * 0.56 - 300
+            Y: =144
+      - icoS6Check3AP:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: |-
+              =If(CountRows(Filter(COMPETENCY_TYPES,
+                    State.Value = "Active",
+                    Not(ID in colAppComps.TypeId))) > 0,
+                 ColorPalette.DangerText, ColorPalette.SuccessText)
+            Height: =20
+            Icon: |-
+              =If(CountRows(Filter(COMPETENCY_TYPES,
+                    State.Value = "Active",
+                    Not(ID in colAppComps.TypeId))) > 0,
+                 Icon.Warning, Icon.Check)
+            Width: =20
+            X: =32
+            Y: =193
       - lblS6Check3AP:
           Control: Label@2.5.1
           Properties:
-            Color: =ColorPalette.WarningText
+            Color: =ColorPalette.TextHeading
             Font: =Typography.Family
-            Height: =22
-            Size: =Typography.SizeBody
-            Text: ="Not checked — competency lists are pending Appendix B"
-            Width: =Parent.Width - 200
-            X: =24
-            Y: =152
-      - btnS6Jump3AP:
-          Control: Classic/Button@2.2.0
+            Height: =30
+            Size: =16
+            Text: ="3. Competencies"
+            Width: =300
+            X: =64
+            Y: =188
+      - lblS6Status3AP:
+          Control: Label@2.5.1
           Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderStyle: =BorderStyle.Solid
-            BorderThickness: =1
-            Color: =ColorPalette.TextBody
-            Fill: =ColorPalette.White
-            FocusedBorderThickness: =1
+            Align: =Align.Right
+            Color: |-
+              =If(CountRows(Filter(COMPETENCY_TYPES,
+                    State.Value = "Active",
+                    Not(ID in colAppComps.TypeId))) > 0,
+                 ColorPalette.DangerText, ColorPalette.SuccessText)
             Font: =Typography.Family
-            Height: =26
-            HoverFill: =ColorPalette.Blue50
-            OnSelect: |-
-              =UpdateContext({ locStep: 3 })
-            PressedFill: =ColorPalette.White
-            RadiusBottomLeft: =6
-            RadiusBottomRight: =6
-            RadiusTopLeft: =6
-            RadiusTopRight: =6
-            Size: =Typography.SizeCaption
-            Text: ="Go to step 3"
-            Width: =120
-            X: =Parent.Width - 144
-            Y: =150
+            FontWeight: =Typography.WeightMedium
+            Height: =30
+            Size: =Typography.SizeHeading
+            Text: |-
+              =If(CountRows(Filter(COMPETENCY_TYPES,
+                    State.Value = "Active",
+                    Not(ID in colAppComps.TypeId))) > 0,
+                 "One of each type required", "Complete")
+            Width: =280
+            X: =Parent.Width * 0.56 - 300
+            Y: =188
+      - icoS6Check4AP:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: |-
+              =If(Or(IsBlank(drpIdpAP.Selected.Value),
+                    IsBlank(Trim(txtRatingAP.Text)),
+                    IsBlank(drpSessionAP.Selected.Value),
+                    And(dtpSessionAP.Visible, IsBlank(dtpSessionAP.SelectedDate))),
+                 ColorPalette.DangerText, ColorPalette.SuccessText)
+            Height: =20
+            Icon: |-
+              =If(Or(IsBlank(drpIdpAP.Selected.Value),
+                    IsBlank(Trim(txtRatingAP.Text)),
+                    IsBlank(drpSessionAP.Selected.Value),
+                    And(dtpSessionAP.Visible, IsBlank(dtpSessionAP.SelectedDate))),
+                 Icon.Warning, Icon.Check)
+            Width: =20
+            X: =32
+            Y: =237
       - lblS6Check4AP:
           Control: Label@2.5.1
           Properties:
-            Color: |-
-              =If(IsBlank(Trim(txtRatingAP.Text)), ColorPalette.DangerText, ColorPalette.SuccessText)
+            Color: =ColorPalette.TextHeading
             Font: =Typography.Family
-            Height: =22
-            Size: =Typography.SizeBody
-            Text: |-
-              =If(IsBlank(Trim(txtRatingAP.Text)),
-                 "Incomplete — latest performance rating is required",
-                 "Complete — eligibility and background")
-            Width: =Parent.Width - 200
-            X: =24
-            Y: =184
-      - btnS6Jump4AP:
-          Control: Classic/Button@2.2.0
+            Height: =30
+            Size: =16
+            Text: ="4. Eligibility"
+            Width: =300
+            X: =64
+            Y: =232
+      - lblS6Status4AP:
+          Control: Label@2.5.1
           Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderStyle: =BorderStyle.Solid
-            BorderThickness: =1
-            Color: =ColorPalette.TextBody
-            Fill: =ColorPalette.White
-            FocusedBorderThickness: =1
+            Align: =Align.Right
+            Color: |-
+              =If(Or(IsBlank(drpIdpAP.Selected.Value),
+                    IsBlank(Trim(txtRatingAP.Text)),
+                    IsBlank(drpSessionAP.Selected.Value),
+                    And(dtpSessionAP.Visible, IsBlank(dtpSessionAP.SelectedDate))),
+                 ColorPalette.DangerText, ColorPalette.SuccessText)
             Font: =Typography.Family
-            Height: =26
-            HoverFill: =ColorPalette.Blue50
-            OnSelect: |-
-              =UpdateContext({ locStep: 4 })
-            PressedFill: =ColorPalette.White
-            RadiusBottomLeft: =6
-            RadiusBottomRight: =6
-            RadiusTopLeft: =6
-            RadiusTopRight: =6
-            Size: =Typography.SizeCaption
-            Text: ="Go to step 4"
-            Width: =120
-            X: =Parent.Width - 144
-            Y: =182
-      # Not a tick: documents genuinely cannot be validated yet (OI-APP-1).
-      # A green check here would be a lie.
+            FontWeight: =Typography.WeightMedium
+            Height: =30
+            Size: =Typography.SizeHeading
+            Text: |-
+              =If(Or(IsBlank(drpIdpAP.Selected.Value),
+                    IsBlank(Trim(txtRatingAP.Text)),
+                    IsBlank(drpSessionAP.Selected.Value),
+                    And(dtpSessionAP.Visible, IsBlank(dtpSessionAP.SelectedDate))),
+                 "Every field required", "Complete")
+            Width: =280
+            X: =Parent.Width * 0.56 - 300
+            Y: =232
+      - icoS6Check5AP:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextHelp
+            Height: =20
+            Icon: =Icon.Warning
+            Width: =20
+            X: =32
+            Y: =281
       - lblS6Check5AP:
           Control: Label@2.5.1
           Properties:
-            Color: =ColorPalette.WarningText
+            Color: =ColorPalette.TextHeading
             Font: =Typography.Family
-            Height: =22
-            Size: =Typography.SizeBody
-            Text: ="Not checked — supporting documents cannot be validated yet (OI-APP-1)"
-            Width: =Parent.Width - 200
-            X: =24
-            Y: =216
-      - btnS6Jump5AP:
-          Control: Classic/Button@2.2.0
-          Properties:
-            BorderColor: =ColorPalette.Gray300
-            BorderStyle: =BorderStyle.Solid
-            BorderThickness: =1
-            Color: =ColorPalette.TextBody
-            Fill: =ColorPalette.White
-            FocusedBorderThickness: =1
-            Font: =Typography.Family
-            Height: =26
-            HoverFill: =ColorPalette.Blue50
-            OnSelect: |-
-              =UpdateContext({ locStep: 5 })
-            PressedFill: =ColorPalette.White
-            RadiusBottomLeft: =6
-            RadiusBottomRight: =6
-            RadiusTopLeft: =6
-            RadiusTopRight: =6
-            Size: =Typography.SizeCaption
-            Text: ="Go to step 5"
-            Width: =120
-            X: =Parent.Width - 144
-            Y: =214
-      - lblS6ConfirmAP:
+            Height: =30
+            Size: =16
+            Text: ="5. Documents"
+            Width: =300
+            X: =64
+            Y: =276
+      - lblS6Status5AP:
           Control: Label@2.5.1
           Properties:
-            Color: =ColorPalette.SuccessText
+            Align: =Align.Right
+            Color: =ColorPalette.TextHelp
             Font: =Typography.Family
             FontWeight: =Typography.WeightMedium
-            Height: =40
-            Size: =Typography.SizeBody
-            Text: ="Your application has been submitted and routed to your first-line supervisor. You will be notified as it progresses."
-            Visible: |-
-              =And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")
-            Width: =Parent.Width - 48
-            X: =24
-            Y: =260
+            Height: =30
+            Size: =Typography.SizeHeading
+            Text: ="Not checked yet"
+            Width: =280
+            X: =Parent.Width * 0.56 - 300
+            Y: =276
+
+      # ---- right panel: what submitting does ----
+      - lblS6WhenAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =30
+            Size: =16
+            Text: ="When you submit"
+            Width: =Parent.Width - Parent.Width * 0.60 - 24
+            X: =Parent.Width * 0.60
+            Y: =100
+      - lblS6WhatAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =132
+            Size: =Typography.SizeHeading
+            Text: |-
+              ="•  Your application goes to your first-line supervisor.
+              •  You can still edit it until the committee begins its review.
+              •  You will be notified as it moves through review."
+            VerticalAlign: =VerticalAlign.Top
+            Width: =Parent.Width - Parent.Width * 0.60 - 24
+            X: =Parent.Width * 0.60
+            Y: =138
+      # lblS6ConfirmAP was here — a post-submit banner reading "Your application
+      # has been submitted and routed to your first-line supervisor." Removed
+      # 2026-08-02: Submit now navigates to the Application Status Screen, which
+      # says the same thing with a timeline behind it. The banner could only
+      # ever be seen by someone who came BACK to a submitted application, and
+      # lblReadOnlyAP already tells that person what they need to know.
       # FR-009 — Submit is the ONLY gated action in the wizard.
       - btnSubmitAP:
           Control: Classic/Button@2.2.0
@@ -1723,14 +2957,29 @@
             Color: =ColorPalette.TextOnDark
             DisplayMode: |-
               =If(
-                Or(IsBlank(Trim(txtNameAP.Text)),
-                   IsBlank(drpProgram1AP.Selected.ID),
-                   And(drpOption1AP.Visible, IsBlank(drpOption1AP.Selected.ID)),
-                   And(Not(IsBlank(drpProgram2AP.Selected.ID)),
-                       drpOption2AP.Visible, IsBlank(drpOption2AP.Selected.ID)),
-                   And(Not(IsBlank(drpProgram3AP.Selected.ID)),
-                       drpOption3AP.Visible, IsBlank(drpOption3AP.Selected.ID)),
-                   IsBlank(Trim(txtRatingAP.Text)),
+                Or(Or(IsBlank(Trim(txtNameAP.Text)),
+                      IsBlank(Trim(txtEmailAP.Text)),
+                      IsBlank(Trim(txtLocationAP.Text)),
+                      IsBlank(Trim(txtJobTitleAP.Text)),
+                      IsBlank(Trim(txtGradeAP.Text)),
+                      IsBlank(Trim(txtSeriesAP.Text)),
+                      IsBlank(dtpStartAP.SelectedDate),
+                      IsBlank(dtpScdAP.SelectedDate),
+                      IsBlank(Trim(txtSup1AP.Text)),
+                      IsBlank(Trim(txtSup2AP.Text))),
+                   Or(IsBlank(drpProgram1AP.Selected.Value),
+                      And(drpOption1AP.Visible, IsBlank(drpOption1AP.Selected.Value)),
+                      And(Not(IsBlank(drpProgram2AP.Selected.Value)),
+                          drpOption2AP.Visible, IsBlank(drpOption2AP.Selected.Value)),
+                      And(Not(IsBlank(drpProgram3AP.Selected.Value)),
+                          drpOption3AP.Visible, IsBlank(drpOption3AP.Selected.Value))),
+                   CountRows(Filter(COMPETENCY_TYPES,
+                      State.Value = "Active",
+                      Not(ID in colAppComps.TypeId))) > 0,
+                   Or(IsBlank(drpIdpAP.Selected.Value),
+                      IsBlank(Trim(txtRatingAP.Text)),
+                      IsBlank(drpSessionAP.Selected.Value),
+                      And(dtpSessionAP.Visible, IsBlank(dtpSessionAP.SelectedDate))),
                    locCycle.State.Value <> "Open",
                    And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
                 DisplayMode.Disabled, DisplayMode.Edit)
@@ -1749,7 +2998,7 @@
                       Id: locCycle.ID,
                       Value: locCycle.CycleName
                     },
-                    ApplicantEmail: User().Email,
+                    ApplicantEmail: Trim(txtEmailAP.Text),
                     ApplicantName: txtNameAP.Text,
                     Location: txtLocationAP.Text,
                     Grade: txtGradeAP.Text,
@@ -1761,9 +3010,13 @@
                     InfoSessionDate: dtpSessionAP.SelectedDate,
                     NCUAStartDate: dtpStartAP.SelectedDate,
                     ServiceComputationDate: dtpScdAP.SelectedDate,
+                    FirstLineSupervisorEmail: txtSup1AP.Text,
+                    SecondLineSupervisorEmail: txtSup2AP.Text,
                     ApplicationStatus: { Value: "Submitted" },
                     ReviewStage: { Value: "Pending First-Line" },
-                    PlacementOutcome: { Value: "Decision Pending" }
+                    PlacementOutcome: { Value: "Decision Pending" },
+                    SubmittedDate:
+                      If(IsBlank(locApp.SubmittedDate), Today(), locApp.SubmittedDate)
                   })
               });
               Remove(APPLICATION_PROGRAM_CHOICES,
@@ -1777,12 +3030,24 @@
               ForAll(
                 Filter(
                   Table(
-                    { PrgId: drpProgram1AP.Selected.ID, PrgName: drpProgram1AP.Selected.ProgramName,
-                      OptId: drpOption1AP.Selected.ID, OptName: drpOption1AP.Selected.OptionName, Rnk: 1 },
-                    { PrgId: drpProgram2AP.Selected.ID, PrgName: drpProgram2AP.Selected.ProgramName,
-                      OptId: drpOption2AP.Selected.ID, OptName: drpOption2AP.Selected.OptionName, Rnk: 2 },
-                    { PrgId: drpProgram3AP.Selected.ID, PrgName: drpProgram3AP.Selected.ProgramName,
-                      OptId: drpOption3AP.Selected.ID, OptName: drpOption3AP.Selected.OptionName, Rnk: 3 }
+                    { PrgId: LookUp(PROGRAMS, ProgramName = drpProgram1AP.Selected.Value).ID,
+                      PrgName: drpProgram1AP.Selected.Value,
+                      OptId: LookUp(PROGRAM_OPTIONS,
+                        And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram1AP.Selected.Value).ID,
+                            OptionName = drpOption1AP.Selected.Value)).ID,
+                      OptName: drpOption1AP.Selected.Value, Rnk: 1 },
+                    { PrgId: LookUp(PROGRAMS, ProgramName = drpProgram2AP.Selected.Value).ID,
+                      PrgName: drpProgram2AP.Selected.Value,
+                      OptId: LookUp(PROGRAM_OPTIONS,
+                        And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram2AP.Selected.Value).ID,
+                            OptionName = drpOption2AP.Selected.Value)).ID,
+                      OptName: drpOption2AP.Selected.Value, Rnk: 2 },
+                    { PrgId: LookUp(PROGRAMS, ProgramName = drpProgram3AP.Selected.Value).ID,
+                      PrgName: drpProgram3AP.Selected.Value,
+                      OptId: LookUp(PROGRAM_OPTIONS,
+                        And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram3AP.Selected.Value).ID,
+                            OptionName = drpOption3AP.Selected.Value)).ID,
+                      OptName: drpOption3AP.Selected.Value, Rnk: 3 }
                   ),
                   Not(IsBlank(PrgId))
                 ) As ch,
@@ -1809,7 +3074,65 @@
                     Rank: ch.Rnk
                   })
               );
-              Notify("Application submitted.", NotificationType.Success)
+                    // Competencies. ADD FIRST, THEN REMOVE — a failed write then costs the
+                    // additions rather than the whole set, which is what a delete-and-
+                    // rewrite cost on the DTD panel when a required Title column made every
+                    // Patch fail. colAppCompsWas is the stored set snapshotted BEFORE any
+                    // write, so "already there" is judged against the server.
+                    ClearCollect(colAppCompsWas,
+                      ForAll(
+                        Filter(APPLICATION_COMPETENCIES,
+                          ApplicationID.Id = locApp.ID) As sv,
+                        { CompId: sv.CompetencyID.Id }));
+                    ForAll(
+                      Filter(colAppComps, Not(CompId in colAppCompsWas.CompId)) As cc,
+                      Patch(APPLICATION_COMPETENCIES, Defaults(APPLICATION_COMPETENCIES),
+                        {
+                          ApplicationID: {
+                            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                            Id: locApp.ID,
+                            Value: locApp.ApplicantEmail
+                          },
+                          CompetencyID: {
+                            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                            Id: cc.CompId,
+                            Value: cc.CompName
+                          }
+                        }));
+                    Remove(APPLICATION_COMPETENCIES,
+                      Filter(APPLICATION_COMPETENCIES,
+                        ApplicationID.Id = locApp.ID,
+                        Not(CompetencyID.Id in colAppComps.CompId)));
+                    // Three document slots exist for every draft. An attachment needs a row
+                    // to attach to, so the rows must be created before the Attachments
+                    // controls have anything to bind to — including on a brand-new
+                    // application, where locApp only exists after the Patch above.
+                    //
+                    // Guarded per type rather than delete-and-rewrite: these rows CARRY THE
+                    // FILES. Removing one to recreate it would destroy the attachment.
+                    ForAll(
+                      Filter(
+                        Table(
+                          { DocType: "Resume" },
+                          { DocType: "Statement of Interest" },
+                          { DocType: "Performance Appraisal" }
+                        ),
+                        IsBlank(LookUp(APPLICATION_DOCUMENTS,
+                          And(ApplicationID.Id = locApp.ID, DocumentType.Value = DocType)))
+                      ) As dt,
+                      Patch(APPLICATION_DOCUMENTS, Defaults(APPLICATION_DOCUMENTS),
+                        {
+                          ApplicationID: {
+                            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                            Id: locApp.ID,
+                            Value: locApp.ApplicantEmail
+                          },
+                          DocumentType: { Value: dt.DocType }
+                        })
+                    );
+              Set(gblFormDirty, false);
+              Notify("Application submitted.", NotificationType.Success);
+              Navigate('Application Status Screen')
             PressedFill: =ColorPalette.Blue700
             RadiusBottomLeft: =8
             RadiusBottomRight: =8
@@ -1818,23 +3141,11 @@
             Size: =Typography.SizeHeading
             Text: ="Submit application"
             Width: =240
-            X: =24
-            Y: =318
-      - lblS6BlockedAP:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextHelp
-            Font: =Typography.Family
-            Height: =40
-            Size: =Typography.SizeCaption
-            Text: ="Submit becomes available once the items marked incomplete above are filled in."
-            Visible: |-
-              =Or(IsBlank(Trim(txtNameAP.Text)),
-                  IsBlank(drpOption1AP.Selected.ID),
-                  IsBlank(Trim(txtRatingAP.Text)))
-            Width: =360
-            X: =288
-            Y: =324
+            # Four equal columns; 1 and 4 empty, 2 holds the checks, 3 holds
+            # this. Centred in column 3 both ways — the arithmetic is the
+            # column's left edge plus half its leftover width.
+            X: =Parent.Width * 0.60
+            Y: =288
 
 # ===========================================================================
 # WIZARD CONTROLS — Back / Next / Save Draft
@@ -1852,9 +3163,11 @@
       FocusedBorderThickness: =1
       Font: =Typography.Family
       Height: =40
+      HoverColor: =Self.Color
       HoverFill: =ColorPalette.Gray50
       OnSelect: |-
         =UpdateContext({ locStep: Max(1, locStep - 1) })
+      PressedColor: =Self.Color
       PressedFill: =ColorPalette.White
       RadiusBottomLeft: =8
       RadiusBottomRight: =8
@@ -1877,9 +3190,11 @@
       Fill: =ColorPalette.Blue600
       Font: =Typography.Family
       Height: =40
+      HoverColor: =Self.Color
       HoverFill: =ColorPalette.Blue700
       OnSelect: |-
         =UpdateContext({ locStep: Min(6, locStep + 1) })
+      PressedColor: =Self.Color
       PressedFill: =ColorPalette.Blue700
       RadiusBottomLeft: =8
       RadiusBottomRight: =8
@@ -1896,19 +3211,35 @@
 - btnSaveDraftAP:
     Control: Classic/Button@2.2.0
     Properties:
-      BorderColor: =ColorPalette.Gray300
+      # ON THE NAVY BAND, and NEVER DISABLED. The label carries the state
+      # instead: a solid blue "Save draft" when there is something to save, a
+      # quiet outlined "Saved ✓" when there is not. Fill and text colour carry
+      # the difference; the weight is bold throughout.
+      #
+      # Disabling it here was the earlier mistake — a greyed control on Navy900
+      # measures 1.78:1 and is simply invisible, and this button is clean most
+      # of the time. Clicking when clean is a harmless no-op.
+      #
+      # It is HIDDEN, not greyed, when the form is genuinely read-only. A
+      # disabled state on this surface cannot be made to read.
+      BorderColor: |-
+        =If(Or(gblFormDirty, IsBlank(locApp)), ColorPalette.Blue600, ColorPalette.Blue50)
       BorderStyle: =BorderStyle.Solid
       BorderThickness: =1
-      Color: =ColorPalette.TextBody
-      DisplayMode: |-
-        =If(Or(locCycle.State.Value <> "Open",
-               And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
-           DisplayMode.Disabled, DisplayMode.Edit)
-      Fill: =ColorPalette.White
+      Color: |-
+        =If(Or(gblFormDirty, IsBlank(locApp)), ColorPalette.TextOnDark, ColorPalette.Blue50)
+      Fill: |-
+        =If(Or(gblFormDirty, IsBlank(locApp)), ColorPalette.Blue600, RGBA(0, 0, 0, 0))
+      FocusedBorderColor: =ColorPalette.FocusOnDark
       FocusedBorderThickness: =1
       Font: =Typography.Family
+      # Bold in both states. Written flat rather than as an If() with two
+      # identical branches — split it again if the states ever diverge.
+      FontWeight: =Typography.WeightBold
       Height: =40
-      HoverFill: =ColorPalette.Gray50
+      HoverColor: =Self.Color
+      HoverFill: |-
+        =If(Or(gblFormDirty, IsBlank(locApp)), ColorPalette.Blue700, ColorPalette.Navy700)
       OnSelect: |-
         =UpdateContext({
           locApp: Patch(APPLICATIONS,
@@ -1919,7 +3250,7 @@
                 Id: locCycle.ID,
                 Value: locCycle.CycleName
               },
-              ApplicantEmail: User().Email,
+              ApplicantEmail: Trim(txtEmailAP.Text),
               ApplicantName: txtNameAP.Text,
               Location: txtLocationAP.Text,
               Grade: txtGradeAP.Text,
@@ -1931,18 +3262,293 @@
               InfoSessionDate: dtpSessionAP.SelectedDate,
               NCUAStartDate: dtpStartAP.SelectedDate,
               ServiceComputationDate: dtpScdAP.SelectedDate,
+              FirstLineSupervisorEmail: txtSup1AP.Text,
+              SecondLineSupervisorEmail: txtSup2AP.Text,
               ApplicationStatus: { Value: "Draft" },
               PlacementOutcome: { Value: "Decision Pending" }
             })
         });
+        Set(gblFormDirty, false);
+        // locDropRank2/3 are deliberately NOT cleared here. Clearing a flag
+        // un-suppresses that rank's Default, the Default still points at the
+        // saved row this handler has not deleted yet, and Power Apps updates a
+        // control when its Default changes — so the dropdown repopulates and
+        // the ForAll below writes the removed choice straight back.
+        //
+        // They are cleared in OnVisible instead, where the record is being
+        // reloaded anyway and no row is mid-flight. Leaving them set costs
+        // nothing: once the row is gone the Default is blank regardless, and a
+        // user's own selection is unaffected by a suppressed Default.
+
+        // Save draft persists the program choices too. It used to patch
+        // APPLICATIONS alone, so an applicant could pick three programs, save,
+        // come back and find nothing — the choices only ever reached SharePoint
+        // on Submit.
+        //
+        // Safe to delete-and-rewrite here ONLY because the six dropdowns now
+        // restore from the saved rows on reopen. Without those Defaults this
+        // block would wipe the choices it just loaded.
+        Remove(APPLICATION_PROGRAM_CHOICES,
+          Filter(APPLICATION_PROGRAM_CHOICES, ApplicationID.Id = locApp.ID));
+        ForAll(
+          Filter(
+            Table(
+            { PrgId: LookUp(PROGRAMS, ProgramName = drpProgram1AP.Selected.Value).ID,
+              PrgName: drpProgram1AP.Selected.Value,
+              OptId: LookUp(PROGRAM_OPTIONS,
+                And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram1AP.Selected.Value).ID,
+                    OptionName = drpOption1AP.Selected.Value)).ID,
+              OptName: drpOption1AP.Selected.Value, Rnk: 1 },
+            { PrgId: LookUp(PROGRAMS, ProgramName = drpProgram2AP.Selected.Value).ID,
+              PrgName: drpProgram2AP.Selected.Value,
+              OptId: LookUp(PROGRAM_OPTIONS,
+                And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram2AP.Selected.Value).ID,
+                    OptionName = drpOption2AP.Selected.Value)).ID,
+              OptName: drpOption2AP.Selected.Value, Rnk: 2 },
+            { PrgId: LookUp(PROGRAMS, ProgramName = drpProgram3AP.Selected.Value).ID,
+              PrgName: drpProgram3AP.Selected.Value,
+              OptId: LookUp(PROGRAM_OPTIONS,
+                And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram3AP.Selected.Value).ID,
+                    OptionName = drpOption3AP.Selected.Value)).ID,
+              OptName: drpOption3AP.Selected.Value, Rnk: 3 }
+            ),
+            Not(IsBlank(PrgId))
+          ) As ch,
+          Patch(APPLICATION_PROGRAM_CHOICES, Defaults(APPLICATION_PROGRAM_CHOICES),
+            {
+              ApplicationID: {
+                '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                Id: locApp.ID,
+                Value: locApp.ApplicantEmail
+              },
+              ProgramID: {
+                '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                Id: ch.PrgId,
+                Value: ch.PrgName
+              },
+              ProgramOptionID:
+                If(Not(IsBlank(ch.OptId)),
+                  {
+                    '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                    Id: ch.OptId,
+                    Value: ch.OptName
+                  },
+                  Blank()),
+              Rank: ch.Rnk
+            })
+        );
+
+        // Competencies. ADD FIRST, THEN REMOVE — a failed write then costs the
+        // additions rather than the whole set, which is what a delete-and-
+        // rewrite cost on the DTD panel when a required Title column made every
+        // Patch fail. colAppCompsWas is the stored set snapshotted BEFORE any
+        // write, so "already there" is judged against the server.
+        ClearCollect(colAppCompsWas,
+          ForAll(
+            Filter(APPLICATION_COMPETENCIES,
+              ApplicationID.Id = locApp.ID) As sv,
+            { CompId: sv.CompetencyID.Id }));
+        ForAll(
+          Filter(colAppComps, Not(CompId in colAppCompsWas.CompId)) As cc,
+          Patch(APPLICATION_COMPETENCIES, Defaults(APPLICATION_COMPETENCIES),
+            {
+              ApplicationID: {
+                '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                Id: locApp.ID,
+                Value: locApp.ApplicantEmail
+              },
+              CompetencyID: {
+                '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                Id: cc.CompId,
+                Value: cc.CompName
+              }
+            }));
+        Remove(APPLICATION_COMPETENCIES,
+          Filter(APPLICATION_COMPETENCIES,
+            ApplicationID.Id = locApp.ID,
+            Not(CompetencyID.Id in colAppComps.CompId)));
+
+        // Three document slots exist for every draft. An attachment needs a row
+        // to attach to, so the rows must be created before the Attachments
+        // controls have anything to bind to — including on a brand-new
+        // application, where locApp only exists after the Patch above.
+        //
+        // Guarded per type rather than delete-and-rewrite: these rows CARRY THE
+        // FILES. Removing one to recreate it would destroy the attachment.
+        ForAll(
+          Filter(
+            Table(
+              { DocType: "Resume" },
+              { DocType: "Statement of Interest" },
+              { DocType: "Performance Appraisal" }
+            ),
+            IsBlank(LookUp(APPLICATION_DOCUMENTS,
+              And(ApplicationID.Id = locApp.ID, DocumentType.Value = DocType)))
+          ) As dt,
+          Patch(APPLICATION_DOCUMENTS, Defaults(APPLICATION_DOCUMENTS),
+            {
+              ApplicationID: {
+                '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+                Id: locApp.ID,
+                Value: locApp.ApplicantEmail
+              },
+              DocumentType: { Value: dt.DocType }
+            })
+        );
         Notify("Draft saved. You can close this and come back to it.", NotificationType.Success)
-      PressedFill: =ColorPalette.White
+      PressedColor: =Self.Color
+      PressedFill: |-
+        =If(Or(gblFormDirty, IsBlank(locApp)), ColorPalette.Blue700, ColorPalette.Navy700)
       RadiusBottomLeft: =8
       RadiusBottomRight: =8
       RadiusTopLeft: =8
       RadiusTopRight: =8
       Size: =Typography.SizeBody
-      Text: ="Save draft"
+      # "Saved" only once something has actually been saved.
+      Text: |-
+        =If(Or(gblFormDirty, IsBlank(locApp)), "Save draft", "Saved  ✓")
+      Tooltip: |-
+        =If(Or(gblFormDirty, IsBlank(locApp)), "Save your progress", "Everything is saved")
+      # Absent, not greyed, when the application cannot be edited.
+      Visible: |-
+        =And(locCycle.State.Value = "Open",
+           Or(IsBlank(locApp), locApp.ApplicationStatus.Value = "Draft"))
       Width: =140
-      X: =Parent.Width - 164
-      Y: =178
+      X: =Parent.Width - 188
+      Y: =224
+
+# ---- unsaved-changes guard, PowerLibs warning-modal-v2-1 ----
+# Raised by icoUtilityLogo in _UtilityBarSlim.yaml, which sets gblConfirmExitAP
+# when gblFormDirty. The link is chrome and lives in the bar; the guard knows
+# about this screen's unsaved work and lives here.
+#
+# BOTH FLAGS ARE GLOBAL (Set), not context (UpdateContext). A context variable
+# exists only on the screen that declares it, and Power Fx rejects an unknown
+# name rather than treating it as blank — so the shared bar, pasted on any other
+# screen, failed to compile. Globals are app-wide. Screen OnHidden clears them.
+# Declared last: z-order is declaration order.
+- recExitScrimAP:
+    Control: Rectangle@2.3.0
+    Properties:
+      BorderColor: =RGBA(0, 0, 0, 0)
+      Fill: =RGBA(0, 0, 0, 0.3)
+      Height: =Parent.Height
+      Visible: =gblConfirmExitAP
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+
+- conExitWarnAP:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Bold
+      Fill: =ColorPalette.White
+      Height: =248
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: =gblConfirmExitAP
+      Width: =520
+      X: =Parent.Width / 2 - Self.Width / 2
+      Y: =Parent.Height / 2 - Self.Height / 2
+    Children:
+      - shpExitHaloAP:
+          Control: Circle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.WarningLight
+            Height: =56
+            Width: =56
+            X: =24
+            Y: =28
+      - icoExitWarnAP:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.WarningText
+            Height: =30
+            Icon: =Icon.Warning
+            Width: =30
+            X: =37
+            Y: =41
+      - lblExitTitleAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =26
+            Size: =Typography.SizeHeading
+            Text: ="You have unsaved changes"
+            Width: =380
+            X: =96
+            Y: =42
+      - lblExitBodyAP:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =84
+            Size: =Typography.SizeBody
+            Text: ="Leaving now discards anything you have changed since your last save. Cancel and use Save draft if you want to keep it."
+            VerticalAlign: =VerticalAlign.Top
+            Width: =400
+            X: =96
+            Y: =72
+      - btnExitCancelAP:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =38
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =Set(gblConfirmExitAP, false)
+            PressedColor: =Self.Color
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            Text: ="Cancel"
+            Width: =120
+            X: =btnExitConfirmAP.X - Self.Width - 10
+            Y: =Parent.Height - 62
+      - btnExitConfirmAP:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Blue600
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =0
+            Color: =ColorPalette.TextOnDark
+            Fill: =ColorPalette.Blue600
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            Height: =38
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.Blue700
+            OnSelect: |-
+              =Set(gblConfirmExitAP, false);
+              Navigate('Landing Screen')
+            PressedColor: =Self.Color
+            PressedFill: =ColorPalette.Blue700
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            Text: ="Leave without saving"
+            Width: =190
+            X: =Parent.Width - 214
+            Y: =Parent.Height - 62

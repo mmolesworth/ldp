@@ -25,9 +25,11 @@ performance-rating appraisal) are **native SharePoint attachments** on this item
 | FirstLineSupervisorEmail | Single line of text | No | Snapshot at submission (R1/R5). |
 | SecondLineSupervisorEmail | Single line of text | No | Snapshot; empty → routing `Held For Alternate`. |
 | AlternateSecondLineEmail | Single line of text | No | **[PROPOSED — FR-012a]** set by DTD; do not transcribe until DTD confirms (Constitution I). |
+| SubmittedDate | Date | No | **Added 2026-08-02.** When the applicant SUBMITTED. Blank while Draft, which is why it is optional. Distinct from SharePoint's `Created`, which is when the draft row first appeared — usually days earlier. Written once by the Application Screen's Submit; never by Save draft. |
 | ReviewStage | Choice | No | Where the packet is (see `_CHOICES.md`). Blank while Draft. `Needs Supervisor Assigned` is **[PROPOSED — FR-012a]**. |
 
-**Indexes:** `CycleID`, `ApplicantEmail`, `ApplicationStatus`, `ReviewStage`, `PlacementOutcome`.
+**Indexes:** `CycleID`, `ApplicantEmail`, `ApplicationStatus`, `ReviewStage`, `PlacementOutcome`,
+`SubmittedDate`.
 **Competencies moved out 2026-07-31.** `OPMCompetencies`, `TechnicalCompetencies` and `ECQs` were
 one text column per competency type, which cannot survive the type list being data-driven.
 Selections now live in `APPLICATION_COMPETENCIES`; the per-type maximum lives in
@@ -67,3 +69,21 @@ Full rationale, the state machine and the invariants are in `_CHOICES.md`.
 
 `Complete` and `Incomplete` both map to `Submitted` because neither described the applicant's
 progress, which is all `ApplicationStatus` now means.
+
+## Added 2026-08-02 — `SubmittedDate`
+
+The Application Status screen dates the first step of its timeline, and nothing here could supply
+that date. `NCUAStartDate`, `ServiceComputationDate` and `InfoSessionDate` are all facts about the
+APPLICANT; `Created` is a fact about the ROW.
+
+`Created` was considered and rejected. It records when the draft was first saved, which for anyone
+who does not finish in one sitting is days early, and for a re-applicant may belong to an entirely
+different cycle. A date that is quietly wrong is worse on this screen than no date at all, because
+the applicant has no way to tell.
+
+Written by `btnSubmitAP` only, and guarded — `If(IsBlank(locApp.SubmittedDate), Today(), ...)` — so
+that a re-submission (should FR-050 post-submission editing ever allow one) keeps the ORIGINAL
+submission date rather than silently restarting the clock. Save draft never touches it.
+
+Created by `build/scripts/Update-LdpSubmittedDate.ps1`. Its backfill is OFF by default and is an
+approximation from `Created`; it exists to make test data render, not to reconstruct history.

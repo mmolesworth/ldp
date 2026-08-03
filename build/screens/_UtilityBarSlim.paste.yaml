@@ -1,0 +1,60 @@
+- conUtilityBar:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Group: UtilityBar
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =ColorPalette.Navy900
+      Height: =52
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+    Children:
+      - icoUtilityLogo:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            Color: =ColorPalette.TextOnDark
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =2
+            Height: =32
+            HoverColor: =ColorPalette.Blue400
+            Icon: =Icon.CameraAperture
+            OnSelect: |-
+              =If(gblFormDirty,
+                 Set(gblConfirmExitAP, true),
+                 Navigate('Landing Screen'))
+            PaddingBottom: =4
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =4
+            PressedColor: =ColorPalette.Blue600
+            TabIndex: =0
+            Tooltip: ="NCUA Leader Development Program — home"
+            Width: =32
+            X: =16
+            Y: =10
+      - lblUtilityBrand:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextOnDark
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =24
+            Size: =Typography.SizeBody
+            Text: ="NCUA Leader Development Program"
+            Width: =420
+            X: =60
+            Y: =14
+      - lblUtilitySignedIn:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Right
+            Color: =ColorPalette.TextOnDarkMuted
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Signed in as " & User().FullName
+            Width: =360
+            X: =Parent.Width - 384
+            Y: =16

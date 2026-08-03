@@ -1425,7 +1425,7 @@
             X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24) * 2
             Y: =118
       - dtpPersStartDTD:
-          Control: Classic/DatePicker@2.5.0
+          Control: Classic/DatePicker@2.6.0
           Properties:
             BorderColor: =ColorPalette.Gray300
             BorderThickness: =1
@@ -1481,7 +1481,7 @@
             X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24) * 2
             Y: =176
       - dtpPersScdDTD:
-          Control: Classic/DatePicker@2.5.0
+          Control: Classic/DatePicker@2.6.0
           Properties:
             BorderColor: =ColorPalette.Gray300
             BorderThickness: =1
@@ -1661,8 +1661,8 @@
                       Properties:
                         Color: =ColorPalette.TextHelp
                         Font: =Typography.Family
-                        Height: =18
-                        Size: =Typography.SizeCaption
+                        Height: =20
+                        Size: =Typography.SizeBody
                         Text: =ThisItem.OptionName
                         Width: =Parent.Width - 60
                         X: =36
@@ -2488,7 +2488,7 @@
             X: =txtEligSessionDTD.X
             Y: =118
       - dtpEligDateDTD:
-          Control: Classic/DatePicker@2.5.0
+          Control: Classic/DatePicker@2.6.0
           Properties:
             BorderColor: =ColorPalette.Gray300
             BorderThickness: =1

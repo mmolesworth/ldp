@@ -1,7 +1,6 @@
 # Provisioning runbook — SharePoint lists
 
-Creates the 16 lists in `build/lists/` on your SharePoint site, and optionally
-seeds the competency catalogue.
+Creates the 15 lists in `build/lists/` on your SharePoint site.
 Script: [`New-LdpSharePointLists.ps1`](New-LdpSharePointLists.ps1)
 
 ## This environment
@@ -10,16 +9,19 @@ Script: [`New-LdpSharePointLists.ps1`](New-LdpSharePointLists.ps1)
 |---|---|
 | Tenant | `markmolesworth.onmicrosoft.com` |
 | Cloud | Commercial (`.sharepoint.com`) — **no `-AzureEnvironment` flag needed** |
-| Target site | `https://markmolesworth.sharepoint.com/sites/leadership-development-program` |
+| Target site | `https://markmolesworth.sharepoint.com/sites/LDP` |
 | SharePoint admin | `https://markmolesworth-admin.sharepoint.com` |
 | Client ID | _fill in after step 3_ |
 
-The target site already exists. Everything below is provisioned **into** it — the
-script never creates a site, so the URL above must be exact.
+Create the target site first if it does not exist — SharePoint admin center →
+Sites → Active sites → Create → Team site, named `LDP`. Provisioning onto the root
+site (`https://markmolesworth.sharepoint.com`) works, but puts 15 `UPPER_SNAKE_CASE`
+lists alongside whatever else lives there and is awkward to unpick later.
 
 **Time:** ~20 min first run (most of it one-time setup in steps 1–3), ~2 min thereafter.
 **You need:** Site Owner (or Site Collection Admin) on the target site, and the ability
-to consent to an Entra ID app registration — on this single-owner tenant that is you.
+to consent to an Entra ID app registration — which in most tenants means a Global
+Administrator does step 3 once, for everyone.
 
 ---
 
@@ -50,12 +52,7 @@ Get-Module -ListAvailable PnP.PowerShell | Select-Object Version
 
 PnP.PowerShell 2.0 removed the shared multi-tenant client ID that older guides
 rely on, so **there is no way to sign in without your own app registration**.
-Do this once for the tenant.
-
-On a single-owner tenant like this one you are the Global Administrator, so consent
-grants itself and no one else has to be involved. (In a managed org tenant this is
-the step that stalls: consent is usually locked down, and duplicate PnP app
-registrations are a governance headache — you would ask whether one already exists.)
+Run this once:
 
 Check the parameter names first — this cmdlet's surface has changed across PnP
 releases, and the docs you find online are often for a different version:
@@ -115,62 +112,31 @@ The cmdlet is only a convenience wrapper. Equivalent manual setup:
 ### Confirm auth before step 4
 
 ```powershell
-Connect-PnPOnline -Url https://markmolesworth.sharepoint.com/sites/leadership-development-program -Interactive -ClientId <guid>
+Connect-PnPOnline -Url https://markmolesworth.sharepoint.com/sites/LDP -Interactive -ClientId 2170e4b3-a74c-492f-b7d6-065737fdad6f
 Get-PnPWeb
 ```
 
 If `Get-PnPWeb` returns the site title, authentication is sorted.
 
+On a single-owner tenant like this one you are the Global Administrator, so consent
+grants itself and no one else has to be involved. (In a managed org tenant this is
+the step that stalls: consent is usually locked down, and duplicate PnP app
+registrations are a governance headache — you would ask whether one already exists.)
+
 ## Step 4 — Dry run
-
-### If the repo lives in WSL
-
-PowerShell treats `\\wsl$\...` as the internet zone, so running the script in place
-trips the signing check. Copy it to a local path instead, and re-copy after every
-edit — the Windows copy does not track the repo:
-
-```powershell
-cd C:\Users\mmole\projects\leadership
-copy \\wsl$\Ubuntu\home\mark\projects\leadership-development\build\scripts\*.ps1 .
-copy \\wsl$\Ubuntu\home\mark\projects\leadership-development\build\scripts\*.csv .
-Unblock-File .\New-LdpSharePointLists.ps1
-```
-
-Copy the **CSVs as well as the script**. `-DataPath` defaults to the script's own
-directory, so as long as they travel together no path argument is needed. Only
-the `.ps1` needs `Unblock-File` — the execution-policy check does not apply to
-data files.
-
-### Execution policy
-
-An unsigned script needs the policy relaxed once. Least-invasive first:
-
-```powershell
-Get-ExecutionPolicy -List          # which scope is blocking?
-Unblock-File .\New-LdpSharePointLists.ps1
-```
-
-If a scope shows `AllSigned` or `Restricted`, also run:
-
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
-```
-
-`CurrentUser` needs no admin rights and leaves machine policy alone. `RemoteSigned`
-still blocks unsigned scripts that came from the internet.
-
-### The dry run
 
 Nothing is written. Confirm the plan is what you expect:
 
 ```powershell
+cd <repo>/build/scripts
+
 ./New-LdpSharePointLists.ps1 `
-    -SiteUrl https://markmolesworth.sharepoint.com/sites/leadership-development-program `
-    -ClientId <your-client-id> `
+    -SiteUrl https://markmolesworth.sharepoint.com/sites/LDP `
+    -ClientId 2170e4b3-a74c-492f-b7d6-065737fdad6f `
     -WhatIf
 ```
 
-You should see `What if:` lines for 16 lists, ~100 columns, 17 lookups, and 25 indexes.
+You should see `What if:` lines for 15 lists, ~90 columns, 16 lookups, and 22 indexes.
 It still signs you in — `-WhatIf` suppresses the writes, not the connection.
 
 ## Step 5 — Run it
@@ -179,70 +145,22 @@ Same command without `-WhatIf`:
 
 ```powershell
 ./New-LdpSharePointLists.ps1 `
-    -SiteUrl https://markmolesworth.sharepoint.com/sites/leadership-development-program `
+    -SiteUrl https://markmolesworth.sharepoint.com/sites/LDP `
     -ClientId <your-client-id>
 ```
 
 Output is four passes, colour-coded: green `+` created, grey `=` already existed,
 yellow `~` deliberately skipped. It ends with a summary and a to-do list.
 
-**`ListsCreated 16` in the summary is the proof it worked.** A `-WhatIf` run prints
-the same four passes but every line reads `What if:` and the summary is all zeroes —
-which is easy to mistake for success.
-
-The lists do **not** appear in the left-hand navigation: they are a backing store for
-the app, not pages to browse. Find them under **Settings (gear) → Site contents**, or
-pass `-ShowInNavigation` to put them in the left nav.
-
 If it fails partway, **just run it again** — the script is idempotent. It checks for
 each list and column before creating it, so a re-run picks up where it stopped.
-
-## Step 5b — Seed the competency catalogue
-
-The 85 competencies are not created by default. Regenerate the CSVs from the
-workbook, then re-run with `-SeedCompetencies`:
-
-```powershell
-python3 build/scripts/Convert-CompetencyWorkbook.py     # in WSL, from the repo root
-```
-
-```powershell
-./New-LdpSharePointLists.ps1 `
-    -SiteUrl https://markmolesworth.sharepoint.com/sites/leadership-development-program `
-    -ClientId <your-client-id> `
-    -SeedCompetencies
-```
-
-`-DataPath` defaults to `build/scripts` relative to the script. If you copied the
-`.ps1` to a Windows path (step 4), the CSVs are not next to it — pass
-`-DataPath \\wsl$\Ubuntu\home\mark\projects\leadership-development\build\data`.
-
-Expect `ItemsSeeded 88` on a first run (3 types + 85 competencies). Re-running
-is safe: it adds only what is missing and reports the rest as existing.
-
-**Seeding is not a sync.** Editing a description in the CSV will not update a row
-already in SharePoint. Edit it in SharePoint, or delete the row and re-seed.
-
-If the lists already exist and you only want the data in, `-SeedOnly` skips
-passes 1-4 entirely:
-
-```powershell
-./New-LdpSharePointLists.ps1 `
-    -SiteUrl https://markmolesworth.sharepoint.com/sites/leadership-development-program `
-    -ClientId <your-client-id> `
-    -SeedOnly `
-    -DataPath \\wsl$\Ubuntu\home\mark\projects\leadership-development\build\data
-```
-
-`-SeedOnly` implies `-SeedCompetencies`. It does not verify that the lists or the
-`CompetencyTypeID` lookup exist — if they do not, it fails at the first write.
 
 ## Step 6 — Verify
 
 ```powershell
-Connect-PnPOnline -Url https://markmolesworth.sharepoint.com/sites/leadership-development-program -Interactive -ClientId <guid>
+Connect-PnPOnline -Url https://markmolesworth.sharepoint.com/sites/LDP -Interactive -ClientId <guid>
 
-# 16 lists?
+# 15 lists?
 Get-PnPList | Where-Object { $_.Title -cmatch '^[A-Z_]+$' } | Select-Object Title, ItemCount
 
 # Lookups wired to the right targets?
@@ -263,7 +181,7 @@ Then open the site and confirm `APPLICATIONS` shows `CycleID`, `Status`, `Routin
 |---|---|
 | `AlternateSecondLineEmail` column, `Held For Alternate`, `Alternate Second Line`, `Alternate Designation` | All `[PROPOSED]`. Constitution I forbids transcribing them until DTD confirms. Re-run with `-IncludeProposed` after sign-off. |
 | Seed `PROGRAMS` with NEXT / MDP / HPP | `PROGRAMS.md` says DTD populates these via the Program Options Screen. |
-| `EMPLOYEE_DIRECTORY` | **Removed 2026-07-26.** Personnel data comes from an existing system (D-1); the interim list is not part of the design. The script no longer creates or manages it. If it already exists in SharePoint, removing it from the script does **not** delete it — see below. |
+| Seed `EMPLOYEE_DIRECTORY` | Loading mechanism is deferred (T077). Remember to include one employee with **no** second-line supervisor, to exercise FR-012a. |
 | Permissions on `CHANGE_HISTORY` | Must be a SharePoint permission, not a hidden control (Constitution VI / OI-7). Deferred. |
 | Validation rules | Every rule in the list specs (one application per applicant per cycle, one Open cycle, four anchors before publish) is enforced in the **app layer**, not by SharePoint. |
 
@@ -290,7 +208,6 @@ Then open the site and confirm `APPLICATIONS` shows `CycleID`, `Status`, `Routin
 
 | Symptom | Cause |
 |---|---|
-| `cannot be loaded. The file ... is not digitally signed` | Execution policy. Run `Unblock-File .\New-LdpSharePointLists.ps1`; if that is not enough, `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`. Recurs every time you re-copy the file from WSL. |
 | `The term 'Connect-PnPOnline' is not recognized` | Step 2 skipped, or you are in Windows PowerShell 5.1 instead of `pwsh`. |
 | `AADSTS65001: The user or administrator has not consented` | Step 3 not completed, or the client ID belongs to a different tenant. |
 | `A parameter cannot be found that matches parameter name 'Interactive'` | You passed `-Interactive` to `Register-PnPEntraIDAppForInteractiveLogin`. It belongs to `Connect-PnPOnline` only. Drop it — see step 3. |
@@ -305,10 +222,10 @@ Then open the site and confirm `APPLICATIONS` shows `CycleID`, `Status`, `Routin
 There is no undo. To start over:
 
 ```powershell
-Connect-PnPOnline -Url https://markmolesworth.sharepoint.com/sites/leadership-development-program -Interactive -ClientId <guid>
+Connect-PnPOnline -Url https://markmolesworth.sharepoint.com/sites/LDP -Interactive -ClientId <guid>
 'CHANGE_HISTORY','NOTIFICATIONS','PLACEMENTS','COMMITTEE_SCORES','RATING_CRITERIA',
 'RATING_SHEETS','CRITERION_ANCHORS','CRITERION_CATALOG','SUPERVISOR_ENDORSEMENTS',
-'APPLICATION_PROGRAM_CHOICES','APPLICATIONS','PROGRAM_OPTIONS',
+'APPLICATION_PROGRAM_CHOICES','APPLICATIONS','EMPLOYEE_DIRECTORY','PROGRAM_OPTIONS',
 'PROGRAMS','CYCLES' | ForEach-Object { Remove-PnPList -Identity $_ -Force }
 ```
 

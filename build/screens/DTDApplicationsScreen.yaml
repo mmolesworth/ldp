@@ -1741,7 +1741,7 @@
             X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24) * 2
             Y: =118
       - dtpPersStartDTD:
-          Control: Classic/DatePicker@2.5.0
+          Control: Classic/DatePicker@2.6.0
           Properties:
             BorderColor: =ColorPalette.Gray300
             BorderThickness: =1
@@ -1801,7 +1801,7 @@
             X: =txtPersNameDTD.X + (txtPersNameDTD.Width + 24) * 2
             Y: =176
       - dtpPersScdDTD:
-          Control: Classic/DatePicker@2.5.0
+          Control: Classic/DatePicker@2.6.0
           Properties:
             BorderColor: =ColorPalette.Gray300
             BorderThickness: =1
@@ -1996,13 +1996,19 @@
                         Width: =Parent.Width - 60
                         X: =36
                         Y: =6
+                  # SizeBody, same as the program above it. The option is a
+                  # real part of the choice — "Mini MBA: Management &
+                  # Leadership" is what the applicant actually picked — so
+                  # caption size was underselling it. Hierarchy is carried by
+                  # colour and weight instead: TextHelp grey at regular weight
+                  # under TextHeading at medium.
                   - lblChoiceOptionDTD:
                       Control: Label@2.5.1
                       Properties:
                         Color: =ColorPalette.TextHelp
                         Font: =Typography.Family
-                        Height: =18
-                        Size: =Typography.SizeCaption
+                        Height: =20
+                        Size: =Typography.SizeBody
                         Text: =ThisItem.OptionName
                         Width: =Parent.Width - 60
                         X: =36
@@ -3019,7 +3025,7 @@
       # date for anyone who opens the field and does not touch it — the trap
       # recorded as OI-REQ-1 against the Application Screen's own pickers.
       - dtpEligDateDTD:
-          Control: Classic/DatePicker@2.5.0
+          Control: Classic/DatePicker@2.6.0
           Properties:
             BorderColor: =ColorPalette.Gray300
             BorderThickness: =1

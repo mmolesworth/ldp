@@ -1,0 +1,1494 @@
+# Application Status Screen — where the applicant's submitted application is
+# Read-only EXCEPT for withdrawal. btnHomeAS and the utility bar logo navigate;
+# btnWdConfirmAS is the one control on this screen that writes, and it writes a
+# single field.
+# Classic controls only (Constitution II). Colours = ColorPalette.*, sizes = Typography.*
+#
+# Composition (Constitution VIII — library first):
+#   · progress timeline — PowerLibs `timeline-progress` (Pro), generated
+#     2026-08-02 via generate_yaml, adapted (see DEVIATIONS)
+#   · everything else is layout the library has no component for
+#
+# ---------------------------------------------------------------------------
+# WHY THIS SCREEN EXISTS
+# ---------------------------------------------------------------------------
+# Not in the requirements — added 2026-08-02 at DTD's request. An applicant who
+# has submitted has nothing to do but wait, and until now the only thing telling
+# them where the packet had got to was a 420px card on the Landing Screen
+# (conTimelineLD) that shows six dots and nothing else.
+#
+# This screen and that card share ONE step model, deliberately. The same
+# applicant can see both in the same session; if they disagreed about the step
+# count we would have built a bug. Change one, change the other.
+#
+# ---------------------------------------------------------------------------
+# HOW TO TRANSCRIBE (Constitution IV)
+# ---------------------------------------------------------------------------
+# Steps marked (screen) are properties of the SCREEN itself — select the screen
+# in the tree view and set them in the properties pane. They are NOT properties
+# of the utility bar or of any control listed below it.
+#
+# They cannot be pasted, and there is no way to make them pasteable. Studio's
+# Paste YAML inserts CONTROLS into the selected screen, so a paste block has no
+# screen node to carry Fill, OnVisible or OnStart. Only the app-source format
+# written by `pac canvas unpack` has one, and Studio will not paste that.
+#
+# The OnVisible below is also kept comment-free and ready to copy in
+# build/screens/ApplicationStatusScreen.OnVisible.fx.
+#
+#   1. New screen → Blank. Rename it "Application Status Screen".
+#   1b. Paste build/screens/_UtilityBarSlim.paste.yaml FIRST (app chrome, shared).
+#   2. (screen) Fill: =ColorPalette.Gray50
+#   3. (screen) OnVisible — transcribe by hand, THREE separate calls, in this
+#      order (no # prefixes, no leading =). Fields inside one UpdateContext
+#      cannot reference each other:
+#
+#        UpdateContext({
+#           locCycle: If(IsBlank(LookUp(CYCLES, State.Value = "Open")),
+#                        First(Sort(CYCLES, OpenDate, SortOrder.Descending)),
+#                        LookUp(CYCLES, State.Value = "Open"))
+#        });
+#        UpdateContext({
+#           locApp: LookUp(APPLICATIONS,
+#                     And(CycleID.Id = locCycle.ID, ApplicantEmail = User().Email))
+#        });
+#        UpdateContext({
+#           locTimeStep: Switch(locApp.ReviewStage.Value,
+#             "Pending First-Line",        2,
+#             "Needs Supervisor Assigned", 3,
+#             "Pending Second-Line",       3,
+#             "Pending DTD Validation",    4,
+#             "Committee Review",          5,
+#             "Pending Placement",         6,
+#             "Pending Notification",      6,
+#             "Complete",                  6,
+#             1),
+#           locStageDone: locApp.ReviewStage.Value = "Complete",
+#           locConfirmWithdrawAS: false
+#        })
+#
+#   4. Data sources (four): CYCLES, APPLICATIONS, APPLICATION_PROGRAM_CHOICES,
+#      PROGRAMS.
+#   5. Preview (F5) — OnVisible does not run on the design surface.
+#
+# ---------------------------------------------------------------------------
+# THE STEP MODEL
+# ---------------------------------------------------------------------------
+# Six display steps over nine ReviewStage values:
+#
+#   1 Submitted                 (any value, once ApplicationStatus is past Draft)
+#   2 First-line endorsement    Pending First-Line
+#   3 Second-line endorsement   Pending Second-Line, Needs Supervisor Assigned
+#   4 Completeness check        Pending DTD Validation
+#   5 Committee review          Committee Review
+#   6 Decision                  Pending Placement, Pending Notification, Complete
+#
+# `Needs Supervisor Assigned` shares step 3 with `Pending Second-Line` and says
+# something different underneath it. It is the one detour in an otherwise linear
+# machine, it rejoins immediately, and a seventh step that appears and vanishes
+# would read as the application going backwards. It IS the second-line step —
+# the wait is just on DTD to name someone rather than on the supervisor to
+# answer.
+#
+# locStageDone exists because locTimeStep alone cannot distinguish "at step 6"
+# from "finished step 6". Without it a closed application shows its last step
+# as In progress forever.
+#
+# ---------------------------------------------------------------------------
+# THE HEADLINE
+# ---------------------------------------------------------------------------
+# lblHeaderTitleAS is "Tracking your application" — deliberately STATIC, and
+# deliberately a description of what the screen does rather than a claim about
+# the application's state.
+#
+# A state-aware headline ("Your application is under review") was built and
+# rejected on 2026-08-02. conHeaderAS has no Visible condition, so this band
+# also sits above the withdrawn panel and the no-application guard, where any
+# assertion about review is false — flatly contradicting the panel underneath
+# it. Making it true needed a three-way guard on a decorative string. A static
+# verb costs nothing and cannot go stale.
+#
+# It does NOT name the current step, and does NOT reuse the timeline card's
+# "Where your application is right now". The card is two inches below; the same
+# sentence twice reads as a rendering fault rather than emphasis.
+#
+# ---------------------------------------------------------------------------
+# GETTING OUT
+# ---------------------------------------------------------------------------
+# btnHomeAS is an icon button in the header band, added 2026-08-02 because the
+# utility bar logo alone was not a discoverable exit — an aperture glyph in 52px
+# of chrome is not where anyone looks when asking "what do I do now?".
+#
+# It is a Classic/Icon Button, built as THREE controls plus an overlay because
+# Classic/Button has no Icon property: conHomeAS is the visible white pill,
+# imgHomeAS and lblHomeAS sit inside it, and btnHomeAS is a fully transparent
+# Classic/Button laid over the whole thing as a SIBLING. That sibling ordering
+# matters — z-order is declaration order, so a button with a solid fill declared
+# after the image would simply paint over it. The same shape is used by
+# conCompRowEdit / btnCompRowEdit.
+#
+# The glyph is gblNavIcons.ReturnHome (Fluent 2), stored with a currentColor
+# placeholder and substituted to #213455 (Navy900) because the pill is WHITE.
+# A data: URI has no cascade to inherit a colour from. If the icon renders
+# blank, App.OnStart has not been re-run since NavIcons.powerfx changed.
+#
+# WHITE PILL, NAVY CONTENT. An outlined ghost button was tried first and was
+# effectively invisible on the navy band. White-on-navy is the treatment this
+# app already uses for a button on a navy surface — btnApplyTodayLD on the
+# landing hero — and it is 12.4:1 against Navy900.
+#
+# ACCESSIBLE NAME LIVES ON THE IMAGE. Classic/Button has no AccessibleLabel
+# property, and an icon-only control with no name is a WCAG 4.1.2 failure — so
+# imgHomeAS carries AccessibleLabel and btnHomeAS carries the matching Tooltip.
+# A home glyph is conventional enough to stand alone visually; it is the screen
+# reader that needed the help, not the sighted user.
+#
+# It is in the HEADER rather than at the foot of the page on purpose. The
+# content already ends at y=700 of a ~768 viewport; a button below it would be
+# the first thing lost to browser chrome, zoom or a shorter laptop screen —
+# reintroducing the exact problem it exists to solve.
+#
+# Outlined white-on-navy, not filled. On a read-only screen leaving is the only
+# action, but it is still navigation, not an achievement; a solid button here
+# would out-shout the timeline that the screen exists to show.
+#
+# lblHeaderWhoAS was REMOVED 2026-08-02 — the applicant's name moved into
+# lblHeaderSubAS, which now reads "Name · Cycle · Submitted date". One line of
+# provenance beats a name floating on its own, and it frees the whole right end
+# of the band for the button.
+#
+# Plain Navigate(). This screen has no unsaved work, so it needs neither
+# gblFormDirty nor a confirm modal — see the note in _UtilityBarSlim.yaml about
+# what a screen owes when it does.
+#
+# ---------------------------------------------------------------------------
+# WITHDRAWAL
+# ---------------------------------------------------------------------------
+# Added 2026-08-02. APPLICATIONS.ApplicationStatus has always carried a
+# "Withdrawn" value and conWithdrawnAS has always rendered that state, but
+# NOTHING IN THE APP COULD SET IT — the value was reachable only by editing the
+# list directly, which policy forbids. This closes that gap.
+#
+# A CARD, BELOW BOTH COLUMNS — DropShadow.Light and radius 12 like the four
+# above it, but filled Gray50 rather than White. It was built white first and
+# changed back on 2026-08-02: as a white card it became a visual PEER of Status
+# and Programs, and the whole point of this panel is that it is not one. The
+# recessed fill carries part of the warning, so the outlined DangerText button
+# is not doing that work alone, and the white button now reads as raised against
+# it. Being the only non-white surface on the screen is the intent, not a
+# slip.
+#
+# Its two labels sit SIDE BY SIDE, not stacked. Only 68px exists below y=700,
+# and two 11pt lines plus real card padding does not fit in that. One row of
+# text keeps 16px top and bottom, which is what makes it read as a card rather
+# than a strip. This is the
+# GitHub "danger zone" convention and the point of it is that an irreversible
+# action should take a deliberate look to find. It is the only element on this
+# screen below y=700.
+#
+# WHEN IT IS OFFERED. While the application is live AND PlacementOutcome is
+# still "Decision Pending". The boundary is taken from the data model rather
+# than invented: once an outcome exists, the applicant's action is no longer
+# withdrawal but "Placement Declined", which is a PlacementOutcome value DTD
+# owns and records. Whether there is an EARLIER cut-off — committee review is
+# the obvious candidate, since withdrawing mid-scoring wastes panel time — is
+# not derivable from anything on file. See OI-STAT-4.
+#
+# WHAT IT WRITES: ApplicationStatus only. ReviewStage is left exactly where it
+# was, so the record still shows how far the packet reached before the applicant
+# pulled it; blanking it would destroy that for no gain. PlacementOutcome stays
+# "Decision Pending" because no decision was made — that is the honest value.
+#
+# NOT WRITTEN, and deliberately: no CHANGE_HISTORY row (ChangeType has no value
+# for this and inventing one is Constitution I), no NOTIFICATIONS row, and no
+# withdrawal reason. All three are in OI-STAT-4 for DTD.
+#
+# THE DIALOG PROMISES NOTHING ABOUT UNDOING IT, and that is deliberate. A draft
+# of this copy ended "contact the Division of Talent Development to reapply".
+# Nothing makes that true: no DTD control sets ApplicationStatus back, and FR-011
+# means a returning applicant loads the WITHDRAWN row rather than a blank one —
+# which then opens read-only, because all 24 inputs on the Application Screen
+# gate on ApplicationStatus <> "Draft". "This action can't be undone" is the
+# only sentence the app can currently stand behind. If DTD later wants a Reopen
+# control, the copy changes with it — not before.
+#
+# ---------------------------------------------------------------------------
+# WHAT THIS SCREEN DELIBERATELY DOES NOT SHOW
+# ---------------------------------------------------------------------------
+# SUPERVISOR ENDORSEMENT DECISIONS. SUPERVISOR_ENDORSEMENTS holds Approve /
+# Disapprove and a mandatory DispositionStatement (FR-013) for each level, and
+# steps 2 and 3 are exactly where an applicant would look for them. Showing an
+# applicant their supervisor's disapproval and its written reasoning is a policy
+# question, not a design one — DTD decides it, not us (OI-STAT-1). Until then
+# the steps show the STAGE only: where the packet is, never what anyone said.
+#
+# PER-STEP DATES, except the first. Only submission has a timestamp
+# (APPLICATIONS.SubmittedDate, added 2026-08-02). Nothing records WHEN a stage
+# changed, so "endorsed on ..." cannot be shown without inventing it
+# (Constitution I). CHANGE_HISTORY is the natural home if DTD wants stage dates
+# later — see OI-STAT-2.
+#
+# ---------------------------------------------------------------------------
+# DEVIATIONS FROM THE GENERATED timeline-progress
+# ---------------------------------------------------------------------------
+# 1. REMOVED Next / Undo / Reset and the demo status line. An applicant able to
+#    advance their own endorsement state is an integrity problem. This is the
+#    same removal made for conTimelineLD on 2026-07-25.
+# 2. varTimeStep → locTimeStep, driven by APPLICATIONS.ReviewStage.
+# 3. ADDED a state word per step (Done / In progress / Not started) and a check
+#    glyph in completed dots. The component distinguishes states by COLOUR
+#    ALONE, which fails Section 508 §1194.21(i) / WCAG 1.4.1.
+# 4. ADDED locStageDone, so the last step can be finished rather than eternally
+#    in progress.
+# 5. Dots 20 → 24px and the step rhythm 70 → 72px. The card is 620px wide here
+#    rather than 388, and the component's proportions look thin at that size.
+# 6. Hardcoded RGBA / Font.'Open Sans' / Size 8 → ColorPalette.* / Typography.*.
+#    Size 8 is below the Section 508 floor in theme.md.
+# 7. Step descriptions and state words SizeCaption (9) → SizeBody (11), 2026-08-02.
+#    The descriptions are the substance of this screen, not captions, and at 9pt
+#    they read as fine print next to an 11pt step title. Descriptions are 38px
+#    and top-aligned, which leaves headroom for a description to wrap without
+#    clipping rather than forcing every one onto a single line. The step rhythm
+#    starts 8px higher (88, not 96) to keep step 6 clear of the card.
+# 8. Step 1 no longer repeats the submission date, 2026-08-02. lblHeaderSubAS
+#    carries it 90px above; saying it twice on one screen is noise, not
+#    reinforcement.
+
+# ===========================================================================
+# HEADER BAND — whose application, which cycle
+# ===========================================================================
+- conHeaderAS:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.Navy900
+      Height: =88
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =72
+    Children:
+      - lblHeaderTitleAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextOnDark
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =30
+            Size: =Typography.SizeTitle
+            Text: ="Tracking your application"
+            Width: =Parent.Width - 242
+            X: =28
+            Y: =16
+      - lblHeaderSubAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.Blue50
+            Font: =Typography.Family
+            Height: =24
+            Size: =Typography.SizeBody
+            Text: |-
+              =If(IsBlank(locApp.ApplicantName), "",
+                 locApp.ApplicantName & "  ·  ")
+                & locCycle.CycleName
+                & If(IsBlank(locApp.SubmittedDate), "",
+                     "  ·  Submitted " & Text(locApp.SubmittedDate, "mmmm d, yyyy"))
+            Width: =Parent.Width - 242
+            X: =28
+            Y: =48
+      - conHomeAS:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =ColorPalette.White
+            Height: =40
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Width: =170
+            X: =Parent.Width - 198
+            Y: =24
+          Children:
+            - imgHomeAS:
+                Control: Image@2.2.3
+                Properties:
+                  AccessibleLabel: ="Back to home"
+                  Height: =28
+                  Image: |-
+                    ="data:image/svg+xml," &
+                      EncodeUrl(Substitute(gblNavIcons.ReturnHome,
+                        "currentColor", "#213455"))
+                  Width: =28
+                  X: =12
+                  Y: =6
+            - lblHomeAS:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.Navy900
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =Parent.Height
+                  Size: =Typography.SizeBody
+                  Text: ="Back to home"
+                  Width: =Parent.Width - 60
+                  X: =48
+                  Y: =0
+      - btnHomeAS:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =RGBA(0, 0, 0, 0)
+            Fill: =RGBA(0, 0, 0, 0)
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =3
+            Height: =conHomeAS.Height
+            HoverColor: =RGBA(0, 0, 0, 0)
+            HoverFill: =RGBA(0, 0, 0, 0.08)
+            OnSelect: =Navigate('Landing Screen')
+            PressedColor: =RGBA(0, 0, 0, 0)
+            PressedFill: =RGBA(0, 0, 0, 0.16)
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Text: =""
+            Tooltip: ="Back to home"
+            Width: =conHomeAS.Width
+            X: =conHomeAS.X
+            Y: =conHomeAS.Y
+
+# ===========================================================================
+# TIMELINE — PowerLibs timeline-progress, adapted. See DEVIATIONS above.
+# ===========================================================================
+- conTimelineAS:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =520
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: |-
+        =And(Not(IsBlank(locApp)),
+           locApp.ApplicationStatus.Value <> "Draft",
+           locApp.ApplicationStatus.Value <> "Withdrawn")
+      Width: =620
+      X: =24
+      Y: =180
+    Children:
+      - lblTimeTitleAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =28
+            Size: =Typography.SizeHeading
+            Text: ="Progress"
+            Width: =300
+            X: =20
+            Y: =18
+      - lblTimeSubtitleAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: ="Where your application is right now"
+            Width: =360
+            X: =20
+            Y: =46
+      - lblTimeCounterAS:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Right
+            Color: =If(locStageDone, ColorPalette.SuccessText, ColorPalette.Blue600)
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =28
+            Size: =Typography.SizeBody
+            Text: |-
+              =If(locStageDone, "Complete",
+                 "Step " & Min(locTimeStep, 6) & " of 6")
+            Width: =180
+            X: =Parent.Width - 200
+            Y: =18
+      - conTL1DotAS:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: |-
+              =If(Or(locTimeStep > 1, And(locTimeStep = 1, locStageDone)), ColorPalette.Success,
+                 If(And(locTimeStep = 1, Not(locStageDone)), ColorPalette.Blue600, ColorPalette.Gray300))
+            Height: =24
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =24
+            X: =36
+            Y: =88
+          Children:
+            - icoTL1CheckAS:
+                Control: Classic/Icon@2.5.0
+                Properties:
+                  Color: =ColorPalette.TextOnDark
+                  Height: =12
+                  Icon: =Icon.Check
+                  Visible: =Or(locTimeStep > 1, And(locTimeStep = 1, locStageDone))
+                  Width: =12
+                  X: =6
+                  Y: =6
+      - recTL1LineAS:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =If(locTimeStep > 1, ColorPalette.Blue600, ColorPalette.Gray200)
+            Height: =48
+            Width: =2
+            X: =conTL1DotAS.X + conTL1DotAS.Width / 2 - 1
+            Y: =conTL1DotAS.Y + conTL1DotAS.Height
+      - lblTL1TitleAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =If(locTimeStep >= 1, ColorPalette.TextHeading, ColorPalette.TextHelp)
+            Font: =Typography.Family
+            FontWeight: =If(locTimeStep >= 1, Typography.WeightMedium, Typography.WeightRegular)
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: ="Submitted"
+            Width: =300
+            X: =78
+            Y: =conTL1DotAS.Y
+      - lblTL1DescAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =38
+            Size: =Typography.SizeBody
+            Text: ="Your application has been received."
+            VerticalAlign: =VerticalAlign.Top
+            Width: =372
+            X: =78
+            Y: =lblTL1TitleAS.Y + lblTL1TitleAS.Height
+      - lblTL1StateAS:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Right
+            Color: |-
+              =If(Or(locTimeStep > 1, And(locTimeStep = 1, locStageDone)), ColorPalette.SuccessText,
+                 If(And(locTimeStep = 1, Not(locStageDone)), ColorPalette.Blue600, ColorPalette.TextHelp))
+            Font: =Typography.Family
+            FontWeight: =If(And(locTimeStep = 1, Not(locStageDone)), Typography.WeightMedium, Typography.WeightRegular)
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: |-
+              =If(Or(locTimeStep > 1, And(locTimeStep = 1, locStageDone)), "Done",
+                 If(And(locTimeStep = 1, Not(locStageDone)), "In progress", "Not started"))
+            Width: =130
+            X: =Parent.Width - 150
+            Y: =conTL1DotAS.Y
+      - conTL2DotAS:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: |-
+              =If(Or(locTimeStep > 2, And(locTimeStep = 2, locStageDone)), ColorPalette.Success,
+                 If(And(locTimeStep = 2, Not(locStageDone)), ColorPalette.Blue600, ColorPalette.Gray300))
+            Height: =24
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =24
+            X: =36
+            Y: =160
+          Children:
+            - icoTL2CheckAS:
+                Control: Classic/Icon@2.5.0
+                Properties:
+                  Color: =ColorPalette.TextOnDark
+                  Height: =12
+                  Icon: =Icon.Check
+                  Visible: =Or(locTimeStep > 2, And(locTimeStep = 2, locStageDone))
+                  Width: =12
+                  X: =6
+                  Y: =6
+      - recTL2LineAS:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =If(locTimeStep > 2, ColorPalette.Blue600, ColorPalette.Gray200)
+            Height: =48
+            Width: =2
+            X: =conTL2DotAS.X + conTL2DotAS.Width / 2 - 1
+            Y: =conTL2DotAS.Y + conTL2DotAS.Height
+      - lblTL2TitleAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =If(locTimeStep >= 2, ColorPalette.TextHeading, ColorPalette.TextHelp)
+            Font: =Typography.Family
+            FontWeight: =If(locTimeStep >= 2, Typography.WeightMedium, Typography.WeightRegular)
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: ="First-line endorsement"
+            Width: =300
+            X: =78
+            Y: =conTL2DotAS.Y
+      - lblTL2DescAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =38
+            Size: =Typography.SizeBody
+            Text: ="With your first-line supervisor for a decision."
+            VerticalAlign: =VerticalAlign.Top
+            Width: =372
+            X: =78
+            Y: =lblTL2TitleAS.Y + lblTL2TitleAS.Height
+      - lblTL2StateAS:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Right
+            Color: |-
+              =If(Or(locTimeStep > 2, And(locTimeStep = 2, locStageDone)), ColorPalette.SuccessText,
+                 If(And(locTimeStep = 2, Not(locStageDone)), ColorPalette.Blue600, ColorPalette.TextHelp))
+            Font: =Typography.Family
+            FontWeight: =If(And(locTimeStep = 2, Not(locStageDone)), Typography.WeightMedium, Typography.WeightRegular)
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: |-
+              =If(Or(locTimeStep > 2, And(locTimeStep = 2, locStageDone)), "Done",
+                 If(And(locTimeStep = 2, Not(locStageDone)), "In progress", "Not started"))
+            Width: =130
+            X: =Parent.Width - 150
+            Y: =conTL2DotAS.Y
+      - conTL3DotAS:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: |-
+              =If(Or(locTimeStep > 3, And(locTimeStep = 3, locStageDone)), ColorPalette.Success,
+                 If(And(locTimeStep = 3, Not(locStageDone)), ColorPalette.Blue600, ColorPalette.Gray300))
+            Height: =24
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =24
+            X: =36
+            Y: =232
+          Children:
+            - icoTL3CheckAS:
+                Control: Classic/Icon@2.5.0
+                Properties:
+                  Color: =ColorPalette.TextOnDark
+                  Height: =12
+                  Icon: =Icon.Check
+                  Visible: =Or(locTimeStep > 3, And(locTimeStep = 3, locStageDone))
+                  Width: =12
+                  X: =6
+                  Y: =6
+      - recTL3LineAS:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =If(locTimeStep > 3, ColorPalette.Blue600, ColorPalette.Gray200)
+            Height: =48
+            Width: =2
+            X: =conTL3DotAS.X + conTL3DotAS.Width / 2 - 1
+            Y: =conTL3DotAS.Y + conTL3DotAS.Height
+      - lblTL3TitleAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =If(locTimeStep >= 3, ColorPalette.TextHeading, ColorPalette.TextHelp)
+            Font: =Typography.Family
+            FontWeight: =If(locTimeStep >= 3, Typography.WeightMedium, Typography.WeightRegular)
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: ="Second-line endorsement"
+            Width: =300
+            X: =78
+            Y: =conTL3DotAS.Y
+      - lblTL3DescAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =38
+            Size: =Typography.SizeBody
+            Text: |-
+              =If(locApp.ReviewStage.Value = "Needs Supervisor Assigned",
+                 "DTD is identifying your second-line supervisor.",
+                 "With your second-line supervisor for a decision.")
+            VerticalAlign: =VerticalAlign.Top
+            Width: =372
+            X: =78
+            Y: =lblTL3TitleAS.Y + lblTL3TitleAS.Height
+      - lblTL3StateAS:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Right
+            Color: |-
+              =If(Or(locTimeStep > 3, And(locTimeStep = 3, locStageDone)), ColorPalette.SuccessText,
+                 If(And(locTimeStep = 3, Not(locStageDone)), ColorPalette.Blue600, ColorPalette.TextHelp))
+            Font: =Typography.Family
+            FontWeight: =If(And(locTimeStep = 3, Not(locStageDone)), Typography.WeightMedium, Typography.WeightRegular)
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: |-
+              =If(Or(locTimeStep > 3, And(locTimeStep = 3, locStageDone)), "Done",
+                 If(And(locTimeStep = 3, Not(locStageDone)), "In progress", "Not started"))
+            Width: =130
+            X: =Parent.Width - 150
+            Y: =conTL3DotAS.Y
+      - conTL4DotAS:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: |-
+              =If(Or(locTimeStep > 4, And(locTimeStep = 4, locStageDone)), ColorPalette.Success,
+                 If(And(locTimeStep = 4, Not(locStageDone)), ColorPalette.Blue600, ColorPalette.Gray300))
+            Height: =24
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =24
+            X: =36
+            Y: =304
+          Children:
+            - icoTL4CheckAS:
+                Control: Classic/Icon@2.5.0
+                Properties:
+                  Color: =ColorPalette.TextOnDark
+                  Height: =12
+                  Icon: =Icon.Check
+                  Visible: =Or(locTimeStep > 4, And(locTimeStep = 4, locStageDone))
+                  Width: =12
+                  X: =6
+                  Y: =6
+      - recTL4LineAS:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =If(locTimeStep > 4, ColorPalette.Blue600, ColorPalette.Gray200)
+            Height: =48
+            Width: =2
+            X: =conTL4DotAS.X + conTL4DotAS.Width / 2 - 1
+            Y: =conTL4DotAS.Y + conTL4DotAS.Height
+      - lblTL4TitleAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =If(locTimeStep >= 4, ColorPalette.TextHeading, ColorPalette.TextHelp)
+            Font: =Typography.Family
+            FontWeight: =If(locTimeStep >= 4, Typography.WeightMedium, Typography.WeightRegular)
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: ="Completeness check"
+            Width: =300
+            X: =78
+            Y: =conTL4DotAS.Y
+      - lblTL4DescAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =38
+            Size: =Typography.SizeBody
+            Text: ="DTD is confirming your application is complete."
+            VerticalAlign: =VerticalAlign.Top
+            Width: =372
+            X: =78
+            Y: =lblTL4TitleAS.Y + lblTL4TitleAS.Height
+      - lblTL4StateAS:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Right
+            Color: |-
+              =If(Or(locTimeStep > 4, And(locTimeStep = 4, locStageDone)), ColorPalette.SuccessText,
+                 If(And(locTimeStep = 4, Not(locStageDone)), ColorPalette.Blue600, ColorPalette.TextHelp))
+            Font: =Typography.Family
+            FontWeight: =If(And(locTimeStep = 4, Not(locStageDone)), Typography.WeightMedium, Typography.WeightRegular)
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: |-
+              =If(Or(locTimeStep > 4, And(locTimeStep = 4, locStageDone)), "Done",
+                 If(And(locTimeStep = 4, Not(locStageDone)), "In progress", "Not started"))
+            Width: =130
+            X: =Parent.Width - 150
+            Y: =conTL4DotAS.Y
+      - conTL5DotAS:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: |-
+              =If(Or(locTimeStep > 5, And(locTimeStep = 5, locStageDone)), ColorPalette.Success,
+                 If(And(locTimeStep = 5, Not(locStageDone)), ColorPalette.Blue600, ColorPalette.Gray300))
+            Height: =24
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =24
+            X: =36
+            Y: =376
+          Children:
+            - icoTL5CheckAS:
+                Control: Classic/Icon@2.5.0
+                Properties:
+                  Color: =ColorPalette.TextOnDark
+                  Height: =12
+                  Icon: =Icon.Check
+                  Visible: =Or(locTimeStep > 5, And(locTimeStep = 5, locStageDone))
+                  Width: =12
+                  X: =6
+                  Y: =6
+      - recTL5LineAS:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =If(locTimeStep > 5, ColorPalette.Blue600, ColorPalette.Gray200)
+            Height: =48
+            Width: =2
+            X: =conTL5DotAS.X + conTL5DotAS.Width / 2 - 1
+            Y: =conTL5DotAS.Y + conTL5DotAS.Height
+      - lblTL5TitleAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =If(locTimeStep >= 5, ColorPalette.TextHeading, ColorPalette.TextHelp)
+            Font: =Typography.Family
+            FontWeight: =If(locTimeStep >= 5, Typography.WeightMedium, Typography.WeightRegular)
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: ="Committee review"
+            Width: =300
+            X: =78
+            Y: =conTL5DotAS.Y
+      - lblTL5DescAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =38
+            Size: =Typography.SizeBody
+            Text: ="The selection committee is scoring applications."
+            VerticalAlign: =VerticalAlign.Top
+            Width: =372
+            X: =78
+            Y: =lblTL5TitleAS.Y + lblTL5TitleAS.Height
+      - lblTL5StateAS:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Right
+            Color: |-
+              =If(Or(locTimeStep > 5, And(locTimeStep = 5, locStageDone)), ColorPalette.SuccessText,
+                 If(And(locTimeStep = 5, Not(locStageDone)), ColorPalette.Blue600, ColorPalette.TextHelp))
+            Font: =Typography.Family
+            FontWeight: =If(And(locTimeStep = 5, Not(locStageDone)), Typography.WeightMedium, Typography.WeightRegular)
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: |-
+              =If(Or(locTimeStep > 5, And(locTimeStep = 5, locStageDone)), "Done",
+                 If(And(locTimeStep = 5, Not(locStageDone)), "In progress", "Not started"))
+            Width: =130
+            X: =Parent.Width - 150
+            Y: =conTL5DotAS.Y
+      - conTL6DotAS:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: |-
+              =If(Or(locTimeStep > 6, And(locTimeStep = 6, locStageDone)), ColorPalette.Success,
+                 If(And(locTimeStep = 6, Not(locStageDone)), ColorPalette.Blue600, ColorPalette.Gray300))
+            Height: =24
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =24
+            X: =36
+            Y: =448
+          Children:
+            - icoTL6CheckAS:
+                Control: Classic/Icon@2.5.0
+                Properties:
+                  Color: =ColorPalette.TextOnDark
+                  Height: =12
+                  Icon: =Icon.Check
+                  Visible: =Or(locTimeStep > 6, And(locTimeStep = 6, locStageDone))
+                  Width: =12
+                  X: =6
+                  Y: =6
+      - lblTL6TitleAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =If(locTimeStep >= 6, ColorPalette.TextHeading, ColorPalette.TextHelp)
+            Font: =Typography.Family
+            FontWeight: =If(locTimeStep >= 6, Typography.WeightMedium, Typography.WeightRegular)
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: ="Decision"
+            Width: =300
+            X: =78
+            Y: =conTL6DotAS.Y
+      - lblTL6DescAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =38
+            Size: =Typography.SizeBody
+            Text: |-
+              =Switch(locApp.PlacementOutcome.Value,
+                "Placed",             "You have been placed in this cohort.",
+                "Not Selected",       "You were not selected for this cohort.",
+                "Placement Declined", "You declined your placement in this cohort.",
+                "The outcome will be recorded and you will be notified.")
+            VerticalAlign: =VerticalAlign.Top
+            Width: =372
+            X: =78
+            Y: =lblTL6TitleAS.Y + lblTL6TitleAS.Height
+      - lblTL6StateAS:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Right
+            Color: |-
+              =If(Or(locTimeStep > 6, And(locTimeStep = 6, locStageDone)), ColorPalette.SuccessText,
+                 If(And(locTimeStep = 6, Not(locStageDone)), ColorPalette.Blue600, ColorPalette.TextHelp))
+            Font: =Typography.Family
+            FontWeight: =If(And(locTimeStep = 6, Not(locStageDone)), Typography.WeightMedium, Typography.WeightRegular)
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: |-
+              =If(Or(locTimeStep > 6, And(locTimeStep = 6, locStageDone)), "Done",
+                 If(And(locTimeStep = 6, Not(locStageDone)), "In progress", "Not started"))
+            Width: =130
+            X: =Parent.Width - 150
+            Y: =conTL6DotAS.Y
+
+# ===========================================================================
+# STATUS FACTS — the three columns, each labelled
+# ===========================================================================
+# _CHOICES.md settles this: the three are independent and a screen may
+# collapse them for display but must never store one. Shown side by side
+# with their column names, because "Submitted / Committee Review / Decision
+# Pending" run together is unreadable without them.
+- conFactsAS:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =162
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: |-
+        =And(Not(IsBlank(locApp)),
+           locApp.ApplicationStatus.Value <> "Draft",
+           locApp.ApplicationStatus.Value <> "Withdrawn")
+      Width: =Parent.Width - 692
+      X: =668
+      Y: =180
+    Children:
+      - lblFactsTitleAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =26
+            Size: =Typography.SizeHeading
+            Text: ="Status"
+            Width: =Parent.Width - 40
+            X: =20
+            Y: =16
+      - lblFactStatusLabelAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: ="Application"
+            Width: =110
+            X: =20
+            Y: =56
+      - lblFactStatusValueAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: =locApp.ApplicationStatus.Value
+            Width: =Parent.Width - 150
+            X: =130
+            Y: =56
+      - lblFactStageLabelAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: ="Stage"
+            Width: =110
+            X: =20
+            Y: =92
+      - lblFactStageValueAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: =If(IsBlank(locApp.ReviewStage.Value), "—", locApp.ReviewStage.Value)
+            Width: =Parent.Width - 150
+            X: =130
+            Y: =92
+      - lblFactOutLabelAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: ="Outcome"
+            Width: =110
+            X: =20
+            Y: =128
+      - lblFactOutValueAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =22
+            Size: =Typography.SizeBody
+            Text: =locApp.PlacementOutcome.Value
+            Width: =Parent.Width - 150
+            X: =130
+            Y: =128
+
+# ===========================================================================
+# WHAT HAPPENS NEXT — keyed to the stage, not the step
+# ===========================================================================
+# Keyed to ReviewStage rather than locTimeStep so the second-line detour can
+# say who is actually being waited on. Every branch ends by telling the
+# applicant whether anything is needed from them; that is the only question
+# this panel exists to answer.
+- conNextAS:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =144
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: |-
+        =And(Not(IsBlank(locApp)),
+           locApp.ApplicationStatus.Value <> "Draft",
+           locApp.ApplicationStatus.Value <> "Withdrawn")
+      Width: =Parent.Width - 692
+      X: =668
+      Y: =354
+    Children:
+      - lblNextTitleAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =26
+            Size: =Typography.SizeHeading
+            Text: ="What happens next"
+            Width: =Parent.Width - 40
+            X: =20
+            Y: =16
+      - lblNextBodyAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =88
+            Size: =Typography.SizeBody
+            Text: |-
+              =Switch(locApp.ReviewStage.Value,
+                "Pending First-Line",
+                  "Your first-line supervisor has been asked to endorse your application. Nothing is needed from you.",
+                "Needs Supervisor Assigned",
+                  "DTD is identifying a second-line supervisor for your application. Nothing is needed from you.",
+                "Pending Second-Line",
+                  "Your second-line supervisor has been asked to endorse your application. Nothing is needed from you.",
+                "Pending DTD Validation",
+                  "DTD is checking that your application is complete. They will contact you if anything is missing.",
+                "Committee Review",
+                  "The selection committee is scoring applications against the published rating criteria.",
+                "Pending Placement",
+                  "Scoring is finished and placement decisions are being made.",
+                "Pending Notification",
+                  "A decision has been recorded. You will be notified.",
+                "Complete",
+                  "This application is closed. Nothing further is needed from you.",
+                "Nothing is needed from you right now.")
+            VerticalAlign: =VerticalAlign.Top
+            Width: =Parent.Width - 40
+            X: =20
+            Y: =48
+
+# ===========================================================================
+# WHAT WAS SUBMITTED — the programme choices, in rank order
+# ===========================================================================
+# Read-only. The application itself is no longer reachable once submitted,
+# so this is the only place the applicant can check what they asked for.
+- conChoicesAS:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =190
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: |-
+        =And(Not(IsBlank(locApp)),
+           locApp.ApplicationStatus.Value <> "Draft",
+           locApp.ApplicationStatus.Value <> "Withdrawn")
+      Width: =Parent.Width - 692
+      X: =668
+      Y: =510
+    Children:
+      - lblChoicesTitleAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =26
+            Size: =Typography.SizeHeading
+            Text: ="Programs you chose"
+            Width: =Parent.Width - 40
+            X: =20
+            Y: =14
+      - galChoicesAS:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Height: =138
+            Items: |-
+              =Sort(
+                Filter(APPLICATION_PROGRAM_CHOICES, ApplicationID.Id = locApp.ID),
+                Rank)
+            ShowScrollbar: =false
+            TemplatePadding: =0
+            TemplateSize: =46
+            Width: =Parent.Width - 40
+            X: =20
+            Y: =44
+          Children:
+            - lblChoiceRankAS:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =20
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.Rank & "."
+                  Width: =24
+                  X: =0
+                  Y: =0
+            - lblChoiceProgAS:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =20
+                  Size: =Typography.SizeBody
+                  Text: =ThisItem.ProgramID.Value
+                  Width: =Parent.TemplateWidth - 30
+                  X: =26
+                  Y: =0
+            - lblChoiceOptAS:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =18
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =If(IsBlank(ThisItem.ProgramOptionID.Value),
+                       "No secondary option",
+                       ThisItem.ProgramOptionID.Value)
+                  Width: =Parent.TemplateWidth - 30
+                  X: =26
+                  Y: =20
+
+# ===========================================================================
+# WITHDRAWN — replaces the timeline rather than stalling it
+# ===========================================================================
+# A withdrawn application has no position in a six-step progression. Showing
+# the timeline frozen at whatever stage it had reached would read as "still
+# being reviewed", which is the opposite of true.
+- conWithdrawnAS:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =200
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: |-
+        =And(Not(IsBlank(locApp)),
+           locApp.ApplicationStatus.Value = "Withdrawn")
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =180
+    Children:
+      - icoWithdrawnAS:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            Color: =ColorPalette.TextSecondary
+            Height: =32
+            Icon: =Icon.Cancel
+            Width: =32
+            X: =28
+            Y: =28
+      - lblWithdrawnTitleAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =30
+            Size: =Typography.SizeHeading
+            Text: ="This application was withdrawn"
+            Width: =Parent.Width - 120
+            X: =76
+            Y: =28
+      - lblWithdrawnBodyAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =80
+            Size: =Typography.SizeBody
+            Text: |-
+              ="It is no longer under review and will not be scored. "
+                & "If this is wrong, contact the Division of Talent Development."
+            VerticalAlign: =VerticalAlign.Top
+            Width: =Parent.Width - 120
+            X: =76
+            Y: =68
+
+# ===========================================================================
+# NO SUBMITTED APPLICATION — the deep-link guard
+# ===========================================================================
+# Nothing in the app navigates here without a submitted application, but a
+# bookmarked URL does. Without this the screen renders a timeline of six
+# empty steps, which reads as "submitted and stuck".
+- conNoAppAS:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.White
+      Height: =200
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: |-
+        =Or(IsBlank(locApp),
+           locApp.ApplicationStatus.Value = "Draft")
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =180
+    Children:
+      - icoNoAppAS:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            Color: =ColorPalette.TextSecondary
+            Height: =32
+            Icon: =Icon.Information
+            Width: =32
+            X: =28
+            Y: =28
+      - lblNoAppTitleAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =30
+            Size: =Typography.SizeHeading
+            Text: |-
+              =If(IsBlank(locApp),
+                 "You have not applied to this cycle",
+                 "Your application has not been submitted yet")
+            Width: =Parent.Width - 120
+            X: =76
+            Y: =28
+      - lblNoAppBodyAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =80
+            Size: =Typography.SizeBody
+            Text: |-
+              ="There is nothing to track until an application has been submitted. "
+                & "Use the logo above to go back."
+            VerticalAlign: =VerticalAlign.Top
+            Width: =Parent.Width - 120
+            X: =76
+            Y: =68
+
+# ===========================================================================
+# DANGER ZONE — withdrawal. See WITHDRAWAL in the header.
+# ===========================================================================
+- conDangerAS:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Light
+      Fill: =ColorPalette.Gray50
+      Height: =52
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: |-
+        =And(Not(IsBlank(locApp)),
+           locApp.ApplicationStatus.Value <> "Draft",
+           locApp.ApplicationStatus.Value <> "Withdrawn",
+           locApp.PlacementOutcome.Value = "Decision Pending")
+      Width: =Parent.Width - 48
+      X: =24
+      Y: =712
+    Children:
+      - lblDangerTitleAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =20
+            Size: =Typography.SizeBody
+            Text: ="Changed your mind?"
+            Width: =160
+            X: =20
+            Y: =16
+      - lblDangerBodyAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeBody
+            Text: ="Withdrawing takes your application out of review. This cannot be undone."
+            Width: =Parent.Width - 420
+            X: =190
+            Y: =16
+      - btnWithdrawAS:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.DangerText
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.DangerText
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =32
+            HoverBorderColor: =ColorPalette.DangerText
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.DangerLight
+            OnSelect: |-
+              =UpdateContext({ locConfirmWithdrawAS: true })
+            PressedBorderColor: =ColorPalette.DangerText
+            PressedColor: =Self.Color
+            PressedFill: =ColorPalette.DangerLight
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            Text: ="Withdraw application"
+            Tooltip: ="Take this application out of review"
+            Width: =190
+            X: =Parent.Width - 210
+            Y: =10
+
+# ===========================================================================
+# WITHDRAW CONFIRMATION — same shape as the DTD Clear validation dialog
+# ===========================================================================
+# Declared LAST: z-order is declaration order, so the scrim and dialog must
+# come after everything they cover.
+- recWdScrimAS:
+    Control: Rectangle@2.3.0
+    Properties:
+      BorderColor: =RGBA(0, 0, 0, 0)
+      Fill: =RGBA(0, 0, 0, 0.45)
+      Height: =Parent.Height
+      Visible: =locConfirmWithdrawAS
+      Width: =Parent.Width
+      X: =0
+      Y: =0
+- conWdConfirmAS:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.Bold
+      Fill: =ColorPalette.White
+      Height: =246
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Visible: =locConfirmWithdrawAS
+      Width: =560
+      X: =(Parent.Width - 560) / 2
+      Y: =(Parent.Height - 246) / 2
+    Children:
+      - shpWdHaloAS:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =ColorPalette.DangerLight
+            Height: =56
+            RadiusBottomLeft: =28
+            RadiusBottomRight: =28
+            RadiusTopLeft: =28
+            RadiusTopRight: =28
+            Width: =56
+            X: =32
+            Y: =32
+      - icoWdWarnAS:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            Color: =ColorPalette.DangerText
+            Height: =28
+            Icon: =Icon.Warning
+            Width: =28
+            X: =46
+            Y: =46
+      - lblWdTitleAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =30
+            Size: =Typography.SizeHeading
+            Text: ="Withdraw this application?"
+            Width: =420
+            X: =104
+            Y: =36
+      - lblWdBodyAS:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =96
+            Size: =Typography.SizeBody
+            Text: |-
+              ="Withdrawing will remove your application from review for the "
+                & locCycle.CycleName
+                & " cycle, and it won't be scored. This action can't be undone."
+            VerticalAlign: =VerticalAlign.Top
+            Width: =424
+            X: =104
+            Y: =72
+      - btnWdCancelAS:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =ColorPalette.Gray300
+            BorderStyle: =BorderStyle.Solid
+            BorderThickness: =1
+            Color: =ColorPalette.TextBody
+            Fill: =ColorPalette.White
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =1
+            Font: =Typography.Family
+            Height: =38
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.Gray50
+            OnSelect: |-
+              =UpdateContext({ locConfirmWithdrawAS: false })
+            PressedColor: =Self.Color
+            PressedFill: =ColorPalette.White
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            Text: ="Keep my application"
+            Width: =180
+            X: =btnWdConfirmAS.X - Self.Width - 10
+            Y: =Parent.Height - 62
+      - btnWdConfirmAS:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextOnDark
+            Fill: =ColorPalette.Danger
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =3
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =38
+            HoverColor: =Self.Color
+            HoverFill: =ColorPalette.DangerText
+            OnSelect: |-
+              =UpdateContext({
+                 locApp: Patch(APPLICATIONS, locApp,
+                   { ApplicationStatus: { Value: "Withdrawn" } }),
+                 locConfirmWithdrawAS: false
+               });
+               Notify("Your application has been withdrawn.", NotificationType.Success)
+            PressedColor: =Self.Color
+            PressedFill: =ColorPalette.DangerText
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            Size: =Typography.SizeBody
+            Text: ="Yes, withdraw it"
+            Width: =180
+            X: =Parent.Width - 204
+            Y: =Parent.Height - 62
