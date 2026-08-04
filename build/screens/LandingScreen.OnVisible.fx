@@ -10,9 +10,17 @@
 UpdateContext({
    locCycle: If(IsBlank(LookUp(CYCLES, State.Value = "Open")),
                 First(Sort(CYCLES, OpenDate, SortOrder.Descending)),
-                LookUp(CYCLES, State.Value = "Open"))
+                LookUp(CYCLES, State.Value = "Open")),
+   locFaqOpenLD:    false, locOpenFaqIdLD:   Blank(),
+   locNeedOpenLD:   false, locOpenNeedIdLD:  Blank(),
+   locDatesOpenLD:  false, locOpenDatesIdLD: Blank(),
+   locEligOpenLD:   false, locOpenEligIdLD:  Blank()
 });
 UpdateContext({
    locApp: LookUp(APPLICATIONS,
              And(CycleID.Id = locCycle.ID, ApplicantEmail = User().Email))
-})
+});
+ClearCollect(colFaqAnimTriggersLD,   { itemID: 0, timestamp: "" });
+ClearCollect(colNeedAnimTriggersLD,  { itemID: 0, timestamp: "" });
+ClearCollect(colDatesAnimTriggersLD, { itemID: 0, timestamp: "" });
+ClearCollect(colEligAnimTriggersLD,  { itemID: 0, timestamp: "" })

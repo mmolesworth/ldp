@@ -16,10 +16,7 @@
 # work is pending; nothing consults it before navigating away. Removing the
 # links removes the hazard rather than mitigating it.
 #
-# Brand and identity stay. "Signed in as" matters MORE here than on the landing
-# page: the Application Screen's email field is editable and the record is keyed
-# on ApplicantEmail, so seeing the signed-in identity beside the form is useful
-# (see OI-APP-5).
+# Brand stays. `lblUtilitySignedIn` (both variants) removed 2026-08-04.
 #
 # ---------------------------------------------------------------------------
 # WHERE TO USE WHICH
@@ -43,17 +40,15 @@
 # TWO FILES IS THE INTERIM ANSWER, NOT THE INTENDED ONE. T083 converts the
 # shared blocks to real canvas components, at which point this becomes one
 # component with a `ShowRoleLinks` property and this file is deleted. Until
-# then, a change to the brand or the signed-in label has to be made in BOTH
-# files or they drift.
+# then, a change to the brand has to be made in BOTH files or they drift.
 #
 # ---------------------------------------------------------------------------
 # GEOMETRY
 # ---------------------------------------------------------------------------
 # Identical to _UtilityBar.yaml — same 52px height, same brand position — so a
-# screen can be switched between the two without moving anything below it. Only
-# lblUtilitySignedIn moves: with no buttons to its right it right-aligns to the
-# edge instead of stopping 538px short. The logo shifts the brand from X=24 to
-# X=60; both bars must be changed together if the mark is ever replaced.
+# screen can be switched between the two without moving anything below it. The
+# logo shifts the brand from X=24 to X=60; both bars must be changed together
+# if the mark is ever replaced.
 
 - conUtilityBar:
     Control: GroupContainer@1.5.0
@@ -131,18 +126,3 @@
             Width: =420
             X: =60
             Y: =14
-      # Identity, not a login prompt. Right-aligned to the bar's own edge —
-      # there are no buttons to clear here, unlike the full variant.
-      - lblUtilitySignedIn:
-          Control: Label@2.5.1
-          Properties:
-            Align: =Align.Right
-            Color: =ColorPalette.TextOnDarkMuted
-            Font: =Typography.Family
-            Height: =20
-            Size: =Typography.SizeCaption
-            Text: |-
-              ="Signed in as " & User().FullName
-            Width: =360
-            X: =Parent.Width - 384
-            Y: =16

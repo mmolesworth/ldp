@@ -31,7 +31,7 @@
                   Color: =ColorPalette.TextOnDark
                   Font: =Typography.Family
                   FontWeight: =Typography.WeightBold
-                  Height: =36
+                  Height: =38
                   Size: =Typography.SizeHero
                   Text: ="Apply to the Leader Development Program"
                   Width: =Parent.Width - 320
@@ -43,7 +43,7 @@
                   Color: =ColorPalette.TextOnDarkMuted
                   Font: =Typography.Family
                   Height: =48
-                  Size: =Typography.SizeTitle
+                  Size: =Typography.SizeSubtitle
                   Text: |-
                     =Switch(locCycle.State.Value,
                       "Open",
@@ -89,16 +89,18 @@
                 Control: Classic/Button@2.2.0
                 Properties:
                   BorderStyle: =BorderStyle.None
-                  Color: =ColorPalette.Navy900
+                  Color: =ColorPalette.TextOnDark
                   DisplayMode: |-
                     =If(locCycle.State.Value = "Open", DisplayMode.Edit, DisplayMode.Disabled)
-                  Fill: =ColorPalette.White
+                  Fill: =ColorPalette.Blue600
                   Font: =Typography.Family
                   FontWeight: =Typography.WeightBold
                   Height: =52
-                  HoverFill: =ColorPalette.Gray50
+                  HoverColor: =ColorPalette.TextOnDark
+                  HoverFill: =ColorPalette.Blue700
                   OnSelect: =Navigate('Application Screen')
-                  PressedFill: =ColorPalette.Gray50
+                  PressedColor: =ColorPalette.TextOnDark
+                  PressedFill: =ColorPalette.Blue700
                   RadiusBottomLeft: =8
                   RadiusBottomRight: =8
                   RadiusTopLeft: =8
@@ -129,7 +131,7 @@
             Color: =ColorPalette.TextHeading
             Font: =Typography.Family
             FontWeight: =Typography.WeightMedium
-            Height: =22
+            Height: =24
             Size: =Typography.SizeSubtitle
             Text: ="Learn about the programs"
             Visible: =conHeroLD.Visible
@@ -191,7 +193,7 @@
                       Properties:
                         DropShadow: =DropShadow.Light
                         Fill: =ColorPalette.White
-                        Height: =Parent.TemplateHeight - 8
+                        Height: =Parent.TemplateHeight - 4
                         RadiusBottomLeft: =10
                         RadiusBottomRight: =10
                         RadiusTopLeft: =10
@@ -207,7 +209,7 @@
                               Font: =Typography.Family
                               FontWeight: =Typography.WeightBold
                               Height: =24
-                              Size: =Typography.SizeSubtitle
+                              Size: =Typography.SizeLabel
                               Text: =ThisItem.ProgramName
                               Width: =Parent.Width - 32
                               X: =16
@@ -218,7 +220,7 @@
                               Color: =ColorPalette.TextBody
                               Font: =Typography.Family
                               Height: =74
-                              Size: =Typography.SizeBody
+                              Size: =Typography.SizeCaption
                               Text: |-
                                 =Coalesce(ThisItem.Description, "Description to be supplied by the program office.")
                               Width: =Parent.Width - 32
@@ -238,126 +240,218 @@
             Width: =Parent.Width - 48
             X: =24
             Y: =conProgramsWellLD.Y + conProgramsWellLD.Height + 12
-      
-      - conNeedLD:
+
+      - conInfoPanelsLD:
           Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
-            DropShadow: =DropShadow.Light
-            Fill: =ColorPalette.Navy900
-            Height: =72
-            RadiusBottomLeft: =10
-            RadiusBottomRight: =10
-            RadiusTopLeft: =10
-            RadiusTopRight: =10
+            DropShadow: =DropShadow.None
+            Fill: =RGBA(0, 0, 0, 0)
+            Height: =Max(conRoleWellLD.Y - Self.Y - 20, 20)
             Visible: =conHeroLD.Visible
-            Width: =(Parent.Width - 96) / 4
-            X: =24
-            Y: =lblInfoHeaderLD.Y + 24
+            Width: =Parent.Width
+            X: =0
+            Y: =lblInfoHeaderLD.Y + lblInfoHeaderLD.Height + 16
           Children:
-            - lblNeedTitleLD:
-                Control: Label@2.5.1
+            - conNeedLD:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
                 Properties:
-                  Align: =Align.Center
-                  Color: =ColorPalette.TextOnDark
-                  Font: =Typography.Family
-                  FontWeight: =Typography.WeightMedium
-                  Height: =26
-                  Size: =Typography.SizeTitle
-                  Text: ="Before you start"
-                  Width: =Parent.Width - 32
-                  X: =16
-                  Y: =23
-      
-      - conDatesLD:
-          Control: GroupContainer@1.5.0
-          Variant: ManualLayout
-          Properties:
-            DropShadow: =DropShadow.Light
-            Fill: =ColorPalette.Navy900
-            Height: =72
-            RadiusBottomLeft: =10
-            RadiusBottomRight: =10
-            RadiusTopLeft: =10
-            RadiusTopRight: =10
-            Visible: =conHeroLD.Visible
-            Width: =conNeedLD.Width
-            X: =conNeedLD.X + conNeedLD.Width + 16
-            Y: =conNeedLD.Y
-          Children:
-            - lblDatesTitleLD:
-                Control: Label@2.5.1
+                  DropShadow: =DropShadow.Light
+                  Fill: =ColorPalette.Navy900
+                  Height: =Min(72, Max(Parent.Height - 8, 12))
+                  RadiusBottomLeft: =10
+                  RadiusBottomRight: =10
+                  RadiusTopLeft: =10
+                  RadiusTopRight: =10
+                  Visible: =conHeroLD.Visible
+                  Width: =(Parent.Width - 96) / 4
+                  X: =24
+                  Y: =(Parent.Height - Self.Height) / 2
+                Children:
+                  - lblNeedTitleLD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Align: =Align.Center
+                        Color: =ColorPalette.TextOnDark
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =26
+                        Size: =Typography.SizeSubtitle
+                        Text: ="Before you start"
+                        Width: =Parent.Width - 32
+                        X: =16
+                        Y: =(Parent.Height - Self.Height) / 2
+                  - btnNeedOverlayLD:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderStyle: =BorderStyle.None
+                        Color: =RGBA(0, 0, 0, 0)
+                        Fill: =RGBA(0, 0, 0, 0)
+                        Font: =Typography.Family
+                        Height: =Parent.Height
+                        HoverFill: =RGBA(255, 255, 255, 0.08)
+                        OnSelect: |-
+                          =UpdateContext({ locNeedOpenLD: true })
+                        PressedFill: =RGBA(255, 255, 255, 0.15)
+                        RadiusBottomLeft: =10
+                        RadiusBottomRight: =10
+                        RadiusTopLeft: =10
+                        RadiusTopRight: =10
+                        Text: =""
+                        Width: =Parent.Width
+                        X: =0
+                        Y: =0
+            
+            - conDatesLD:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
                 Properties:
-                  Align: =Align.Center
-                  Color: =ColorPalette.TextOnDark
-                  Font: =Typography.Family
-                  FontWeight: =Typography.WeightMedium
-                  Height: =26
-                  Size: =Typography.SizeTitle
-                  Text: ="Key dates"
-                  Width: =Parent.Width - 32
-                  X: =16
-                  Y: =23
-      
-      - conEligibilityLD:
-          Control: GroupContainer@1.5.0
-          Variant: ManualLayout
-          Properties:
-            DropShadow: =DropShadow.Light
-            Fill: =ColorPalette.Navy900
-            Height: =72
-            RadiusBottomLeft: =10
-            RadiusBottomRight: =10
-            RadiusTopLeft: =10
-            RadiusTopRight: =10
-            Visible: =conHeroLD.Visible
-            Width: =conNeedLD.Width
-            X: =conDatesLD.X + conNeedLD.Width + 16
-            Y: =conNeedLD.Y
-          Children:
-            - lblEligibilityTitleLD:
-                Control: Label@2.5.1
+                  DropShadow: =DropShadow.Light
+                  Fill: =ColorPalette.Navy900
+                  Height: =conNeedLD.Height
+                  RadiusBottomLeft: =10
+                  RadiusBottomRight: =10
+                  RadiusTopLeft: =10
+                  RadiusTopRight: =10
+                  Visible: =conHeroLD.Visible
+                  Width: =conNeedLD.Width
+                  X: =conNeedLD.X + conNeedLD.Width + 16
+                  Y: =conNeedLD.Y
+                Children:
+                  - lblDatesTitleLD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Align: =Align.Center
+                        Color: =ColorPalette.TextOnDark
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =26
+                        Size: =Typography.SizeSubtitle
+                        Text: ="Key dates"
+                        Width: =Parent.Width - 32
+                        X: =16
+                        Y: =(Parent.Height - Self.Height) / 2
+                  - btnDatesOverlayLD:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderStyle: =BorderStyle.None
+                        Color: =RGBA(0, 0, 0, 0)
+                        Fill: =RGBA(0, 0, 0, 0)
+                        Font: =Typography.Family
+                        Height: =Parent.Height
+                        HoverFill: =RGBA(255, 255, 255, 0.08)
+                        OnSelect: |-
+                          =UpdateContext({ locDatesOpenLD: true })
+                        PressedFill: =RGBA(255, 255, 255, 0.15)
+                        RadiusBottomLeft: =10
+                        RadiusBottomRight: =10
+                        RadiusTopLeft: =10
+                        RadiusTopRight: =10
+                        Text: =""
+                        Width: =Parent.Width
+                        X: =0
+                        Y: =0
+            
+            - conEligibilityLD:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
                 Properties:
-                  Align: =Align.Center
-                  Color: =ColorPalette.TextOnDark
-                  Font: =Typography.Family
-                  FontWeight: =Typography.WeightMedium
-                  Height: =26
-                  Size: =Typography.SizeTitle
-                  Text: ="Eligibility"
-                  Width: =Parent.Width - 32
-                  X: =16
-                  Y: =23
-      
-      - conContactLD:
-          Control: GroupContainer@1.5.0
-          Variant: ManualLayout
-          Properties:
-            DropShadow: =DropShadow.Light
-            Fill: =ColorPalette.Navy900
-            Height: =72
-            RadiusBottomLeft: =10
-            RadiusBottomRight: =10
-            RadiusTopLeft: =10
-            RadiusTopRight: =10
-            Visible: =conHeroLD.Visible
-            Width: =conNeedLD.Width
-            X: =conEligibilityLD.X + conNeedLD.Width + 16
-            Y: =conNeedLD.Y
-          Children:
-            - lblContactTitleLD:
-                Control: Label@2.5.1
+                  DropShadow: =DropShadow.Light
+                  Fill: =ColorPalette.Navy900
+                  Height: =conNeedLD.Height
+                  RadiusBottomLeft: =10
+                  RadiusBottomRight: =10
+                  RadiusTopLeft: =10
+                  RadiusTopRight: =10
+                  Visible: =conHeroLD.Visible
+                  Width: =conNeedLD.Width
+                  X: =conDatesLD.X + conNeedLD.Width + 16
+                  Y: =conNeedLD.Y
+                Children:
+                  - lblEligibilityTitleLD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Align: =Align.Center
+                        Color: =ColorPalette.TextOnDark
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =26
+                        Size: =Typography.SizeSubtitle
+                        Text: ="Eligibility"
+                        Width: =Parent.Width - 32
+                        X: =16
+                        Y: =(Parent.Height - Self.Height) / 2
+                  - btnEligOverlayLD:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderStyle: =BorderStyle.None
+                        Color: =RGBA(0, 0, 0, 0)
+                        Fill: =RGBA(0, 0, 0, 0)
+                        Font: =Typography.Family
+                        Height: =Parent.Height
+                        HoverFill: =RGBA(255, 255, 255, 0.08)
+                        OnSelect: |-
+                          =UpdateContext({ locEligOpenLD: true })
+                        PressedFill: =RGBA(255, 255, 255, 0.15)
+                        RadiusBottomLeft: =10
+                        RadiusBottomRight: =10
+                        RadiusTopLeft: =10
+                        RadiusTopRight: =10
+                        Text: =""
+                        Width: =Parent.Width
+                        X: =0
+                        Y: =0
+            
+            - conContactLD:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
                 Properties:
-                  Align: =Align.Center
-                  Color: =ColorPalette.TextOnDark
-                  Font: =Typography.Family
-                  FontWeight: =Typography.WeightMedium
-                  Height: =26
-                  Size: =Typography.SizeTitle
-                  Text: ="FAQs"
-                  Width: =Parent.Width - 32
-                  X: =16
-                  Y: =23
+                  DropShadow: =DropShadow.Light
+                  Fill: =ColorPalette.Navy900
+                  Height: =conNeedLD.Height
+                  RadiusBottomLeft: =10
+                  RadiusBottomRight: =10
+                  RadiusTopLeft: =10
+                  RadiusTopRight: =10
+                  Visible: =conHeroLD.Visible
+                  Width: =conNeedLD.Width
+                  X: =conEligibilityLD.X + conNeedLD.Width + 16
+                  Y: =conNeedLD.Y
+                Children:
+                  - lblContactTitleLD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Align: =Align.Center
+                        Color: =ColorPalette.TextOnDark
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =26
+                        Size: =Typography.SizeSubtitle
+                        Text: ="FAQs"
+                        Width: =Parent.Width - 32
+                        X: =16
+                        Y: =(Parent.Height - Self.Height) / 2
+                  - btnContactOverlayLD:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderStyle: =BorderStyle.None
+                        Color: =RGBA(0, 0, 0, 0)
+                        Fill: =RGBA(0, 0, 0, 0)
+                        Font: =Typography.Family
+                        Height: =Parent.Height
+                        HoverFill: =RGBA(255, 255, 255, 0.08)
+                        OnSelect: |-
+                          =UpdateContext({ locFaqOpenLD: true })
+                        PressedFill: =RGBA(255, 255, 255, 0.15)
+                        RadiusBottomLeft: =10
+                        RadiusBottomRight: =10
+                        RadiusTopLeft: =10
+                        RadiusTopRight: =10
+                        Text: =""
+                        Width: =Parent.Width
+                        X: =0
+                        Y: =0
       - conRoleWellLD:
           Control: GroupContainer@1.5.0
           Variant: ManualLayout
@@ -470,6 +564,7 @@
                         Height: =40
                         Size: =Typography.SizeCaption
                         Text: ="Manage cycles, scoring, and placement."
+                        VerticalAlign: =VerticalAlign.Top
                         Width: =Parent.Width - 222
                         X: =20
                         Y: =38
@@ -494,3 +589,824 @@
                         Width: =170
                         X: =Parent.Width - 190
                         Y: =29
+
+      - conFaqModalLD:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =RGBA(0, 0, 0, 0)
+            Height: =Parent.Height
+            Visible: =locFaqOpenLD
+            Width: =Parent.Width
+            X: =0
+            Y: =0
+          Children:
+            - btnFaqModalBackdropLD:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =RGBA(0, 0, 0, 0.5)
+                  Font: =Typography.Family
+                  Height: =Parent.Height
+                  HoverFill: =RGBA(0, 0, 0, 0.5)
+                  OnSelect: |-
+                    =UpdateContext({ locFaqOpenLD: false })
+                  PressedFill: =RGBA(0, 0, 0, 0.5)
+                  Text: =""
+                  Width: =Parent.Width
+                  X: =0
+                  Y: =0
+            - conFaqModalCardLD:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.Bold
+                  Fill: =ColorPalette.White
+                  Height: =600
+                  RadiusBottomLeft: =12
+                  RadiusBottomRight: =12
+                  RadiusTopLeft: =12
+                  RadiusTopRight: =12
+                  Width: =720
+                  X: =(Parent.Width - Self.Width) / 2
+                  Y: =(Parent.Height - Self.Height) / 2
+                Children:
+                  - lblFaqModalTitleLD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightBold
+                        Height: =32
+                        Size: =Typography.SizeHeading
+                        Text: ="Frequently Asked Questions"
+                        Width: =Parent.Width - 96
+                        X: =24
+                        Y: =24
+                  - btnFaqModalCloseLD:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderStyle: =BorderStyle.None
+                        Color: =ColorPalette.TextHelp
+                        Fill: =RGBA(0, 0, 0, 0)
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightBold
+                        Height: =32
+                        HoverColor: =ColorPalette.TextHeading
+                        HoverFill: =ColorPalette.Gray50
+                        OnSelect: |-
+                          =UpdateContext({ locFaqOpenLD: false })
+                        PressedColor: =ColorPalette.TextHeading
+                        PressedFill: =ColorPalette.Gray50
+                        RadiusBottomLeft: =16
+                        RadiusBottomRight: =16
+                        RadiusTopLeft: =16
+                        RadiusTopRight: =16
+                        Size: =Typography.SizeSubtitle
+                        Text: ="X"
+                        Width: =32
+                        X: =Parent.Width - 56
+                        Y: =20
+                  - galFaqLD:
+                      Control: Gallery@2.15.0
+                      Variant: BrowseLayout_Flexible_SocialFeed_ver5.0
+                      Properties:
+                        BorderColor: =ColorPalette.Gray200
+                        Height: =Parent.Height - 96
+                        Items: |-
+                          =[
+                            { id: 1, title: "Lorem ipsum dolor sit amet?", body: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat." },
+                            { id: 2, title: "Ut enim ad minim veniam?", body: "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum." },
+                            { id: 3, title: "Sed ut perspiciatis unde omnis?", body: "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo." },
+                            { id: 4, title: "Nemo enim ipsam voluptatem?", body: "Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est qui dolorem ipsum quia dolor sit amet." },
+                            { id: 5, title: "At vero eos et accusamus?", body: "At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident." }
+                          ]
+                        ShowScrollbar: =true
+                        TemplatePadding: =6
+                        TemplateSize: =160
+                        Width: =Parent.Width - 48
+                        X: =24
+                        Y: =72
+                      Children:
+                        - conFaqItemLD:
+                            Control: GroupContainer@1.5.0
+                            Variant: ManualLayout
+                            Properties:
+                              BorderColor: =ColorPalette.Gray200
+                              BorderThickness: =1
+                              DropShadow: =DropShadow.None
+                              Fill: =ColorPalette.White
+                              Height: =If(locOpenFaqIdLD = ThisItem.id, lblFaqTitleLD.Height + lblFaqBodyLD.Height + 16, lblFaqTitleLD.Height)
+                              RadiusBottomLeft: =6
+                              RadiusBottomRight: =6
+                              RadiusTopLeft: =6
+                              RadiusTopRight: =6
+                              Width: =galFaqLD.TemplateWidth
+                        - lblFaqBodyLD:
+                            Control: Label@2.5.1
+                            Properties:
+                              AutoHeight: =true
+                              Color: =ColorPalette.TextBody
+                              Font: =Typography.Family
+                              Height: =80
+                              PaddingBottom: =12
+                              PaddingLeft: =16
+                              PaddingRight: =16
+                              Size: =Typography.SizeCaption
+                              Text: =ThisItem.body
+                              Visible: =locOpenFaqIdLD = ThisItem.id
+                              Width: =galFaqLD.TemplateWidth - imgFaqArrowLD.Width - 32
+                              Y: =lblFaqTitleLD.Height
+                        - lblFaqTitleLD:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =ColorPalette.TextHeading
+                              Font: =Typography.Family
+                              FontWeight: =Typography.WeightBold
+                              Height: =40
+                              PaddingLeft: =16
+                              Size: =Typography.SizeLabel
+                              Text: =ThisItem.title
+                              Width: =galFaqLD.TemplateWidth - imgFaqArrowLD.Width - 24
+                        - imgFaqArrowLD:
+                            Control: Image@2.2.3
+                            Properties:
+                              Height: =16
+                              Image: |
+                                ="data:image/svg+xml," & EncodeUrl(
+                                    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='40px' height='40px'>
+                                      <style>
+                                        .arrow" & ThisItem.id & "_" & LookUp(colFaqAnimTriggersLD, itemID = ThisItem.id).timestamp & " {
+                                          stroke: black;
+                                          stroke-width: 1.5;
+                                          stroke-linecap: round;
+                                          stroke-linejoin: round;
+                                          fill: none;
+                                          transform-origin: center;
+                                          animation-name: rotateArrow" & ThisItem.id & "_" & LookUp(colFaqAnimTriggersLD, itemID = ThisItem.id).timestamp & ";
+                                          animation-duration: " & If(IsBlank(LookUp(colFaqAnimTriggersLD, itemID = ThisItem.id).timestamp), "0ms", "400ms") & ";
+                                          animation-fill-mode: both;
+                                        }
+                                        @keyframes rotateArrow" & ThisItem.id & "_" & LookUp(colFaqAnimTriggersLD, itemID = ThisItem.id).timestamp & " {
+                                          " & If(locOpenFaqIdLD = ThisItem.id, "0%", "100%") & " {
+                                            transform: rotate(0deg);
+                                            d: path('m4.5 15.75 7.5-7.5 7.5 7.5');
+                                          }
+                                          " & If(locOpenFaqIdLD = ThisItem.id, "100%", "0%") & " {
+                                            transform: rotate(180deg);
+                                            d: path('m4.5 15.75 7.5-7.5 7.5 7.5');
+                                          }
+                                        }
+                                      </style>
+                                      <path class='arrow" & ThisItem.id & "_" & LookUp(colFaqAnimTriggersLD, itemID = ThisItem.id).timestamp & "' d='m4.5 15.75 7.5-7.5 7.5 7.5' />
+                                    </svg>"
+                                )
+                              OnSelect: =false
+                              Width: =16
+                              X: =Parent.TemplateWidth - Self.Width - 16
+                              Y: =12
+                        - btnFaqItemLD:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Align: =Align.Left
+                              BorderStyle: =BorderStyle.None
+                              Color: =ColorPalette.TextHeading
+                              Fill: =RGBA(0, 0, 0, 0)
+                              Font: =Typography.Family
+                              Height: =If(locOpenFaqIdLD = ThisItem.id, lblFaqTitleLD.Height + lblFaqBodyLD.Height + 16, lblFaqTitleLD.Height)
+                              HoverColor: =ColorPalette.TextHeading
+                              HoverFill: =RGBA(0, 0, 0, 0.04)
+                              OnSelect: |-
+                                =UpdateContext({ locOpenFaqIdLD: If(locOpenFaqIdLD = ThisItem.id, Blank(), ThisItem.id) });
+                                RemoveIf(colFaqAnimTriggersLD, itemID = ThisItem.id);
+                                Collect(colFaqAnimTriggersLD, { itemID: ThisItem.id, timestamp: Text(Now(), "yyyymmddhhmmss") })
+                              PaddingLeft: =16
+                              PaddingRight: =16
+                              PressedColor: =ColorPalette.TextHeading
+                              PressedFill: =RGBA(0, 0, 0, 0.08)
+                              RadiusBottomLeft: =6
+                              RadiusBottomRight: =6
+                              RadiusTopLeft: =6
+                              RadiusTopRight: =6
+                              Size: =Typography.SizeLabel
+                              Text: =""
+                              Width: =galFaqLD.TemplateWidth
+                              X: =0
+                              Y: =0
+
+      - conNeedModalLD:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =RGBA(0, 0, 0, 0)
+            Height: =Parent.Height
+            Visible: =locNeedOpenLD
+            Width: =Parent.Width
+            X: =0
+            Y: =0
+          Children:
+            - btnNeedModalBackdropLD:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =RGBA(0, 0, 0, 0.5)
+                  Font: =Typography.Family
+                  Height: =Parent.Height
+                  HoverFill: =RGBA(0, 0, 0, 0.5)
+                  OnSelect: |-
+                    =UpdateContext({ locNeedOpenLD: false })
+                  PressedFill: =RGBA(0, 0, 0, 0.5)
+                  Text: =""
+                  Width: =Parent.Width
+                  X: =0
+                  Y: =0
+            - conNeedModalCardLD:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.Bold
+                  Fill: =ColorPalette.White
+                  Height: =600
+                  RadiusBottomLeft: =12
+                  RadiusBottomRight: =12
+                  RadiusTopLeft: =12
+                  RadiusTopRight: =12
+                  Width: =720
+                  X: =(Parent.Width - Self.Width) / 2
+                  Y: =(Parent.Height - Self.Height) / 2
+                Children:
+                  - lblNeedModalTitleLD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightBold
+                        Height: =32
+                        Size: =Typography.SizeHeading
+                        Text: ="Before you start"
+                        Width: =Parent.Width - 96
+                        X: =24
+                        Y: =24
+                  - btnNeedModalCloseLD:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderStyle: =BorderStyle.None
+                        Color: =ColorPalette.TextHelp
+                        Fill: =RGBA(0, 0, 0, 0)
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightBold
+                        Height: =32
+                        HoverColor: =ColorPalette.TextHeading
+                        HoverFill: =ColorPalette.Gray50
+                        OnSelect: |-
+                          =UpdateContext({ locNeedOpenLD: false })
+                        PressedColor: =ColorPalette.TextHeading
+                        PressedFill: =ColorPalette.Gray50
+                        RadiusBottomLeft: =16
+                        RadiusBottomRight: =16
+                        RadiusTopLeft: =16
+                        RadiusTopRight: =16
+                        Size: =Typography.SizeSubtitle
+                        Text: ="X"
+                        Width: =32
+                        X: =Parent.Width - 56
+                        Y: =20
+                  - galNeedLD:
+                      Control: Gallery@2.15.0
+                      Variant: BrowseLayout_Flexible_SocialFeed_ver5.0
+                      Properties:
+                        BorderColor: =ColorPalette.Gray200
+                        Height: =Parent.Height - 96
+                        Items: |-
+                          =[
+                            { id: 1, title: "Quis autem vel eum iure?", body: "Neque porro quisquam est qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem." },
+                            { id: 2, title: "Et harum quidem rerum facilis?", body: "Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi consequatur quis autem vel eum iure reprehenderit qui in ea voluptate velit esse." },
+                            { id: 3, title: "Temporibus autem quibusdam?", body: "Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae itaque earum rerum tenetur a sapiente." },
+                            { id: 4, title: "Itaque earum rerum hic?", body: "Itaque earum rerum hic tenetur a sapiente delectus, ut aut reficiendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat quos dolores et quas molestias." }
+                          ]
+                        ShowScrollbar: =true
+                        TemplatePadding: =6
+                        TemplateSize: =160
+                        Width: =Parent.Width - 48
+                        X: =24
+                        Y: =72
+                      Children:
+                        - conNeedItemLD:
+                            Control: GroupContainer@1.5.0
+                            Variant: ManualLayout
+                            Properties:
+                              BorderColor: =ColorPalette.Gray200
+                              BorderThickness: =1
+                              DropShadow: =DropShadow.None
+                              Fill: =ColorPalette.White
+                              Height: =If(locOpenNeedIdLD = ThisItem.id, lblNeedItemTitleLD.Height + lblNeedItemBodyLD.Height + 16, lblNeedItemTitleLD.Height)
+                              RadiusBottomLeft: =6
+                              RadiusBottomRight: =6
+                              RadiusTopLeft: =6
+                              RadiusTopRight: =6
+                              Width: =galNeedLD.TemplateWidth
+                        - lblNeedItemBodyLD:
+                            Control: Label@2.5.1
+                            Properties:
+                              AutoHeight: =true
+                              Color: =ColorPalette.TextBody
+                              Font: =Typography.Family
+                              Height: =80
+                              PaddingBottom: =12
+                              PaddingLeft: =16
+                              PaddingRight: =16
+                              Size: =Typography.SizeCaption
+                              Text: =ThisItem.body
+                              Visible: =locOpenNeedIdLD = ThisItem.id
+                              Width: =galNeedLD.TemplateWidth - imgNeedArrowLD.Width - 32
+                              Y: =lblNeedItemTitleLD.Height
+                        - lblNeedItemTitleLD:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =ColorPalette.TextHeading
+                              Font: =Typography.Family
+                              FontWeight: =Typography.WeightBold
+                              Height: =40
+                              PaddingLeft: =16
+                              Size: =Typography.SizeLabel
+                              Text: =ThisItem.title
+                              Width: =galNeedLD.TemplateWidth - imgNeedArrowLD.Width - 24
+                        - imgNeedArrowLD:
+                            Control: Image@2.2.3
+                            Properties:
+                              Height: =16
+                              Image: |
+                                ="data:image/svg+xml," & EncodeUrl(
+                                    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='40px' height='40px'>
+                                      <style>
+                                        .arrow" & ThisItem.id & "_" & LookUp(colNeedAnimTriggersLD, itemID = ThisItem.id).timestamp & " {
+                                          stroke: black;
+                                          stroke-width: 1.5;
+                                          stroke-linecap: round;
+                                          stroke-linejoin: round;
+                                          fill: none;
+                                          transform-origin: center;
+                                          animation-name: rotateArrow" & ThisItem.id & "_" & LookUp(colNeedAnimTriggersLD, itemID = ThisItem.id).timestamp & ";
+                                          animation-duration: " & If(IsBlank(LookUp(colNeedAnimTriggersLD, itemID = ThisItem.id).timestamp), "0ms", "400ms") & ";
+                                          animation-fill-mode: both;
+                                        }
+                                        @keyframes rotateArrow" & ThisItem.id & "_" & LookUp(colNeedAnimTriggersLD, itemID = ThisItem.id).timestamp & " {
+                                          " & If(locOpenNeedIdLD = ThisItem.id, "0%", "100%") & " {
+                                            transform: rotate(0deg);
+                                            d: path('m4.5 15.75 7.5-7.5 7.5 7.5');
+                                          }
+                                          " & If(locOpenNeedIdLD = ThisItem.id, "100%", "0%") & " {
+                                            transform: rotate(180deg);
+                                            d: path('m4.5 15.75 7.5-7.5 7.5 7.5');
+                                          }
+                                        }
+                                      </style>
+                                      <path class='arrow" & ThisItem.id & "_" & LookUp(colNeedAnimTriggersLD, itemID = ThisItem.id).timestamp & "' d='m4.5 15.75 7.5-7.5 7.5 7.5' />
+                                    </svg>"
+                                )
+                              OnSelect: =false
+                              Width: =16
+                              X: =Parent.TemplateWidth - Self.Width - 16
+                              Y: =12
+                        - btnNeedItemLD:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Align: =Align.Left
+                              BorderStyle: =BorderStyle.None
+                              Color: =ColorPalette.TextHeading
+                              Fill: =RGBA(0, 0, 0, 0)
+                              Font: =Typography.Family
+                              Height: =If(locOpenNeedIdLD = ThisItem.id, lblNeedItemTitleLD.Height + lblNeedItemBodyLD.Height + 16, lblNeedItemTitleLD.Height)
+                              HoverColor: =ColorPalette.TextHeading
+                              HoverFill: =RGBA(0, 0, 0, 0.04)
+                              OnSelect: |-
+                                =UpdateContext({ locOpenNeedIdLD: If(locOpenNeedIdLD = ThisItem.id, Blank(), ThisItem.id) });
+                                RemoveIf(colNeedAnimTriggersLD, itemID = ThisItem.id);
+                                Collect(colNeedAnimTriggersLD, { itemID: ThisItem.id, timestamp: Text(Now(), "yyyymmddhhmmss") })
+                              PaddingLeft: =16
+                              PaddingRight: =16
+                              PressedColor: =ColorPalette.TextHeading
+                              PressedFill: =RGBA(0, 0, 0, 0.08)
+                              RadiusBottomLeft: =6
+                              RadiusBottomRight: =6
+                              RadiusTopLeft: =6
+                              RadiusTopRight: =6
+                              Size: =Typography.SizeLabel
+                              Text: =""
+                              Width: =galNeedLD.TemplateWidth
+                              X: =0
+                              Y: =0
+
+      - conDatesModalLD:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =RGBA(0, 0, 0, 0)
+            Height: =Parent.Height
+            Visible: =locDatesOpenLD
+            Width: =Parent.Width
+            X: =0
+            Y: =0
+          Children:
+            - btnDatesModalBackdropLD:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =RGBA(0, 0, 0, 0.5)
+                  Font: =Typography.Family
+                  Height: =Parent.Height
+                  HoverFill: =RGBA(0, 0, 0, 0.5)
+                  OnSelect: |-
+                    =UpdateContext({ locDatesOpenLD: false })
+                  PressedFill: =RGBA(0, 0, 0, 0.5)
+                  Text: =""
+                  Width: =Parent.Width
+                  X: =0
+                  Y: =0
+            - conDatesModalCardLD:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.Bold
+                  Fill: =ColorPalette.White
+                  Height: =600
+                  RadiusBottomLeft: =12
+                  RadiusBottomRight: =12
+                  RadiusTopLeft: =12
+                  RadiusTopRight: =12
+                  Width: =720
+                  X: =(Parent.Width - Self.Width) / 2
+                  Y: =(Parent.Height - Self.Height) / 2
+                Children:
+                  - lblDatesModalTitleLD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightBold
+                        Height: =32
+                        Size: =Typography.SizeHeading
+                        Text: ="Key dates"
+                        Width: =Parent.Width - 96
+                        X: =24
+                        Y: =24
+                  - btnDatesModalCloseLD:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderStyle: =BorderStyle.None
+                        Color: =ColorPalette.TextHelp
+                        Fill: =RGBA(0, 0, 0, 0)
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightBold
+                        Height: =32
+                        HoverColor: =ColorPalette.TextHeading
+                        HoverFill: =ColorPalette.Gray50
+                        OnSelect: |-
+                          =UpdateContext({ locDatesOpenLD: false })
+                        PressedColor: =ColorPalette.TextHeading
+                        PressedFill: =ColorPalette.Gray50
+                        RadiusBottomLeft: =16
+                        RadiusBottomRight: =16
+                        RadiusTopLeft: =16
+                        RadiusTopRight: =16
+                        Size: =Typography.SizeSubtitle
+                        Text: ="X"
+                        Width: =32
+                        X: =Parent.Width - 56
+                        Y: =20
+                  - galDatesLD:
+                      Control: Gallery@2.15.0
+                      Variant: BrowseLayout_Flexible_SocialFeed_ver5.0
+                      Properties:
+                        BorderColor: =ColorPalette.Gray200
+                        Height: =Parent.Height - 96
+                        Items: |-
+                          =[
+                            { id: 1, title: "When do applications open?", body: "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt." },
+                            { id: 2, title: "When do applications close?", body: "Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est omnis dolor repellendus temporibus." },
+                            { id: 3, title: "When is committee review?", body: "Vel illum qui dolorem eum fugiat quo voluptas nulla pariatur at vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti." },
+                            { id: 4, title: "When are decisions announced?", body: "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore." }
+                          ]
+                        ShowScrollbar: =true
+                        TemplatePadding: =6
+                        TemplateSize: =160
+                        Width: =Parent.Width - 48
+                        X: =24
+                        Y: =72
+                      Children:
+                        - conDatesItemLD:
+                            Control: GroupContainer@1.5.0
+                            Variant: ManualLayout
+                            Properties:
+                              BorderColor: =ColorPalette.Gray200
+                              BorderThickness: =1
+                              DropShadow: =DropShadow.None
+                              Fill: =ColorPalette.White
+                              Height: =If(locOpenDatesIdLD = ThisItem.id, lblDatesItemTitleLD.Height + lblDatesItemBodyLD.Height + 16, lblDatesItemTitleLD.Height)
+                              RadiusBottomLeft: =6
+                              RadiusBottomRight: =6
+                              RadiusTopLeft: =6
+                              RadiusTopRight: =6
+                              Width: =galDatesLD.TemplateWidth
+                        - lblDatesItemBodyLD:
+                            Control: Label@2.5.1
+                            Properties:
+                              AutoHeight: =true
+                              Color: =ColorPalette.TextBody
+                              Font: =Typography.Family
+                              Height: =80
+                              PaddingBottom: =12
+                              PaddingLeft: =16
+                              PaddingRight: =16
+                              Size: =Typography.SizeCaption
+                              Text: =ThisItem.body
+                              Visible: =locOpenDatesIdLD = ThisItem.id
+                              Width: =galDatesLD.TemplateWidth - imgDatesArrowLD.Width - 32
+                              Y: =lblDatesItemTitleLD.Height
+                        - lblDatesItemTitleLD:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =ColorPalette.TextHeading
+                              Font: =Typography.Family
+                              FontWeight: =Typography.WeightBold
+                              Height: =40
+                              PaddingLeft: =16
+                              Size: =Typography.SizeLabel
+                              Text: =ThisItem.title
+                              Width: =galDatesLD.TemplateWidth - imgDatesArrowLD.Width - 24
+                        - imgDatesArrowLD:
+                            Control: Image@2.2.3
+                            Properties:
+                              Height: =16
+                              Image: |
+                                ="data:image/svg+xml," & EncodeUrl(
+                                    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='40px' height='40px'>
+                                      <style>
+                                        .arrow" & ThisItem.id & "_" & LookUp(colDatesAnimTriggersLD, itemID = ThisItem.id).timestamp & " {
+                                          stroke: black;
+                                          stroke-width: 1.5;
+                                          stroke-linecap: round;
+                                          stroke-linejoin: round;
+                                          fill: none;
+                                          transform-origin: center;
+                                          animation-name: rotateArrow" & ThisItem.id & "_" & LookUp(colDatesAnimTriggersLD, itemID = ThisItem.id).timestamp & ";
+                                          animation-duration: " & If(IsBlank(LookUp(colDatesAnimTriggersLD, itemID = ThisItem.id).timestamp), "0ms", "400ms") & ";
+                                          animation-fill-mode: both;
+                                        }
+                                        @keyframes rotateArrow" & ThisItem.id & "_" & LookUp(colDatesAnimTriggersLD, itemID = ThisItem.id).timestamp & " {
+                                          " & If(locOpenDatesIdLD = ThisItem.id, "0%", "100%") & " {
+                                            transform: rotate(0deg);
+                                            d: path('m4.5 15.75 7.5-7.5 7.5 7.5');
+                                          }
+                                          " & If(locOpenDatesIdLD = ThisItem.id, "100%", "0%") & " {
+                                            transform: rotate(180deg);
+                                            d: path('m4.5 15.75 7.5-7.5 7.5 7.5');
+                                          }
+                                        }
+                                      </style>
+                                      <path class='arrow" & ThisItem.id & "_" & LookUp(colDatesAnimTriggersLD, itemID = ThisItem.id).timestamp & "' d='m4.5 15.75 7.5-7.5 7.5 7.5' />
+                                    </svg>"
+                                )
+                              OnSelect: =false
+                              Width: =16
+                              X: =Parent.TemplateWidth - Self.Width - 16
+                              Y: =12
+                        - btnDatesItemLD:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Align: =Align.Left
+                              BorderStyle: =BorderStyle.None
+                              Color: =ColorPalette.TextHeading
+                              Fill: =RGBA(0, 0, 0, 0)
+                              Font: =Typography.Family
+                              Height: =If(locOpenDatesIdLD = ThisItem.id, lblDatesItemTitleLD.Height + lblDatesItemBodyLD.Height + 16, lblDatesItemTitleLD.Height)
+                              HoverColor: =ColorPalette.TextHeading
+                              HoverFill: =RGBA(0, 0, 0, 0.04)
+                              OnSelect: |-
+                                =UpdateContext({ locOpenDatesIdLD: If(locOpenDatesIdLD = ThisItem.id, Blank(), ThisItem.id) });
+                                RemoveIf(colDatesAnimTriggersLD, itemID = ThisItem.id);
+                                Collect(colDatesAnimTriggersLD, { itemID: ThisItem.id, timestamp: Text(Now(), "yyyymmddhhmmss") })
+                              PaddingLeft: =16
+                              PaddingRight: =16
+                              PressedColor: =ColorPalette.TextHeading
+                              PressedFill: =RGBA(0, 0, 0, 0.08)
+                              RadiusBottomLeft: =6
+                              RadiusBottomRight: =6
+                              RadiusTopLeft: =6
+                              RadiusTopRight: =6
+                              Size: =Typography.SizeLabel
+                              Text: =""
+                              Width: =galDatesLD.TemplateWidth
+                              X: =0
+                              Y: =0
+
+      - conEligModalLD:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =RGBA(0, 0, 0, 0)
+            Height: =Parent.Height
+            Visible: =locEligOpenLD
+            Width: =Parent.Width
+            X: =0
+            Y: =0
+          Children:
+            - btnEligModalBackdropLD:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =RGBA(0, 0, 0, 0)
+                  Fill: =RGBA(0, 0, 0, 0.5)
+                  Font: =Typography.Family
+                  Height: =Parent.Height
+                  HoverFill: =RGBA(0, 0, 0, 0.5)
+                  OnSelect: |-
+                    =UpdateContext({ locEligOpenLD: false })
+                  PressedFill: =RGBA(0, 0, 0, 0.5)
+                  Text: =""
+                  Width: =Parent.Width
+                  X: =0
+                  Y: =0
+            - conEligModalCardLD:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.Bold
+                  Fill: =ColorPalette.White
+                  Height: =600
+                  RadiusBottomLeft: =12
+                  RadiusBottomRight: =12
+                  RadiusTopLeft: =12
+                  RadiusTopRight: =12
+                  Width: =720
+                  X: =(Parent.Width - Self.Width) / 2
+                  Y: =(Parent.Height - Self.Height) / 2
+                Children:
+                  - lblEligModalTitleLD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightBold
+                        Height: =32
+                        Size: =Typography.SizeHeading
+                        Text: ="Eligibility"
+                        Width: =Parent.Width - 96
+                        X: =24
+                        Y: =24
+                  - btnEligModalCloseLD:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderStyle: =BorderStyle.None
+                        Color: =ColorPalette.TextHelp
+                        Fill: =RGBA(0, 0, 0, 0)
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightBold
+                        Height: =32
+                        HoverColor: =ColorPalette.TextHeading
+                        HoverFill: =ColorPalette.Gray50
+                        OnSelect: |-
+                          =UpdateContext({ locEligOpenLD: false })
+                        PressedColor: =ColorPalette.TextHeading
+                        PressedFill: =ColorPalette.Gray50
+                        RadiusBottomLeft: =16
+                        RadiusBottomRight: =16
+                        RadiusTopLeft: =16
+                        RadiusTopRight: =16
+                        Size: =Typography.SizeSubtitle
+                        Text: ="X"
+                        Width: =32
+                        X: =Parent.Width - 56
+                        Y: =20
+                  - galEligLD:
+                      Control: Gallery@2.15.0
+                      Variant: BrowseLayout_Flexible_SocialFeed_ver5.0
+                      Properties:
+                        BorderColor: =ColorPalette.Gray200
+                        Height: =Parent.Height - 96
+                        Items: |-
+                          =[
+                            { id: 1, title: "What grade levels qualify?", body: "Consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip." },
+                            { id: 2, title: "Is a performance rating required?", body: "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum sed ut perspiciatis unde omnis iste natus error sit voluptatem." },
+                            { id: 3, title: "Do I need a supervisor endorsement?", body: "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia." },
+                            { id: 4, title: "Are prior trainings a prerequisite?", body: "Neque porro quisquam est qui dolorem ipsum quia dolor sit amet consectetur adipisci velit sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam." }
+                          ]
+                        ShowScrollbar: =true
+                        TemplatePadding: =6
+                        TemplateSize: =160
+                        Width: =Parent.Width - 48
+                        X: =24
+                        Y: =72
+                      Children:
+                        - conEligItemLD:
+                            Control: GroupContainer@1.5.0
+                            Variant: ManualLayout
+                            Properties:
+                              BorderColor: =ColorPalette.Gray200
+                              BorderThickness: =1
+                              DropShadow: =DropShadow.None
+                              Fill: =ColorPalette.White
+                              Height: =If(locOpenEligIdLD = ThisItem.id, lblEligItemTitleLD.Height + lblEligItemBodyLD.Height + 16, lblEligItemTitleLD.Height)
+                              RadiusBottomLeft: =6
+                              RadiusBottomRight: =6
+                              RadiusTopLeft: =6
+                              RadiusTopRight: =6
+                              Width: =galEligLD.TemplateWidth
+                        - lblEligItemBodyLD:
+                            Control: Label@2.5.1
+                            Properties:
+                              AutoHeight: =true
+                              Color: =ColorPalette.TextBody
+                              Font: =Typography.Family
+                              Height: =80
+                              PaddingBottom: =12
+                              PaddingLeft: =16
+                              PaddingRight: =16
+                              Size: =Typography.SizeCaption
+                              Text: =ThisItem.body
+                              Visible: =locOpenEligIdLD = ThisItem.id
+                              Width: =galEligLD.TemplateWidth - imgEligArrowLD.Width - 32
+                              Y: =lblEligItemTitleLD.Height
+                        - lblEligItemTitleLD:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =ColorPalette.TextHeading
+                              Font: =Typography.Family
+                              FontWeight: =Typography.WeightBold
+                              Height: =40
+                              PaddingLeft: =16
+                              Size: =Typography.SizeLabel
+                              Text: =ThisItem.title
+                              Width: =galEligLD.TemplateWidth - imgEligArrowLD.Width - 24
+                        - imgEligArrowLD:
+                            Control: Image@2.2.3
+                            Properties:
+                              Height: =16
+                              Image: |
+                                ="data:image/svg+xml," & EncodeUrl(
+                                    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='40px' height='40px'>
+                                      <style>
+                                        .arrow" & ThisItem.id & "_" & LookUp(colEligAnimTriggersLD, itemID = ThisItem.id).timestamp & " {
+                                          stroke: black;
+                                          stroke-width: 1.5;
+                                          stroke-linecap: round;
+                                          stroke-linejoin: round;
+                                          fill: none;
+                                          transform-origin: center;
+                                          animation-name: rotateArrow" & ThisItem.id & "_" & LookUp(colEligAnimTriggersLD, itemID = ThisItem.id).timestamp & ";
+                                          animation-duration: " & If(IsBlank(LookUp(colEligAnimTriggersLD, itemID = ThisItem.id).timestamp), "0ms", "400ms") & ";
+                                          animation-fill-mode: both;
+                                        }
+                                        @keyframes rotateArrow" & ThisItem.id & "_" & LookUp(colEligAnimTriggersLD, itemID = ThisItem.id).timestamp & " {
+                                          " & If(locOpenEligIdLD = ThisItem.id, "0%", "100%") & " {
+                                            transform: rotate(0deg);
+                                            d: path('m4.5 15.75 7.5-7.5 7.5 7.5');
+                                          }
+                                          " & If(locOpenEligIdLD = ThisItem.id, "100%", "0%") & " {
+                                            transform: rotate(180deg);
+                                            d: path('m4.5 15.75 7.5-7.5 7.5 7.5');
+                                          }
+                                        }
+                                      </style>
+                                      <path class='arrow" & ThisItem.id & "_" & LookUp(colEligAnimTriggersLD, itemID = ThisItem.id).timestamp & "' d='m4.5 15.75 7.5-7.5 7.5 7.5' />
+                                    </svg>"
+                                )
+                              OnSelect: =false
+                              Width: =16
+                              X: =Parent.TemplateWidth - Self.Width - 16
+                              Y: =12
+                        - btnEligItemLD:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Align: =Align.Left
+                              BorderStyle: =BorderStyle.None
+                              Color: =ColorPalette.TextHeading
+                              Fill: =RGBA(0, 0, 0, 0)
+                              Font: =Typography.Family
+                              Height: =If(locOpenEligIdLD = ThisItem.id, lblEligItemTitleLD.Height + lblEligItemBodyLD.Height + 16, lblEligItemTitleLD.Height)
+                              HoverColor: =ColorPalette.TextHeading
+                              HoverFill: =RGBA(0, 0, 0, 0.04)
+                              OnSelect: |-
+                                =UpdateContext({ locOpenEligIdLD: If(locOpenEligIdLD = ThisItem.id, Blank(), ThisItem.id) });
+                                RemoveIf(colEligAnimTriggersLD, itemID = ThisItem.id);
+                                Collect(colEligAnimTriggersLD, { itemID: ThisItem.id, timestamp: Text(Now(), "yyyymmddhhmmss") })
+                              PaddingLeft: =16
+                              PaddingRight: =16
+                              PressedColor: =ColorPalette.TextHeading
+                              PressedFill: =RGBA(0, 0, 0, 0.08)
+                              RadiusBottomLeft: =6
+                              RadiusBottomRight: =6
+                              RadiusTopLeft: =6
+                              RadiusTopRight: =6
+                              Size: =Typography.SizeLabel
+                              Text: =""
+                              Width: =galEligLD.TemplateWidth
+                              X: =0
+                              Y: =0

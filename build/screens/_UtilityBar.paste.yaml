@@ -22,19 +22,6 @@
             Width: =420
             X: =24
             Y: =14
-      - lblUtilitySignedIn:
-          Control: Label@2.5.1
-          Properties:
-            Align: =Align.Right
-            Color: =ColorPalette.TextOnDarkMuted
-            Font: =Typography.Family
-            Height: =20
-            Size: =Typography.SizeCaption
-            Text: |-
-              ="Signed in as " & User().FullName
-            Width: =260
-            X: =Parent.Width - 538
-            Y: =16
       - btnUtilityReviewers:
           Control: Classic/Button@2.2.0
           Properties:

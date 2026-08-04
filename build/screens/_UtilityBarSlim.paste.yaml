@@ -45,16 +45,3 @@
             Width: =420
             X: =60
             Y: =14
-      - lblUtilitySignedIn:
-          Control: Label@2.5.1
-          Properties:
-            Align: =Align.Right
-            Color: =ColorPalette.TextOnDarkMuted
-            Font: =Typography.Family
-            Height: =20
-            Size: =Typography.SizeCaption
-            Text: |-
-              ="Signed in as " & User().FullName
-            Width: =360
-            X: =Parent.Width - 384
-            Y: =16
