@@ -277,7 +277,12 @@
           Properties:
             DropShadow: =DropShadow.None
             Fill: =ColorPalette.Gray25
-            Height: =198
+            # Responsive: shrink on tight viewports so the info panels below
+            # still get their room above the role band. Natural cap is 198
+            # (two rows of program cards); floor is 100 (one row with a
+            # scrollbar). Reserves ~300px below for info header + info
+            # panels + role band + gaps.
+            Height: =Max(100, Min(198, Parent.Height - Self.Y - 300))
             RadiusBottomLeft: =10
             RadiusBottomRight: =10
             RadiusTopLeft: =10
@@ -389,9 +394,11 @@
             # Fill the space between the info header above and the role band
             # below. Panels inside stay centred vertically via their own Y
             # formula and shrink their own height when the wrapper is short.
-            # 20px minimum keeps the container from going negative on
-            # pathologically small viewports (Canvas vs Window resize).
-            Height: =Max(conRoleWellLD.Y - Self.Y - 20, 20)
+            # 100px minimum guarantees the panels always render at a usable
+            # size — pairs with the responsive conProgramsWellLD.Height so
+            # the programs well is what shrinks on tight viewports, not the
+            # info panels below.
+            Height: =Max(conRoleWellLD.Y - Self.Y - 20, 100)
             Visible: =conHeroLD.Visible
             Width: =Parent.Width
             X: =0

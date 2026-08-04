@@ -162,7 +162,7 @@
           Properties:
             DropShadow: =DropShadow.None
             Fill: =ColorPalette.Gray25
-            Height: =198
+            Height: =Max(100, Min(198, Parent.Height - Self.Y - 300))
             RadiusBottomLeft: =10
             RadiusBottomRight: =10
             RadiusTopLeft: =10
@@ -247,7 +247,7 @@
           Properties:
             DropShadow: =DropShadow.None
             Fill: =RGBA(0, 0, 0, 0)
-            Height: =Max(conRoleWellLD.Y - Self.Y - 20, 20)
+            Height: =Max(conRoleWellLD.Y - Self.Y - 20, 100)
             Visible: =conHeroLD.Visible
             Width: =Parent.Width
             X: =0
