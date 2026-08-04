@@ -624,12 +624,12 @@
                 Properties:
                   DropShadow: =DropShadow.Bold
                   Fill: =ColorPalette.White
-                  Height: =600
+                  Height: =Min(600, Max(Parent.Height - 40, 240))
                   RadiusBottomLeft: =12
                   RadiusBottomRight: =12
                   RadiusTopLeft: =12
                   RadiusTopRight: =12
-                  Width: =720
+                  Width: =Min(720, Parent.Width - 48)
                   X: =(Parent.Width - Self.Width) / 2
                   Y: =(Parent.Height - Self.Height) / 2
                 Children:
@@ -830,12 +830,12 @@
                 Properties:
                   DropShadow: =DropShadow.Bold
                   Fill: =ColorPalette.White
-                  Height: =600
+                  Height: =Min(600, Max(Parent.Height - 40, 240))
                   RadiusBottomLeft: =12
                   RadiusBottomRight: =12
                   RadiusTopLeft: =12
                   RadiusTopRight: =12
-                  Width: =720
+                  Width: =Min(720, Parent.Width - 48)
                   X: =(Parent.Width - Self.Width) / 2
                   Y: =(Parent.Height - Self.Height) / 2
                 Children:
@@ -1035,12 +1035,12 @@
                 Properties:
                   DropShadow: =DropShadow.Bold
                   Fill: =ColorPalette.White
-                  Height: =600
+                  Height: =Min(600, Max(Parent.Height - 40, 240))
                   RadiusBottomLeft: =12
                   RadiusBottomRight: =12
                   RadiusTopLeft: =12
                   RadiusTopRight: =12
-                  Width: =720
+                  Width: =Min(720, Parent.Width - 48)
                   X: =(Parent.Width - Self.Width) / 2
                   Y: =(Parent.Height - Self.Height) / 2
                 Children:
@@ -1240,12 +1240,12 @@
                 Properties:
                   DropShadow: =DropShadow.Bold
                   Fill: =ColorPalette.White
-                  Height: =600
+                  Height: =Min(600, Max(Parent.Height - 40, 240))
                   RadiusBottomLeft: =12
                   RadiusBottomRight: =12
                   RadiusTopLeft: =12
                   RadiusTopRight: =12
-                  Width: =720
+                  Width: =Min(720, Parent.Width - 48)
                   X: =(Parent.Width - Self.Width) / 2
                   Y: =(Parent.Height - Self.Height) / 2
                 Children:
