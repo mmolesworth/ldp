@@ -16,11 +16,17 @@
 # ---------------------------------------------------------------------------
 # PLACEMENT ON EACH SCREEN
 # ---------------------------------------------------------------------------
-# Sits at the very top (Y = 0), full width, 24px tall. The existing utility
-# bar sits at Y = 0 too, so on any screen that uses both, shift the utility
-# bar down by 24px (Y = 24) and shift the screen's own content down by 24px
-# to match. Do this in Studio after pasting — a global reflow across every
-# screen belongs in its own change, not this one.
+# Sits at the very top (Y = 0), full width, 24px tall. Paste this BEFORE the
+# utility bar — the utility bar's Y is `If(lblEnvBanner.Height > 0, ..., 0)`
+# and needs `lblEnvBanner` to already exist on the screen when it resolves.
+#
+# The utility bar shifts down automatically to sit below this banner. Screens
+# that use the utility bar MUST also paste this file, or the utility bar's Y
+# reference to `lblEnvBanner.Height` won't resolve.
+#
+# To hide the banner (e.g. for PROD), set Height = 0 below and the utility
+# bar collapses back to Y = 0 with no other edits. Screen content still needs
+# to be shifted independently — that reflow is a separate change (T083).
 
 - lblEnvBanner:
     Control: Label@2.5.1

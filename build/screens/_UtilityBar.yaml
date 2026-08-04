@@ -50,7 +50,12 @@
       Height: =52
       Width: =Parent.Width
       X: =0
-      Y: =0
+      # Sits directly below _EnvironmentBanner (see _EnvironmentBanner.yaml).
+      # If the banner is present on the screen, its Height pushes the utility
+      # bar down. If the banner is not on the screen or its height is 0, the
+      # utility bar sits at the very top. Screens that use the utility bar
+      # MUST paste _EnvironmentBanner too, or this reference won't resolve.
+      Y: =If(lblEnvBanner.Height > 0, lblEnvBanner.Height, 0)
     Children:
       - lblUtilityBrand:
           Control: Label@2.5.1

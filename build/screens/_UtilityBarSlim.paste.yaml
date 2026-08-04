@@ -8,7 +8,7 @@
       Height: =52
       Width: =Parent.Width
       X: =0
-      Y: =0
+      Y: =If(lblEnvBanner.Height > 0, lblEnvBanner.Height, 0)
     Children:
       - icoUtilityLogo:
           Control: Classic/Icon@2.5.0
