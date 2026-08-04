@@ -1,0 +1,38 @@
+# Environment Banner — shared app chrome
+# A single centered label across the top of every screen, showing which
+# environment the app is running in. Classic controls only (Constitution II).
+#
+# ---------------------------------------------------------------------------
+# THIS IS A SHARED PASTE BLOCK
+# ---------------------------------------------------------------------------
+# Paste it on every screen. Studio will auto-suffix duplicate names
+# (lblEnvBanner_1, _2 …) on the second and later screens — that is FINE;
+# nothing references this control by name.
+#
+# Change the environment name in ONE place: the Text below. All screens'
+# banners update the next time each is re-pasted. (Converting the shared
+# blocks to canvas components is the T083 refactor.)
+#
+# ---------------------------------------------------------------------------
+# PLACEMENT ON EACH SCREEN
+# ---------------------------------------------------------------------------
+# Sits at the very top (Y = 0), full width, 24px tall. The existing utility
+# bar sits at Y = 0 too, so on any screen that uses both, shift the utility
+# bar down by 24px (Y = 24) and shift the screen's own content down by 24px
+# to match. Do this in Studio after pasting — a global reflow across every
+# screen belongs in its own change, not this one.
+
+- lblEnvBanner:
+    Control: Label@2.5.1
+    Properties:
+      Align: =Align.Center
+      Color: =ColorPalette.TextOnDark
+      Fill: =RGBA(95, 127, 35, 1)
+      Font: =Typography.Family
+      FontWeight: =Typography.WeightBold
+      Height: =24
+      Size: =Typography.SizeCaption
+      Text: ="DEV"
+      Width: =Parent.Width
+      X: =0
+      Y: =0

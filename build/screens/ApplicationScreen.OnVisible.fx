@@ -26,10 +26,10 @@ UpdateContext({
 });
 ClearCollect(colAppComps,
     ForAll(Filter(APPLICATION_COMPETENCIES, ApplicationID.Id = locApp.ID) As ac,
-        { CompId:    ac.CompetencyID.Id,
-          CompName:  ac.CompetencyID.Value,
-          TypeId:    LookUp(COMPETENCIES, ID = ac.CompetencyID.Id).CompetencyTypeID.Id,
-          TypeName:  LookUp(COMPETENCIES, ID = ac.CompetencyID.Id).CompetencyTypeID.Value,
-          TypeOrder: LookUp(COMPETENCY_TYPES,
-                       ID = LookUp(COMPETENCIES,
-                              ID = ac.CompetencyID.Id).CompetencyTypeID.Id).SortOrder }))
+        With({ compRec: LookUp(COMPETENCIES, ID = ac.CompetencyID.Id) },
+        With({ typeRec: LookUp(COMPETENCY_TYPES, ID = compRec.CompetencyTypeID.Id) },
+            { CompId:    ac.CompetencyID.Id,
+              CompName:  ac.CompetencyID.Value,
+              TypeId:    compRec.CompetencyTypeID.Id,
+              TypeName:  compRec.CompetencyTypeID.Value,
+              TypeOrder: typeRec.SortOrder }))))

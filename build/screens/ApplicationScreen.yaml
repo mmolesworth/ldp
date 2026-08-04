@@ -41,20 +41,25 @@
 #          locCompTypeAP: First(SortByColumns(
 #                             Filter(COMPETENCY_TYPES, State.Value = "Active"),
 #                             "SortOrder", SortOrder.Ascending)).ID
-#      });
+#      });Don
 #      UpdateContext({
 #          locApp: LookUp(APPLICATIONS,
 #                    And(CycleID.Id = locCycle.ID, ApplicantEmail = User().Email))
 #      });
 #      ClearCollect(colAppComps,
 #          ForAll(Filter(APPLICATION_COMPETENCIES, ApplicationID.Id = locApp.ID) As ac,
-#              { CompId:    ac.CompetencyID.Id,
-#                CompName:  ac.CompetencyID.Value,
-#                TypeId:    LookUp(COMPETENCIES, ID = ac.CompetencyID.Id).CompetencyTypeID.Id,
-#                TypeName:  LookUp(COMPETENCIES, ID = ac.CompetencyID.Id).CompetencyTypeID.Value,
-#                TypeOrder: LookUp(COMPETENCY_TYPES,
-#                             ID = LookUp(COMPETENCIES,
-#                                    ID = ac.CompetencyID.Id).CompetencyTypeID.Id).SortOrder }))
+#              With({ compRec: LookUp(COMPETENCIES, ID = ac.CompetencyID.Id) },
+#              With({ typeRec: LookUp(COMPETENCY_TYPES, ID = compRec.CompetencyTypeID.Id) },
+#                  { CompId:    ac.CompetencyID.Id,
+#                    CompName:  ac.CompetencyID.Value,
+#                    TypeId:    compRec.CompetencyTypeID.Id,
+#                    TypeName:  compRec.CompetencyTypeID.Value,
+#                    TypeOrder: typeRec.SortOrder }))))
+#
+#      The two With blocks name the parent-record lookups so each fires once
+#      per row (not three times) and so Power Fx type-inference sees a flatter
+#      expression — deeply nested LookUp chains inside ForAll's record literal
+#      can fail to fully type-infer and emit "Error type" for the last field.
 #
 #   THREE BLOCKS, IN THIS ORDER. locApp needs locCycle; colAppComps needs
 #   locApp. A variable cannot be referenced inside the UpdateContext that
