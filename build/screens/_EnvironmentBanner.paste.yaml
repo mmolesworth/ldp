@@ -1,0 +1,14 @@
+- lblEnvBanner:
+    Control: Label@2.5.1
+    Properties:
+      Align: =Align.Center
+      Color: =ColorPalette.TextOnDark
+      Fill: =RGBA(95, 127, 35, 1)
+      Font: =Typography.Family
+      FontWeight: =Typography.WeightBold
+      Height: =24
+      Size: =Typography.SizeCaption
+      Text: ="DEV"
+      Width: =Parent.Width
+      X: =0
+      Y: =0

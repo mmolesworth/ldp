@@ -1,0 +1,69 @@
+- conUtilityBar:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Group: UtilityBar
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =ColorPalette.Navy900
+      Height: =52
+      Width: =Parent.Width
+      X: =0
+      Y: =If(lblEnvBanner.Height > 0, lblEnvBanner.Height, 0)
+    Children:
+      - lblUtilityBrand:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextOnDark
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =24
+            Size: =Typography.SizeBody
+            Text: ="NCUA Leader Development Program"
+            Width: =420
+            X: =24
+            Y: =14
+      - lblUtilitySignedIn:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Right
+            Color: =ColorPalette.TextOnDarkMuted
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeCaption
+            Text: |-
+              ="Signed in as " & User().FullName
+            Width: =260
+            X: =Parent.Width - 538
+            Y: =16
+      - btnUtilityReviewers:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextOnDark
+            Fill: =RGBA(0, 0, 0, 0)
+            Font: =Typography.Family
+            Height: =28
+            HoverFill: =ColorPalette.Navy700
+            OnSelect: =Navigate('Supervisor Endorsement Screen')
+            PressedFill: =ColorPalette.Navy700
+            Size: =Typography.SizeCaption
+            Text: ="Reviewers"
+            Width: =100
+            X: =Parent.Width - 262
+            Y: =12
+      - btnUtilityAdmin:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextOnDark
+            Fill: =RGBA(0, 0, 0, 0)
+            Font: =Typography.Family
+            Height: =28
+            HoverFill: =ColorPalette.Navy700
+            OnSelect: =Navigate('Admin Dashboard Screen')
+            PressedFill: =ColorPalette.Navy700
+            Size: =Typography.SizeCaption
+            Text: ="Administrators"
+            Width: =130
+            X: =Parent.Width - 154
+            Y: =12

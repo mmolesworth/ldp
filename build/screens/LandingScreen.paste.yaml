@@ -1,66 +1,4 @@
-# Landing Screen — US13 (RQ101–104, FR-051/052)
-# Structure and rationale: build/LANDING_DESIGN.md — read that before changing layout.
-# Classic controls only (Constitution II). Colours = ColorPalette.*, sizes = Typography.*
-#
-# Composition (Constitution VIII — library first):
-#   · layout the library has no component for; no PowerLibs components used
-#
-# ---------------------------------------------------------------------------
-# HOW TO TRANSCRIBE (Constitution IV)
-# ---------------------------------------------------------------------------
-# Steps marked (screen) are properties of the SCREEN itself — select the screen
-# in the tree view and set them in the properties pane. They are NOT properties
-# of the utility bar or of any control listed below it.
-#
-# They cannot be pasted, and there is no way to make them pasteable. Studio's
-# Paste YAML inserts CONTROLS into the selected screen, so a paste block has no
-# screen node to carry Fill, OnVisible or OnStart. Only the app-source format
-# written by `pac canvas unpack` has one, and Studio will not paste that.
-#
-# The OnVisible below is also kept comment-free and ready to copy in
-# build/screens/LandingScreen.OnVisible.fx.
-#
-#   1. New screen → Blank. Rename it "Landing Screen".
-#   1b. Paste build/screens/_UtilityBar.yaml FIRST (app chrome, shared).
-#   2. (screen) Fill: =ColorPalette.Gray50
-#   3. (screen) OnVisible — transcribe by hand:
-#        =UpdateContext({
-#           locCycle: If(IsBlank(LookUp(CYCLES, State.Value = "Open")),
-#                        First(Sort(CYCLES, OpenDate, SortOrder.Descending)),
-#                        LookUp(CYCLES, State.Value = "Open"))
-#        });
-#        UpdateContext({
-#           locApp: LookUp(APPLICATIONS,
-#                     And(CycleID.Id = locCycle.ID, ApplicantEmail = User().Email))
-#        })
-#      The two calls must stay separate and in order — locApp depends on
-#      locCycle. Fields inside one UpdateContext cannot reference each other.
-#   4. Data sources (three): CYCLES, APPLICATIONS, PROGRAMS.
-#   5. App → StartScreen = 'Landing Screen'.
-#   6. Preview (F5) — OnVisible does not run on the design surface.
-#
-# ---------------------------------------------------------------------------
-# THE ONE-CTA RULE
-# ---------------------------------------------------------------------------
-# Exactly one primary CTA above the fold: btnApplyToday. Its label changes with
-# applicant state (Apply Today / Finish your application). That is one slot
-# with state-dependent content — never two competing buttons.
-# The role links are utility navigation in small type, not CTAs.
 
-# ===========================================================================
-# ① UTILITY BAR — now a shared block: build/screens/_UtilityBar.yaml
-# Paste that file FIRST, then everything below. It is shared with every other
-# screen, so it is not duplicated here.
-# ===========================================================================
-
-# ===========================================================================
-# ② BODY — everything between the utility bar and the role band.
-#
-# One responsive container so the body region reflows automatically when the
-# environment banner shifts the utility bar down (or hides itself), and grows
-# to fill the available height on larger displays. Children inside stay
-# manual-layout; the container just anchors the top and stretches the bottom.
-# ===========================================================================
 - conBodyLD:
     Control: GroupContainer@1.5.0
     Variant: ManualLayout
@@ -69,18 +7,9 @@
       Fill: =RGBA(0, 0, 0, 0)
       Width: =Parent.Width
       X: =0
-      # Anchor top: sit 20px below the utility bar's bottom edge. When the
-      # environment banner is present the utility bar shifts down and this
-      # whole region follows it; no other Y values need editing.
       Y: =conUtilityBar.Y + conUtilityBar.Height + 20
-      # Fill to the screen bottom. The role band lives inside as a child and
-      # anchors itself to Parent.Height - 140, so it still sits 140px above
-      # the screen bottom without needing a sibling reference from here.
       Height: =Parent.Height - Self.Y
     Children:
-      # -----------------------------------------------------------------------
-      # HERO — one primary CTA. Sits at the top of the body container.
-      # -----------------------------------------------------------------------
       - conHeroLD:
           Control: GroupContainer@1.5.0
           Variant: ManualLayout
@@ -94,10 +23,6 @@
             RadiusTopRight: =10
             Width: =Parent.Width - 48
             X: =24
-            # Relative to conBodyLD, which handles the utility-bar offset.
-            # Y=16 adds breathing room between the utility bar and the hero;
-            # the paired Height reduction keeps the hero's bottom edge fixed
-            # so nothing downstream needs to shift.
             Y: =16
           Children:
             - lblHeroHeadlineLD:
@@ -112,9 +37,6 @@
                   Width: =Parent.Width - 320
                   X: =28
                   Y: =28
-            # Who it is for and what the deadline is — the two things that decide
-            # whether the applicant reads on. Facts only; no invented claims about
-            # the programme (Constitution I).
             - lblHeroSubheadLD:
                 Control: Label@2.5.1
                 Properties:
@@ -143,7 +65,6 @@
                   Width: =Parent.Width - 320
                   X: =28
                   Y: =66
-            # Outcome, once a decision exists. Replaces the invitation.
             - lblHeroOutcomeLD:
                 Control: Label@2.5.1
                 Properties:
@@ -164,15 +85,11 @@
                   Width: =Parent.Width - 320
                   X: =28
                   Y: =120
-            # THE primary CTA. Disabled until the Application Screen is transcribed.
             - btnApplyTodayLD:
                 Control: Classic/Button@2.2.0
                 Properties:
                   BorderStyle: =BorderStyle.None
                   Color: =ColorPalette.Navy900
-                  # Live only while a cycle is Open (FR-051/FR-008). The hero itself is
-                  # hidden once an application is in flight, so no submitted-state test
-                  # is needed here.
                   DisplayMode: |-
                     =If(locCycle.State.Value = "Open", DisplayMode.Edit, DisplayMode.Disabled)
                   Fill: =ColorPalette.White
@@ -180,11 +97,6 @@
                   FontWeight: =Typography.WeightBold
                   Height: =52
                   HoverFill: =ColorPalette.Gray50
-                  # The Application Screen's OnVisible resolves the applicant's row for
-                  # this cycle — existing Draft if there is one, blank otherwise. The
-                  # row is written on first Save draft or Submit, not on arrival, so
-                  # clicking through and leaving does not litter APPLICATIONS with
-                  # empty rows. FR-011 holds either way: one row per (cycle, email).
                   OnSelect: =Navigate('Application Screen')
                   PressedFill: =ColorPalette.Gray50
                   RadiusBottomLeft: =8
@@ -211,11 +123,6 @@
                   X: =Parent.Width - 268
                   Y: =128
       
-      # -----------------------------------------------------------------------
-      # PROGRAMS & INFO — applicant content only. No role switching in this
-      # region. Anchored to the hero above rather than a fixed Y so the whole
-      # section shifts when the hero grows or moves.
-      # -----------------------------------------------------------------------
       - lblProgramsHeaderLD:
           Control: Label@2.5.1
           Properties:
@@ -230,9 +137,6 @@
             X: =24
             Y: =conHeroLD.Y + conHeroLD.Height + 20
       
-      # A well behind the gallery. Without it the scrollbar sits on the page
-      # background with no boundary to belong to, which is what made a fourth
-      # program look wrong. Outer height is conditional so the page still fits.
       - lblProgramsCountLD:
           Control: Label@2.5.1
           Properties:
@@ -241,8 +145,6 @@
             Font: =Typography.Family
             Height: =22
             Size: =Typography.SizeCaption
-            # Non-visual users get no benefit from a peek row or a scrollbar, so the
-            # count says it in words.
             Text: |-
               =CountRows(Filter(PROGRAMS, State.Value = "Active")) & " programs" &
               If(CountRows(Filter(PROGRAMS, State.Value = "Active")) > 3,
@@ -270,32 +172,13 @@
           Children:
             - galProgramsLD:
                 Control: Gallery@2.15.0
-                # Vertical + WrapCount is what gives a wrapping GRID. A Horizontal gallery
-                # is a single row that scrolls sideways; a plain Vertical gallery is one
-                # item per row. WrapCount 3 keeps the three-across layout and pushes a
-                # fourth program onto a second row instead of off the right edge.
                 Variant: Vertical
                 Properties:
                   BorderColor: =ColorPalette.Gray200
-                  # Only one row fits between the header and the supporting panels, and the
-                  # page itself cannot scroll (no scroll host). So row two is reached by
-                  # scrolling inside the gallery — hence the conditional scrollbar below.
-                  # Sized so the supporting panels below still clear the role band in both
-                  # cases. Strip hidden: one row plus a 50px peek of row two — the peek is
-                  # the scroll affordance. Strip shown: exactly one row, everything shifts
-                  # down 60px, panels still land above the band.
                   Height: =Parent.Height - 16
-                  # Retired programs must never reach an applicant-facing picker
-                  # (PROGRAMS.md). The gallery, the count above it and the scrollbar
-                  # all read the SAME filtered set, or the count contradicts the list.
-                  # PROGRAMS is a small reference list — the bounded non-delegable
-                  # exception. CountRows does not delegate; acceptable here and ONLY here.
                   Items: =Filter(PROGRAMS, State.Value = "Active")
                   ShowScrollbar: =CountRows(Filter(PROGRAMS, State.Value = "Active")) > 3
                   TemplatePadding: =0
-                  # In a wrapped Vertical gallery TemplateSize is the ROW HEIGHT. Each item's
-                  # width is derived automatically as gallery width / WrapCount, which the
-                  # card below reads as Parent.TemplateWidth.
                   TemplateSize: =132
                   Width: =Parent.Width - 16
                   WrapCount: =3
@@ -415,7 +298,6 @@
                   Width: =Parent.Width - 32
                   X: =16
                   Y: =23
-            # The only supporting panel with real content — it comes from CYCLES.
       
       - conEligibilityLD:
           Control: GroupContainer@1.5.0
@@ -476,12 +358,6 @@
                   Width: =Parent.Width - 32
                   X: =16
                   Y: =23
-      # -----------------------------------------------------------------------
-      # ROLE BAND — in a well, like the programs section. On a Gray50 page two
-      # white panels with nothing behind them did not read as a distinct region.
-      # Anchored to Parent.Height - 140 (Parent = conBodyLD, which fills to the
-      # screen bottom), so it sits 140px above the screen bottom regardless.
-      # -----------------------------------------------------------------------
       - conRoleWellLD:
           Control: GroupContainer@1.5.0
           Variant: ManualLayout
@@ -524,8 +400,6 @@
                         Width: =Parent.Width - 222
                         X: =20
                         Y: =14
-                  # One destination for supervisors and committee members both. Two
-                  # near-identical panels would be exactly the role ambiguity to avoid.
                   - lblBandReviewersDescLD:
                       Control: Label@2.5.1
                       Properties:
