@@ -1,4 +1,4 @@
-- conAdminShell:
+- conAdminShell_6:
     Control: GroupContainer@1.5.0
     Variant: ManualLayout
     Properties:
@@ -7,7 +7,7 @@
       Width: =Parent.Width
       Y: =conUtilityBar.Y + conUtilityBar.Height
     Children:
-      - conSidebar:
+      - conSidebar_6:
           Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
@@ -18,7 +18,7 @@
             RadiusTopRight: =10
             Width: =If(gblSidebar, 300, 68)
           Children:
-            - conShellTitle:
+            - conShellTitle_6:
                 Control: GroupContainer@1.5.0
                 Variant: AutoLayout
                 Properties:
@@ -27,7 +27,7 @@
                   LayoutDirection: =LayoutDirection.Horizontal
                   Width: =Parent.Width
                 Children:
-                  - lblPlaceholder:
+                  - lblPlaceholder_1:
                       Control: Label@2.5.1
                       Properties:
                         BorderColor: =RGBA(0, 18, 107, 1)
@@ -36,7 +36,7 @@
                         LayoutMinWidth: =16
                         Text: =""
                         Width: =25
-                  - lblShellTitle:
+                  - lblShellTitle_6:
                       Control: Label@2.5.1
                       Properties:
                         Color: =ColorPalette.TextOnDark
@@ -50,7 +50,7 @@
                         Text: ="LDP Administration"
                         Visible: =gblSidebar
                         Wrap: =false
-                  - icoShellToggle:
+                  - icoShellToggle_6:
                       Control: Classic/Icon@2.5.0
                       Properties:
                         AlignInContainer: =AlignInContainer.Center
@@ -63,17 +63,17 @@
                         PaddingBottom: =15
                         PaddingTop: =15
                         Width: =0
-            - conShellItems:
+            - conShellItems_6:
                 Control: GroupContainer@1.5.0
                 Variant: AutoLayout
                 Properties:
                   DropShadow: =DropShadow.None
-                  Height: =Parent.Height - conShellUser.Height - conShellTitle.Height
+                  Height: =Parent.Height - conShellUser_6.Height - conShellTitle_6.Height
                   LayoutDirection: =LayoutDirection.Vertical
                   Width: =Parent.Width
-                  Y: =conShellTitle.Height
+                  Y: =conShellTitle_6.Height
                 Children:
-                  - galShellNav:
+                  - galShellNav_6:
                       Control: Gallery@2.15.0
                       Variant: Vertical
                       Properties:
@@ -99,7 +99,7 @@
                         TemplateSize: =45
                         Width: =Parent.Width
                       Children:
-                        - lblShellDivider:
+                        - lblShellDivider_6:
                             Control: Label@2.5.1
                             Properties:
                               Align: =Align.Center
@@ -116,7 +116,7 @@
                               Visible: =And(ThisItem.isHeader, Not(gblSidebar))
                               Width: =Parent.TemplateWidth
                               Y: =15
-                        - lblShellHeader:
+                        - lblShellHeader_6:
                             Control: Label@2.5.1
                             Properties:
                               Color: =ColorPalette.TextOnDarkMuted
@@ -133,7 +133,7 @@
                               Width: =Parent.TemplateWidth
                               Wrap: =false
                               Y: =15
-                        - conShellItem:
+                        - conShellItem_6:
                             Control: GroupContainer@1.5.0
                             Variant: AutoLayout
                             Properties:
@@ -147,13 +147,13 @@
                               Visible: =Not(ThisItem.isHeader)
                               Width: =Parent.TemplateWidth
                             Children:
-                              - imgShellItem:
+                              - imgShellItem_6:
                                   Control: Image@2.2.3
                                   Properties:
                                     Height: =Parent.Height * 0.58
                                     Image: ="data:image/svg+xml," & EncodeUrl(ThisItem.iconSvg)
                                     Width: =Self.Height
-                              - lblShellItem:
+                              - lblShellItem_6:
                                   Control: Label@2.5.1
                                   Properties:
                                     Color: =ColorPalette.TextOnDark
@@ -167,9 +167,9 @@
                                     Size: =Typography.SizeBody
                                     Text: =ThisItem.labelText
                                     Visible: =gblSidebar
-                                    Width: =Parent.Width - imgShellItem.Width - Parent.LayoutGap
+                                    Width: =Parent.Width - imgShellItem_6.Width - Parent.LayoutGap
                                     Wrap: =false
-                        - btnShellItem:
+                        - btnShellItem_6:
                             Control: Classic/Button@2.2.0
                             Properties:
                               BorderStyle: =BorderStyle.None
@@ -197,7 +197,7 @@
                               Visible: =Not(ThisItem.isHeader)
                               Width: =Parent.TemplateWidth * 0.9
                               X: =Parent.TemplateWidth * 0.05
-            - conShellUser:
+            - conShellUser_6:
                 Control: GroupContainer@1.5.0
                 Variant: AutoLayout
                 Properties:
@@ -207,7 +207,7 @@
                   Width: =Parent.Width
                   Y: =Parent.Height - Self.Height
                 Children:
-                  - lblShellUser:
+                  - lblShellUser_6:
                       Control: Label@2.5.1
                       Properties:
                         Align: =Align.Center
@@ -220,7 +220,7 @@
                         Size: =Typography.SizeCaption
                         Text: =User().FullName
                         Visible: =gblSidebar
-      - conMainArea:
+      - conMainArea_6:
           Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
@@ -228,77 +228,6 @@
             Height: =Parent.Height - 5
             RadiusTopLeft: =10
             RadiusTopRight: =10
-            Width: =Parent.Width - conSidebar.Width - 5
-            X: =conSidebar.Width
+            Width: =Parent.Width - conSidebar_6.Width - 5
+            X: =conSidebar_6.Width
             Y: =5
-          Children:
-            - conWipSH:
-                Control: GroupContainer@1.5.0
-                Variant: ManualLayout
-                Properties:
-                  BorderColor: =ColorPalette.Gray300
-                  BorderThickness: =1
-                  DropShadow: =DropShadow.None
-                  Fill: =ColorPalette.White
-                  Height: =240
-                  RadiusBottomLeft: =12
-                  RadiusBottomRight: =12
-                  RadiusTopLeft: =12
-                  RadiusTopRight: =12
-                  Width: =520
-                  X: =(Parent.Width - Self.Width) / 2
-                  Y: =(Parent.Height - Self.Height) / 2
-                Children:
-                  - lblWipTagSH:
-                      Control: Label@2.5.1
-                      Properties:
-                        Align: =Align.Center
-                        Color: =ColorPalette.Blue600
-                        Font: =Typography.Family
-                        FontWeight: =Typography.WeightBold
-                        Height: =20
-                        Size: =Typography.SizeCaption
-                        Text: ="COMING SOON"
-                        Width: =Parent.Width - 48
-                        X: =24
-                        Y: =40
-                  - lblWipTitleSH:
-                      Control: Label@2.5.1
-                      Properties:
-                        Align: =Align.Center
-                        Color: =ColorPalette.TextHeading
-                        Font: =Typography.Family
-                        FontWeight: =Typography.WeightBold
-                        Height: =32
-                        Size: =Typography.SizeHeading
-                        Text: ="This screen is under construction"
-                        Width: =Parent.Width - 48
-                        X: =24
-                        Y: =68
-                  - lblWipMessageSH:
-                      Control: Label@2.5.1
-                      Properties:
-                        Align: =Align.Center
-                        Color: =ColorPalette.TextBody
-                        Font: =Typography.Family
-                        Height: =48
-                        Size: =Typography.SizeBody
-                        Text: |-
-                          ="Functionality is being built and will be available in a
-                          future release. Thanks for your patience."
-                        VerticalAlign: =VerticalAlign.Top
-                        Width: =Parent.Width - 48
-                        X: =24
-                        Y: =108
-                  - lblWipFooterSH:
-                      Control: Label@2.5.1
-                      Properties:
-                        Align: =Align.Center
-                        Color: =ColorPalette.TextHelp
-                        Font: =Typography.Family
-                        Height: =20
-                        Size: =Typography.SizeCaption
-                        Text: ="Placeholder for demo — do not use for real data."
-                        Width: =Parent.Width - 48
-                        X: =24
-                        Y: =180
