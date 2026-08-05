@@ -1,0 +1,73 @@
+- conWipSH:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      BorderColor: =ColorPalette.Gray300
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      Fill: =ColorPalette.White
+      Height: =240
+      RadiusBottomLeft: =12
+      RadiusBottomRight: =12
+      RadiusTopLeft: =12
+      RadiusTopRight: =12
+      Width: =520
+      X: =(Parent.Width - Self.Width) / 2
+      Y: =(Parent.Height - Self.Height) / 2
+    Children:
+      - lblWipTagSH:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.Blue600
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =20
+            Size: =Typography.SizeCaption
+            Text: ="COMING SOON"
+            VerticalAlign: =VerticalAlign.Middle
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =40
+      - lblWipTitleSH:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =32
+            Size: =Typography.SizeHeading
+            Text: ="This screen is under construction"
+            VerticalAlign: =VerticalAlign.Middle
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =68
+      - lblWipMessageSH:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =48
+            Size: =Typography.SizeBody
+            Text: |-
+              ="Functionality is being built and will be available in a
+              future release. Thanks for your patience."
+            VerticalAlign: =VerticalAlign.Top
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =108
+      - lblWipFooterSH:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =ColorPalette.TextHelp
+            Font: =Typography.Family
+            Height: =20
+            Size: =Typography.SizeCaption
+            Text: ="Placeholder for demo — do not use for real data."
+            VerticalAlign: =VerticalAlign.Middle
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =180

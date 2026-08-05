@@ -185,11 +185,17 @@
                 Properties:
                   BorderStyle: =BorderStyle.None
                   Color: =ColorPalette.TextOnDark
-                  # Live only while a cycle is Open (FR-051/FR-008). The hero itself is
-                  # hidden once an application is in flight, so no submitted-state test
-                  # is needed here.
+                  # Live only while a cycle is Open (FR-051/FR-008) UNLESS the
+                  # applicant has already submitted — in that case the button
+                  # switches to "Track your application" and stays enabled so
+                  # they can always open the Application Status Screen, even
+                  # after the cycle has closed.
                   DisplayMode: |-
-                    =If(locCycle.State.Value = "Open", DisplayMode.Edit, DisplayMode.Disabled)
+                    =If(Or(locApp.ApplicationStatus.Value = "Submitted",
+                           locApp.ApplicationStatus.Value = "Validated"),
+                        DisplayMode.Edit,
+                        If(locCycle.State.Value = "Open",
+                           DisplayMode.Edit, DisplayMode.Disabled))
                   # Accent Blue on the Navy900 hero — the primary CTA reads
                   # as filled + prominent rather than a subtle white pill.
                   Fill: =ColorPalette.Blue600
@@ -198,12 +204,18 @@
                   Height: =52
                   HoverColor: =ColorPalette.TextOnDark
                   HoverFill: =ColorPalette.Blue700
-                  # The Application Screen's OnVisible resolves the applicant's row for
-                  # this cycle — existing Draft if there is one, blank otherwise. The
-                  # row is written on first Save draft or Submit, not on arrival, so
-                  # clicking through and leaving does not litter APPLICATIONS with
-                  # empty rows. FR-011 holds either way: one row per (cycle, email).
-                  OnSelect: =Navigate('Application Screen')
+                  # No app or Draft → Application Screen (its OnVisible resolves
+                  # the applicant's row for this cycle: existing Draft if any,
+                  # blank otherwise — the row is written on first Save draft or
+                  # Submit, not on arrival, so FR-011's one-row-per-(cycle,email)
+                  # holds either way).
+                  # Submitted/Validated → Application Status Screen (read-only
+                  # tracking view; kept reachable after cycle close).
+                  OnSelect: |-
+                    =Switch(Coalesce(locApp.ApplicationStatus.Value, ""),
+                        "Submitted", Navigate('Application Status Screen'),
+                        "Validated", Navigate('Application Status Screen'),
+                        Navigate('Application Screen'))
                   PressedColor: =ColorPalette.TextOnDark
                   PressedFill: =ColorPalette.Blue700
                   RadiusBottomLeft: =8
@@ -212,7 +224,11 @@
                   RadiusTopRight: =8
                   Size: =Typography.SizeHeading
                   Text: |-
-                    =If(IsBlank(locApp), "Apply Today", "Finish your application")
+                    =Switch(Coalesce(locApp.ApplicationStatus.Value, ""),
+                        "Draft",     "Finish your application",
+                        "Submitted", "Track your application",
+                        "Validated", "Track your application",
+                        "Apply Today")
                   Width: =240
                   X: =Parent.Width - 268
                   Y: =40
@@ -225,7 +241,10 @@
                   Height: =28
                   Size: =Typography.SizeCaption
                   Text: ="Applications can only be submitted while a cycle is open."
-                  Visible: =locCycle.State.Value <> "Open"
+                  Visible: |-
+                    =And(locCycle.State.Value <> "Open",
+                         Not(Or(locApp.ApplicationStatus.Value = "Submitted",
+                                locApp.ApplicationStatus.Value = "Validated")))
                   Width: =240
                   X: =Parent.Width - 268
                   Y: =128

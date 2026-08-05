@@ -5,9 +5,17 @@
 # ---------------------------------------------------------------------------
 # THIS IS A SHARED PASTE BLOCK
 # ---------------------------------------------------------------------------
-# Paste FIRST on every administration screen, then that screen's own content
-# INSIDE conMainArea (not as a sibling). conMainArea is the content region to
-# the right of the rail; anything pasted at screen level sits underneath it.
+# Paste order on every administration screen:
+#   1. _EnvironmentBanner.paste.yaml FIRST — the utility bar references
+#      lblEnvBanner.Height and won't compile without it.
+#   2. _UtilityBarSlim.paste.yaml — this shell's Y references conUtilityBar
+#      and won't compile without it.
+#   3. _AdminShell.yaml — this file. Anchors below the utility bar via
+#      Y = conUtilityBar.Y + conUtilityBar.Height and fills to the screen
+#      bottom.
+#   4. That screen's own content INSIDE conMainArea (not as a sibling).
+#      conMainArea is the content region to the right of the rail;
+#      anything pasted at screen level sits underneath it.
 #
 # Each screen holds its own copy, so Studio auto-suffixes duplicates
 # (conAdminShell_1, _2 …). That is fine — nothing references these controls by
@@ -66,10 +74,14 @@
     Group: AdminShell
     Properties:
       Fill: =ColorPalette.Navy850
-      Height: =Parent.Height
       Width: =Parent.Width
       X: =0
-      Y: =0
+      # Anchor to the bottom of the utility bar (which itself anchors below
+      # the environment banner). When the banner is present the utility bar
+      # shifts down and the shell follows automatically.
+      Y: =conUtilityBar.Y + conUtilityBar.Height
+      # Fill to the screen bottom.
+      Height: =Parent.Height - Self.Y
     Children:
       - conSidebar:
           Control: GroupContainer@1.5.0

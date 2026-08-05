@@ -15,18 +15,18 @@ ClearCollect(colSupAppsSE,
             Or(FirstLineSupervisorEmail = User().Email,
                SecondLineSupervisorEmail = User().Email)) As a,
         { App: a, Label: a.ApplicantName }));
-UpdateContext({ locTabSE: 1, locDecisionSE: "",
-                locStatementCollapsed: false,
-                locSuggestOpen: false,
-                locQueueOpen: false,
+UpdateContext({ locTabSE: 1, locDecisionSE: Blank(),
+                locOpenCardSE: Blank(),
+                varOpenSupItemSE: Blank(),
                 locCompTypeSE: First(SortByColumns(
                     Filter(COMPETENCY_TYPES, State.Value = "Active"),
                     "SortOrder", SortOrder.Ascending)).ID,
                 locApp: First(colSupAppsSE).App });
 ClearCollect(colSuggestSE, Filter(Table({id: 0, program: "", option: ""}), false));
+ClearCollect(colSupDecisionsSE,
+    { level: "First Line",  decision: "", comment: "" },
+    { level: "Second Line", decision: "", comment: "" });
 UpdateContext({
     locMineSE: LookUp(SUPERVISOR_ENDORSEMENTS,
-        And(ApplicationID.Id = locApp.ID, SupervisorEmail = User().Email)),
-    locPriorSE: LookUp(SUPERVISOR_ENDORSEMENTS,
-        And(ApplicationID.Id = locApp.ID, SupervisorLevel.Value = "First Line"))
+        And(ApplicationID.Id = locApp.ID, SupervisorEmail = User().Email))
 })

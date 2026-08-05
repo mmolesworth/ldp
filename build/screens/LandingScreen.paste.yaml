@@ -91,14 +91,22 @@
                   BorderStyle: =BorderStyle.None
                   Color: =ColorPalette.TextOnDark
                   DisplayMode: |-
-                    =If(locCycle.State.Value = "Open", DisplayMode.Edit, DisplayMode.Disabled)
+                    =If(Or(locApp.ApplicationStatus.Value = "Submitted",
+                           locApp.ApplicationStatus.Value = "Validated"),
+                        DisplayMode.Edit,
+                        If(locCycle.State.Value = "Open",
+                           DisplayMode.Edit, DisplayMode.Disabled))
                   Fill: =ColorPalette.Blue600
                   Font: =Typography.Family
                   FontWeight: =Typography.WeightBold
                   Height: =52
                   HoverColor: =ColorPalette.TextOnDark
                   HoverFill: =ColorPalette.Blue700
-                  OnSelect: =Navigate('Application Screen')
+                  OnSelect: |-
+                    =Switch(Coalesce(locApp.ApplicationStatus.Value, ""),
+                        "Submitted", Navigate('Application Status Screen'),
+                        "Validated", Navigate('Application Status Screen'),
+                        Navigate('Application Screen'))
                   PressedColor: =ColorPalette.TextOnDark
                   PressedFill: =ColorPalette.Blue700
                   RadiusBottomLeft: =8
@@ -107,7 +115,11 @@
                   RadiusTopRight: =8
                   Size: =Typography.SizeHeading
                   Text: |-
-                    =If(IsBlank(locApp), "Apply Today", "Finish your application")
+                    =Switch(Coalesce(locApp.ApplicationStatus.Value, ""),
+                        "Draft",     "Finish your application",
+                        "Submitted", "Track your application",
+                        "Validated", "Track your application",
+                        "Apply Today")
                   Width: =240
                   X: =Parent.Width - 268
                   Y: =40
@@ -120,7 +132,10 @@
                   Height: =28
                   Size: =Typography.SizeCaption
                   Text: ="Applications can only be submitted while a cycle is open."
-                  Visible: =locCycle.State.Value <> "Open"
+                  Visible: |-
+                    =And(locCycle.State.Value <> "Open",
+                         Not(Or(locApp.ApplicationStatus.Value = "Submitted",
+                                locApp.ApplicationStatus.Value = "Validated")))
                   Width: =240
                   X: =Parent.Width - 268
                   Y: =128

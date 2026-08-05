@@ -45,3 +45,26 @@
             Width: =420
             X: =60
             Y: =14
+      - icoUtilityClose:
+          Control: Classic/Icon@2.5.0
+          Properties:
+            Color: =ColorPalette.TextOnDark
+            FocusedBorderColor: =ColorPalette.FocusOnDark
+            FocusedBorderThickness: =2
+            Height: =32
+            HoverColor: =ColorPalette.Blue400
+            Icon: =Icon.Cancel
+            OnSelect: |-
+              =If(gblFormDirty,
+                 Set(gblConfirmExitAP, true),
+                 Navigate('Landing Screen'))
+            PaddingBottom: =4
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =4
+            PressedColor: =ColorPalette.Blue600
+            TabIndex: =0
+            Tooltip: ="Close and return to home"
+            Width: =32
+            X: =Parent.Width - 48
+            Y: =10
