@@ -1,0 +1,293 @@
+- conAdminShell:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Group: AdminShell
+    Properties:
+      Fill: =ColorPalette.Navy850
+      Width: =Parent.Width
+      X: =0
+      # Anchor to the bottom of the utility bar (which itself anchors below
+      # the environment banner). When the banner is present the utility bar
+      # shifts down and the shell follows automatically.
+      Y: =conUtilityBar.Y + conUtilityBar.Height
+      # Fill to the screen bottom.
+      Height: =Parent.Height - Self.Y
+    Children:
+      - conSidebar:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.None
+            Fill: =ColorPalette.Navy850
+            Height: =Parent.Height
+            RadiusBottomRight: =10
+            RadiusTopRight: =10
+            # Fixed px, not a percentage: "LDP Administration" needs ~140px of
+            # label plus a 40px logo and a 40px toggle. At 16% of a 1366 window
+            # that is 219px and the title clipped.
+            Width: |-
+              =If(gblSidebar, 300, 68)
+          Children:
+            - conShellTitle:
+                Control: GroupContainer@1.5.0
+                Variant: AutoLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Height: =Parent.Height * 0.08
+                  LayoutDirection: =LayoutDirection.Horizontal
+                  Width: =Parent.Width
+                Children:
+                  - icoShellLogo:
+                      Control: Classic/Icon@2.5.0
+                      Properties:
+                        AlignInContainer: =AlignInContainer.Center
+                        Color: =ColorPalette.TextOnDark
+                        FillPortions: =0.5
+                        Height: =Parent.Height * 0.9
+                        Icon: =Icon.CameraAperture
+                        LayoutMinWidth: =0
+                        PaddingBottom: =10
+                        PaddingLeft: =10
+                        PaddingTop: =10
+                  - lblShellTitle:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextOnDark
+                        FillPortions: =1
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightBold
+                        Height: =Parent.Height
+                        LayoutMinWidth: =0
+                        PaddingLeft: =0
+                        Size: =Typography.SizeBody
+                        Text: ="LDP Administration"
+                        Visible: =gblSidebar
+                        # See the note on lblShellItem — no wrapping during the
+                        # expand, or the text scrambles for a frame.
+                        Wrap: =false
+                  - icoShellToggle:
+                      Control: Classic/Icon@2.5.0
+                      Properties:
+                        AlignInContainer: =AlignInContainer.Center
+                        Color: =ColorPalette.TextOnDark
+                        FillPortions: =0.4
+                        Height: =Parent.Height * 0.9
+                        Icon: |-
+                          =If(gblSidebar, Icon.Cancel, Icon.Hamburger)
+                        LayoutMinWidth: |-
+                          =If(gblSidebar, 0, Parent.Width)
+                        OnSelect: =Set(gblSidebar, !gblSidebar)
+                        PaddingBottom: =15
+                        PaddingTop: =15
+                        Width: =0
+            - conShellItems:
+                Control: GroupContainer@1.5.0
+                Variant: AutoLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Height: =Parent.Height - conShellUser.Height - conShellTitle.Height
+                  LayoutDirection: =LayoutDirection.Vertical
+                  Width: =Parent.Width
+                  Y: =conShellTitle.Height
+                Children:
+                  - galShellNav:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        Height: =Parent.Height
+                        # No `screen` column: a gallery cannot Navigate to a
+                        # variable screen, so routing is a Switch in OnSelect.
+                        Items: |-
+                          =Table(
+                            { id: 1,  isHeader: false, labelText: "Dashboard",             iconSvg: gblNavIcons.Dashboard },
+                            { id: 2,  isHeader: true,  labelText: "REVIEW & SELECTION",    iconSvg: gblNavIcons.ReviewSelection },
+                            { id: 3,  isHeader: false, labelText: "Applications",          iconSvg: gblNavIcons.Applications },
+                            { id: 4,  isHeader: false, labelText: "Placements",            iconSvg: gblNavIcons.Placements },
+                            { id: 5,  isHeader: false, labelText: "Notifications",         iconSvg: gblNavIcons.Notifications },
+                            { id: 6,  isHeader: true,  labelText: "PROGRAM MANAGEMENT",    iconSvg: gblNavIcons.ProgramManagement },
+                            { id: 7,  isHeader: false, labelText: "Programs",              iconSvg: gblNavIcons.Programs },
+                            { id: 8,  isHeader: false, labelText: "Application Cycles",    iconSvg: gblNavIcons.Cycles },
+                            { id: 9,  isHeader: false, labelText: "Competencies",          iconSvg: gblNavIcons.Competencies },
+                            { id: 10, isHeader: true,  labelText: "EVALUATION MANAGEMENT", iconSvg: gblNavIcons.EvaluationManagement },
+                            { id: 11, isHeader: false, labelText: "Criterion Catalog",     iconSvg: gblNavIcons.CriterionCatalog },
+                            { id: 12, isHeader: false, labelText: "Scoring Rubrics",       iconSvg: gblNavIcons.RatingSheets }
+                          )
+                        LayoutMinWidth: =0
+                        ShowScrollbar: =false
+                        TemplatePadding: =0
+                        TemplateSize: =45
+                        Width: =Parent.Width
+                      Children:
+                        - lblShellDivider:
+                            Control: Label@2.5.1
+                            Properties:
+                              Align: =Align.Center
+                              Color: =ColorPalette.TextOnDarkMuted
+                              Font: =Typography.Family
+                              FontWeight: =Typography.WeightMedium
+                              Height: =Parent.TemplateHeight - 15
+                              PaddingBottom: =10
+                              PaddingLeft: |-
+                                =If(gblSidebar, Parent.TemplateWidth * 0.1, 0)
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =Typography.SizeCaption
+                              Text: ="___"
+                              Visible: |-
+                                =And(ThisItem.isHeader, Not(gblSidebar))
+                              Width: =Parent.TemplateWidth
+                              Y: =15
+                        - lblShellHeader:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =ColorPalette.TextOnDarkMuted
+                              Font: =Typography.Family
+                              FontWeight: =Typography.WeightMedium
+                              Height: =Parent.TemplateHeight - 15
+                              PaddingBottom: =0
+                              PaddingLeft: |-
+                                =If(gblSidebar, Parent.TemplateWidth * 0.1, 0)
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =Typography.SizeCaption
+                              Text: =ThisItem.labelText
+                              Visible: |-
+                                =And(ThisItem.isHeader, gblSidebar)
+                              Width: =Parent.TemplateWidth
+                              # See the note on lblShellItem.
+                              Wrap: =false
+                              Y: =15
+                        - conShellItem:
+                            Control: GroupContainer@1.5.0
+                            Variant: AutoLayout
+                            Properties:
+                              DropShadow: =DropShadow.None
+                              Height: =Parent.TemplateHeight
+                              LayoutAlignItems: =LayoutAlignItems.Center
+                              LayoutDirection: =LayoutDirection.Horizontal
+                              LayoutGap: |-
+                                =If(gblSidebar, 10, 0)
+                              LayoutJustifyContent: |-
+                                =If(gblSidebar, LayoutJustifyContent.Start, LayoutJustifyContent.Center)
+                              PaddingLeft: |-
+                                =If(gblSidebar, Parent.TemplateWidth * 0.1, 0)
+                              Visible: =Not(ThisItem.isHeader)
+                              Width: =Parent.TemplateWidth
+                            Children:
+                              # Image, not Classic/Icon: these are custom SVGs
+                              # from gblNavIcons (App.OnStart), not Icon.* enums.
+                              # The fill is baked in as white — an Image cannot
+                              # be recoloured by a Color property.
+                              - imgShellItem:
+                                  Control: Image@2.2.3
+                                  Properties:
+                                    Height: =Parent.Height * 0.58
+                                    Image: |-
+                                      ="data:image/svg+xml," & EncodeUrl(ThisItem.iconSvg)
+                                    Width: =Self.Height
+                              - lblShellItem:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =ColorPalette.TextOnDark
+                                    Font: =Typography.Family
+                                    FontWeight: =Typography.WeightMedium
+                                    Height: =Parent.Height
+                                    PaddingBottom: =0
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    Size: =Typography.SizeBody
+                                    Text: =ThisItem.labelText
+                                    Visible: =gblSidebar
+                                    Width: =Parent.Width - imgShellItem.Width - Parent.LayoutGap
+                                    # THIS is the expand stutter. Visible flips
+                                    # the instant gblSidebar changes, but the
+                                    # width it inherits from Parent is still the
+                                    # collapsed 68 for a frame or two. A
+                                    # wrapping label uses that width immediately
+                                    # and breaks "Application Cycles" into
+                                    # stacked fragments, then reflows once the
+                                    # rail reaches 300 — which is the scramble.
+                                    #
+                                    # Wrap: =false makes the intermediate width
+                                    # harmless: the text is simply clipped by the
+                                    # rail it is inside, and unclips as the rail
+                                    # widens. Nav labels should never wrap
+                                    # anyway; a two-line nav item would be a bug
+                                    # in its own right.
+                                    Wrap: =false
+                        # Accessible name rides in Text, painted transparent —
+                        # Classic/Button has no AccessibleLabel (PA2108).
+                        - btnShellItem:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderStyle: =BorderStyle.None
+                              Color: =RGBA(0, 0, 0, 0)
+                              Fill: =RGBA(0, 0, 0, 0)
+                              Height: =Parent.TemplateHeight
+                              HoverColor: =RGBA(0, 0, 0, 0)
+                              # SEMI-TRANSPARENT, and it has to be. This button
+                              # sits ON TOP of the icon and label, so an opaque
+                              # fill paints over them and the row goes blank on
+                              # hover. A low-alpha white tints the row instead
+                              # and lets the content show through.
+                              # Not a ColorPalette token on purpose: the palette
+                              # holds opaque brand colours, and this is an
+                              # interaction scrim — same reasoning as the
+                              # RGBA(0, 0, 0, 0) transparents used throughout.
+                              HoverFill: =RGBA(255, 255, 255, 0.12)
+                              OnSelect: |-
+                                =Switch(ThisItem.labelText,
+                                  "Dashboard", Navigate('Admin Dashboard Screen'),
+                                  "Applications", Navigate('DTD Applications Screen'),
+                                  "Placements", Navigate('Placement Screen'),
+                                  "Notifications", Navigate('Notification Screen'),
+                                  "Programs", Navigate('Program Options Screen'),
+                                  "Application Cycles", Navigate('Application Cycles Screen'),
+                                  "Competencies", Navigate('Competencies Screen'),
+                                  "Criterion Catalog", Navigate('Criterion Catalog Screen'),
+                                  "Scoring Rubrics", Navigate('Scoring Rubrics Screen'),
+                                  Notify("That screen has not been built yet.", NotificationType.Information)
+                                )
+                              PressedColor: =RGBA(0, 0, 0, 0)
+                              PressedFill: =RGBA(255, 255, 255, 0.2)
+                              Text: =ThisItem.labelText
+                              Visible: =Not(ThisItem.isHeader)
+                              Width: =Parent.TemplateWidth * 0.9
+                              X: =Parent.TemplateWidth * 0.05
+            - conShellUser:
+                Control: GroupContainer@1.5.0
+                Variant: AutoLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Height: =Parent.Height * 0.08
+                  LayoutDirection: =LayoutDirection.Horizontal
+                  Width: =Parent.Width
+                  Y: =Parent.Height - Self.Height
+                Children:
+                  - lblShellUser:
+                      Control: Label@2.5.1
+                      Properties:
+                        Align: =Align.Center
+                        Color: =ColorPalette.TextOnDarkMuted
+                        FillPortions: =1
+                        Font: =Typography.Family
+                        Height: =Parent.Height
+                        LayoutMinWidth: =0
+                        PaddingLeft: =0
+                        Size: =Typography.SizeCaption
+                        Text: =User().FullName
+                        Visible: =gblSidebar
+
+      # ---- paste each admin screen's own content INSIDE this container ----
+      - conMainArea:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            Fill: =ColorPalette.Gray50
+            Height: =Parent.Height - 5
+            RadiusTopLeft: =10
+            RadiusTopRight: =10
+            Width: =Parent.Width - conSidebar.Width - 5
+            X: =conSidebar.Width
+            Y: =5
