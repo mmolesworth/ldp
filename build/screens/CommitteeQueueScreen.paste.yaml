@@ -1,0 +1,356 @@
+
+- conBodyCQ:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =RGBA(0, 0, 0, 0)
+      Height: =692
+      Width: =Parent.Width
+      X: =0
+      Y: =76
+    Children:
+      - conHeaderCQ:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.Light
+            Fill: =ColorPalette.Navy900
+            Height: =88
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =20
+          Children:
+            - lblHeaderTitleCQ:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextOnDark
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =30
+                  Size: =Typography.SizeTitle
+                  Text: ="Committee Review Queue"
+                  Width: =Parent.Width - 56
+                  X: =28
+                  Y: =16
+            - lblHeaderSubCQ:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.Blue50
+                  Font: =Typography.Family
+                  Height: =24
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =If(IsBlank(locCommittee), "No committee is currently active.",
+                       locProgram.ProgramName & "  ·  " &
+                       locCycle.CycleName & "  ·  Published v" &
+                       Text(locSheet.SheetVersion) & " rubric")
+                  Width: =Parent.Width - 56
+                  X: =28
+                  Y: =48
+      - conNoneCQ:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderThickness: =0
+            DropShadow: =DropShadow.None
+            Fill: =RGBA(0, 0, 0, 0)
+            Height: =120
+            Visible: =Or(IsBlank(locCommittee), CountRows(colPoolCQ) = 0)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =conHeaderCQ.Y + conHeaderCQ.Height + 20
+          Children:
+            - lblNoneCQ:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Center
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =Parent.Height
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =If(IsBlank(locCommittee),
+                        "No committee is currently active. DTD forms a committee when a program enters committee review.",
+                        "No applicants are in this pool yet.")
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =Parent.Width
+      - conToScoreCQ:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.Light
+            Fill: =ColorPalette.White
+            Height: =60 + Min(8, CountRows(colToScoreCQ)) * 68 + 16
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Visible: =And(Not(IsBlank(locCommittee)), CountRows(colToScoreCQ) > 0)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =conHeaderCQ.Y + conHeaderCQ.Height + 20
+          Children:
+            - conToScoreHeaderCQ:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Fill: =ColorPalette.Navy900
+                  Height: =48
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                  RadiusTopLeft: =12
+                  RadiusTopRight: =12
+                  Width: =Parent.Width
+                  X: =0
+                  Y: =0
+                Children:
+                  - lblToScoreTitleCQ:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextOnDark
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightBold
+                        Height: =28
+                        Size: =Typography.SizeHeading
+                        Text: |-
+                          ="To score  (" & CountRows(colToScoreCQ) & ")"
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =Parent.Width - 40
+                        X: =20
+                        Y: =(Parent.Height - Self.Height) / 2
+            - galToScoreCQ:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Height: =Min(8, CountRows(colToScoreCQ)) * 68
+                  Items: |-
+                    =SortByColumns(colToScoreCQ, "ApplicantName", SortOrder.Ascending)
+                  ShowScrollbar: =true
+                  TemplatePadding: =0
+                  TemplateSize: =68
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =56
+                Children:
+                  - lblRowNameTsCQ:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =24
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.ApplicantName
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =260
+                        X: =16
+                        Y: =14
+                  - lblRowMetaTsCQ:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHelp
+                        Font: =Typography.Family
+                        Height: =20
+                        Size: =Typography.SizeCaption
+                        Text: |-
+                          =Coalesce(ThisItem.Grade, "—") & "  ·  Submitted " &
+                           If(IsBlank(ThisItem.SubmittedDate), "—",
+                              Text(ThisItem.SubmittedDate, "mmm d, yyyy"))
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =360
+                        X: =16
+                        Y: =36
+                  - btnRowScoreTsCQ:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =ColorPalette.Blue600
+                        BorderStyle: =BorderStyle.Solid
+                        BorderThickness: =1
+                        Color: =ColorPalette.Blue600
+                        Fill: =ColorPalette.White
+                        FocusedBorderColor: =ColorPalette.FocusOnLight
+                        FocusedBorderThickness: =1
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =32
+                        HoverBorderColor: =ColorPalette.Blue600
+                        HoverColor: =ColorPalette.Blue700
+                        HoverFill: =ColorPalette.Blue50
+                        OnSelect: |-
+                          =Navigate('Committee Score Screen', ScreenTransition.None,
+                             { locChoiceID: ThisItem.Choice.ID })
+                        PressedBorderColor: =ColorPalette.Blue700
+                        PressedColor: =ColorPalette.Blue700
+                        PressedFill: =ColorPalette.Blue50
+                        RadiusBottomLeft: =8
+                        RadiusBottomRight: =8
+                        RadiusTopLeft: =8
+                        RadiusTopRight: =8
+                        Size: =Typography.SizeBody
+                        Text: ="Score  >"
+                        Width: =120
+                        X: =Parent.TemplateWidth - Self.Width - 16
+                        Y: =(Parent.TemplateHeight - Self.Height) / 2
+      - conScoredCQ:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.Light
+            Fill: =ColorPalette.White
+            Height: =60 + Min(8, CountRows(colScoredCQ)) * 68 + 16
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Visible: =And(Not(IsBlank(locCommittee)), CountRows(colScoredCQ) > 0)
+            Width: =Parent.Width - 48
+            X: =24
+            Y: |-
+              =If(CountRows(colToScoreCQ) > 0,
+                  conToScoreCQ.Y + conToScoreCQ.Height + 20,
+                  conHeaderCQ.Y + conHeaderCQ.Height + 20)
+          Children:
+            - conScoredHeaderCQ:
+                Control: GroupContainer@1.5.0
+                Variant: ManualLayout
+                Properties:
+                  DropShadow: =DropShadow.None
+                  Fill: =ColorPalette.Navy900
+                  Height: =48
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                  RadiusTopLeft: =12
+                  RadiusTopRight: =12
+                  Width: =Parent.Width
+                  X: =0
+                  Y: =0
+                Children:
+                  - lblScoredTitleCQ:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextOnDark
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightBold
+                        Height: =28
+                        Size: =Typography.SizeHeading
+                        Text: |-
+                          ="Scored  (" & CountRows(colScoredCQ) & ")"
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =Parent.Width - 40
+                        X: =20
+                        Y: =(Parent.Height - Self.Height) / 2
+            - galScoredCQ:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Height: =Min(8, CountRows(colScoredCQ)) * 68
+                  Items: |-
+                    =SortByColumns(colScoredCQ, "FinalScore", SortOrder.Descending)
+                  ShowScrollbar: =true
+                  TemplatePadding: =0
+                  TemplateSize: =68
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =56
+                Children:
+                  - lblRowRankScCQ:
+                      Control: Label@2.5.1
+                      Properties:
+                        Align: =Align.Center
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightBold
+                        Height: =24
+                        Size: =Typography.SizeBody
+                        Text: |-
+                          ="#" &
+                           (CountIf(colScoredCQ, FinalScore > ThisItem.FinalScore) + 1)
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =48
+                        X: =8
+                        Y: =(Parent.TemplateHeight - Self.Height) / 2
+                  - lblRowNameScCQ:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =24
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.ApplicantName
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =260
+                        X: =64
+                        Y: =14
+                  - lblRowMetaScCQ:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHelp
+                        Font: =Typography.Family
+                        Height: =20
+                        Size: =Typography.SizeCaption
+                        Text: |-
+                          =Coalesce(ThisItem.Grade, "—") & "  ·  Scored " &
+                           If(IsBlank(ThisItem.Choice.ScoredDate), "—",
+                              Text(ThisItem.Choice.ScoredDate, "mmm d, yyyy"))
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =360
+                        X: =64
+                        Y: =36
+                  - lblRowScoreScCQ:
+                      Control: Label@2.5.1
+                      Properties:
+                        Align: =Align.Right
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightBold
+                        Height: =24
+                        Size: =Typography.SizeBody
+                        Text: |-
+                          =Text(ThisItem.FinalScore) & " / " &
+                           Text(5 * CountRows(Filter(RATING_CRITERIA,
+                             RatingSheetID.Id = locCommittee.RatingSheetID.Id)))
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =120
+                        X: =Parent.TemplateWidth - 288
+                        Y: =(Parent.TemplateHeight - Self.Height) / 2
+                  - btnRowReviewScCQ:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =ColorPalette.Gray300
+                        BorderStyle: =BorderStyle.Solid
+                        BorderThickness: =1
+                        Color: =ColorPalette.TextBody
+                        Fill: =ColorPalette.White
+                        FocusedBorderColor: =ColorPalette.FocusOnLight
+                        FocusedBorderThickness: =1
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =32
+                        HoverBorderColor: =ColorPalette.Gray300
+                        HoverColor: =ColorPalette.TextHeading
+                        HoverFill: =ColorPalette.Gray25
+                        OnSelect: |-
+                          =Navigate('Committee Score Screen', ScreenTransition.None,
+                             { locChoiceID: ThisItem.Choice.ID })
+                        PressedBorderColor: =ColorPalette.Gray300
+                        PressedColor: =ColorPalette.TextHeading
+                        PressedFill: =ColorPalette.Gray50
+                        RadiusBottomLeft: =8
+                        RadiusBottomRight: =8
+                        RadiusTopLeft: =8
+                        RadiusTopRight: =8
+                        Size: =Typography.SizeBody
+                        Text: ="Review  >"
+                        Width: =120
+                        X: =Parent.TemplateWidth - Self.Width - 16
+                        Y: =(Parent.TemplateHeight - Self.Height) / 2

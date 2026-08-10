@@ -1,7 +1,7 @@
 #Requires -Version 7.2
 <#
 .SYNOPSIS
-    Provisions the 14 SharePoint lists for the LDP Application (Phase I).
+    Provisions the 15 SharePoint lists for the LDP Application (Phase I).
 
 .DESCRIPTION
     Creates every list, column, lookup relationship, and index defined in
@@ -237,9 +237,16 @@ $script:Lists = [ordered]@{
     }
 
     'APPLICATION_PROGRAM_CHOICES' = @{
-        Description = 'Ranked program-option selections (join of APPLICATIONS x PROGRAM_OPTIONS).'
+        Description = 'Ranked program selections (applicant-owned) plus committee score aggregate (committee-owned). Per-criterion detail on COMMITTEE_CRITERION_SCORES.'
         Fields      = @(
-            @{ Name = 'Rank'; Type = 'Number'; Required = $true }
+            @{ Name = 'Rank';              Type = 'Number'; Required = $true }
+            # Committee-owned columns, written on submit from the Committee
+            # Score Screen. Blank until then. See build/lists/APPLICATION_PROGRAM_CHOICES.md
+            # (revised 2026-08-07) for the split of ownership on this row.
+            @{ Name = 'FinalScore';        Type = 'Number' }
+            @{ Name = 'PercentOfPossible'; Type = 'Number' }
+            @{ Name = 'ScoredBy';          Type = 'Text' }
+            @{ Name = 'ScoredDate';        Type = 'Date' }
         )
     }
 
@@ -298,15 +305,25 @@ $script:Lists = [ordered]@{
         )
     }
 
-    'COMMITTEE_SCORES' = @{
-        Description = 'Applicant score per program. FinalScore/PercentOfPossible queryable; breakdown is JSON.'
+    # COMMITTEE_SCORES was deprecated 2026-08-07. Aggregate moved to
+    # APPLICATION_PROGRAM_CHOICES; per-criterion detail moved to a new
+    # COMMITTEE_CRITERION_SCORES list. Never populated in any environment.
+    # If the list exists in SharePoint from an earlier run, delete manually.
+
+    'COMMITTEES' = @{
+        Description = 'A committee formed to score applicants for a program in a cycle. Pins the rubric version being scored against. See build/lists/COMMITTEES.md.'
         Fields      = @(
-            @{ Name = 'FinalScore';        Type = 'Number'; Required = $true }
-            @{ Name = 'PercentOfPossible'; Type = 'Number' }
-            @{ Name = 'CriterionScores';   Type = 'Note' }   # JSON — plain text, see Set-FieldTweak
-            @{ Name = 'Rank';              Type = 'Number' }
-            @{ Name = 'ScoredBy';          Type = 'Text' }
-            @{ Name = 'ScoredDate';        Type = 'Date' }
+            @{ Name = 'CommitteeName'; Type = 'Text';   Required = $true }
+            @{ Name = 'State';         Type = 'Choice'; Required = $true; Choices = @('Active', 'Ranked') }
+            @{ Name = 'FormedDate';    Type = 'Date';   Required = $true }
+        )
+    }
+
+    'COMMITTEE_CRITERION_SCORES' = @{
+        Description = 'Per-criterion score and comment for an applicant''s program choice. One row per (choice x criterion). Aggregate on APPLICATION_PROGRAM_CHOICES.'
+        Fields      = @(
+            @{ Name = 'Score';   Type = 'Number'; Required = $true }
+            @{ Name = 'Comment'; Type = 'Note' }
         )
     }
 
@@ -361,16 +378,19 @@ $script:Lookups = @(
     # that only some programs have — HPP today, none tomorrow if it changes.
     # Requiring the option is what forced fabricated "N/A" rows for MDP and
     # NEXT, since neither can be chosen without one. See 2026-07-31.
-    @{ List = 'APPLICATION_PROGRAM_CHOICES'; Name = 'ProgramID';          Target = 'PROGRAMS';           ShowField = 'ProgramName';   Required = $true }
-    @{ List = 'APPLICATION_PROGRAM_CHOICES'; Name = 'ProgramOptionID';    Target = 'PROGRAM_OPTIONS';    ShowField = 'OptionName';    Required = $false }
-    @{ List = 'SUPERVISOR_ENDORSEMENTS';     Name = 'ApplicationID';      Target = 'APPLICATIONS';       ShowField = 'ApplicantEmail'; Required = $true }
-    @{ List = 'RATING_SHEETS';               Name = 'ProgramID';          Target = 'PROGRAMS';           ShowField = 'ProgramName';   Required = $true }
-    @{ List = 'RATING_CRITERIA';             Name = 'RatingSheetID';      Target = 'RATING_SHEETS';      ShowField = 'ID';            Required = $true }
-    @{ List = 'RATING_CRITERIA';             Name = 'CatalogCriterionID'; Target = 'CRITERION_CATALOG';  ShowField = 'CriterionName'; Required = $true }
-    @{ List = 'CRITERION_ANCHORS';           Name = 'CatalogCriterionID'; Target = 'CRITERION_CATALOG';  ShowField = 'CriterionName'; Required = $true }
-    @{ List = 'COMMITTEE_SCORES';            Name = 'ApplicationID';      Target = 'APPLICATIONS';       ShowField = 'ApplicantEmail'; Required = $true }
-    @{ List = 'COMMITTEE_SCORES';            Name = 'ProgramID';          Target = 'PROGRAMS';           ShowField = 'ProgramName';   Required = $true }
-    @{ List = 'COMMITTEE_SCORES';            Name = 'RatingSheetID';      Target = 'RATING_SHEETS';      ShowField = 'ID';            Required = $true }
+    @{ List = 'APPLICATION_PROGRAM_CHOICES'; Name = 'ProgramID';                 Target = 'PROGRAMS';                    ShowField = 'ProgramName';   Required = $true }
+    @{ List = 'APPLICATION_PROGRAM_CHOICES'; Name = 'ProgramOptionID';           Target = 'PROGRAM_OPTIONS';             ShowField = 'OptionName';    Required = $false }
+    @{ List = 'APPLICATION_PROGRAM_CHOICES'; Name = 'CommitteeID';               Target = 'COMMITTEES';                  ShowField = 'CommitteeName'; Required = $false }
+    @{ List = 'SUPERVISOR_ENDORSEMENTS';     Name = 'ApplicationID';             Target = 'APPLICATIONS';                ShowField = 'ApplicantEmail'; Required = $true }
+    @{ List = 'RATING_SHEETS';               Name = 'ProgramID';                 Target = 'PROGRAMS';                    ShowField = 'ProgramName';   Required = $true }
+    @{ List = 'RATING_CRITERIA';             Name = 'RatingSheetID';             Target = 'RATING_SHEETS';               ShowField = 'ID';            Required = $true }
+    @{ List = 'RATING_CRITERIA';             Name = 'CatalogCriterionID';        Target = 'CRITERION_CATALOG';           ShowField = 'CriterionName'; Required = $true }
+    @{ List = 'CRITERION_ANCHORS';           Name = 'CatalogCriterionID';        Target = 'CRITERION_CATALOG';           ShowField = 'CriterionName'; Required = $true }
+    @{ List = 'COMMITTEES';                  Name = 'ProgramID';                 Target = 'PROGRAMS';                    ShowField = 'ProgramName';   Required = $true }
+    @{ List = 'COMMITTEES';                  Name = 'CycleID';                   Target = 'CYCLES';                      ShowField = 'CycleName';     Required = $true }
+    @{ List = 'COMMITTEES';                  Name = 'RatingSheetID';             Target = 'RATING_SHEETS';               ShowField = 'ID';            Required = $true }
+    @{ List = 'COMMITTEE_CRITERION_SCORES';  Name = 'ApplicationProgramChoiceID'; Target = 'APPLICATION_PROGRAM_CHOICES'; ShowField = 'ID';            Required = $true }
+    @{ List = 'COMMITTEE_CRITERION_SCORES';  Name = 'RatingCriterionID';         Target = 'RATING_CRITERIA';             ShowField = 'ID';            Required = $true }
     @{ List = 'PLACEMENTS';                  Name = 'ApplicationID';      Target = 'APPLICATIONS';       ShowField = 'ApplicantEmail'; Required = $true }
     @{ List = 'PLACEMENTS';                  Name = 'ProgramID';          Target = 'PROGRAMS';           ShowField = 'ProgramName';   Required = $true }
     @{ List = 'PLACEMENTS';                  Name = 'ProgramOptionID';    Target = 'PROGRAM_OPTIONS';    ShowField = 'OptionName';    Required = $false }
@@ -384,13 +404,14 @@ $script:Indexes = [ordered]@{
     'APPLICATIONS'                = @('CycleID', 'ApplicantEmail', 'ApplicationStatus', 'ReviewStage', 'PlacementOutcome')
     'APPLICATION_DOCUMENTS'       = @('ApplicationID', 'DocumentType')
     'APPLICATION_COMPETENCIES'    = @('ApplicationID', 'CompetencyID')
-    'APPLICATION_PROGRAM_CHOICES' = @('ApplicationID', 'ProgramID', 'ProgramOptionID')
+    'APPLICATION_PROGRAM_CHOICES' = @('ApplicationID', 'ProgramID', 'ProgramOptionID', 'CommitteeID')
     'SUPERVISOR_ENDORSEMENTS'     = @('ApplicationID')
     'RATING_SHEETS'               = @('ProgramID', 'State')
     'RATING_CRITERIA'             = @('RatingSheetID')
     'CRITERION_CATALOG'           = @('State')
     'CRITERION_ANCHORS'           = @('CatalogCriterionID')
-    'COMMITTEE_SCORES'            = @('ApplicationID', 'ProgramID', 'RatingSheetID')
+    'COMMITTEES'                  = @('ProgramID', 'CycleID', 'State')
+    'COMMITTEE_CRITERION_SCORES'  = @('ApplicationProgramChoiceID', 'RatingCriterionID')
     'PLACEMENTS'                  = @('ApplicationID', 'ProgramID', 'ProgramOptionID', 'CycleID')
     'NOTIFICATIONS'               = @('ApplicationID')
     'CHANGE_HISTORY'              = @('ApplicationID')
@@ -469,8 +490,8 @@ function New-LdpField {
 
         'Note' {
             Add-PnPField @common -Type Note | Out-Null
-            # Plain text, not rich text: CriterionScores/Details hold JSON, and rich
-            # text wraps values in markup that Power Fx would have to strip.
+            # Plain text, not rich text: Details holds JSON, and rich text wraps
+            # values in markup that Power Fx would have to strip.
             Set-PnPField -List $ListTitle -Identity $name -Values @{ RichText = $false; AppendOnly = $false } | Out-Null
         }
 

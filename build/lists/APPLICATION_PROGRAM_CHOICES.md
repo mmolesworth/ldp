@@ -10,9 +10,14 @@ with the chosen option where the program has any.
 | ApplicationID | Lookup (APPLICATIONS) | Yes | Owning application. |
 | ProgramID | Lookup (PROGRAMS) | Yes | **The choice.** Stores `PROGRAMS.ID`. |
 | ProgramOptionID | Lookup (PROGRAM_OPTIONS) | No | The option chosen under that program. Populated only where the program has active options — HPP today; blank for MDP and NEXT. |
-| Rank | Number | Yes | 1 = highest, up to 3. |
+| Rank | Number | Yes | Applicant's preference rank: 1 = highest, up to 3. Not the score rank. |
+| CommitteeID | Lookup (COMMITTEES) | No | Written by the Committee Score Screen on first submit. Blank until scored. |
+| FinalScore | Number | No | Sum of per-criterion anchor values from `COMMITTEE_CRITERION_SCORES`. Written on submit. |
+| PercentOfPossible | Number | No | `FinalScore ÷ (5 × criteria count)` — cross-pool comparison (RQ119). Written on submit. |
+| ScoredBy | Single line of text | No | Committee recorder's email (audit). Written on submit. |
+| ScoredDate | Date | No | When scoring was submitted. |
 
-**Indexes:** `ApplicationID`, `ProgramID`, `ProgramOptionID`.
+**Indexes:** `ApplicationID`, `ProgramID`, `ProgramOptionID`, `CommitteeID`.
 **Validation:** one to three rows per application, ranks 1–3, no duplicate rank (FR-004).
 **Uniqueness is on the PAIR** (`ProgramID`, `ProgramOptionID`), not on the program. An applicant may
 rank HPP more than once with a different option each time. MDP or NEXT twice is still blocked, and
@@ -37,3 +42,24 @@ optional because most programs genuinely have no option to record.
 
 Migrated by `build/scripts/Update-LdpProgramChoices.ps1`. `PLACEMENTS` had the identical defect and
 was fixed in the same run.
+
+## Revised 2026-08-07 — committee score moved onto the choice row
+
+Committee scoring aggregates (`FinalScore`, `PercentOfPossible`, `ScoredBy`, `ScoredDate`) now live
+on this row rather than a separate `COMMITTEE_SCORES` list. Per-criterion detail moved to a new
+`COMMITTEE_CRITERION_SCORES` list. `COMMITTEE_SCORES` is deprecated (never populated; dropped from
+provisioning).
+
+**Why fold it in.** APPLICATION_PROGRAM_CHOICES already has exactly one row per (application ×
+program) — the same key `COMMITTEE_SCORES` used. A separate list was duplicating that key just to
+hang score columns off it. Merging removes a whole list and turns "look up this applicant's score
+for this program" into a single read.
+
+**No `Rank` score column.** Applicant preference (columns 1–3) stays on `Rank`. Committee ranking
+is derived at query time: `CountIf(pool, FinalScore > Self.FinalScore) + 1`. See COMMITTEES.md for
+rationale.
+
+**Two owners on one row.** The applicant writes `ProgramID`, `ProgramOptionID`, `Rank` during
+`ApplicationStatus = Draft`. The committee writes `CommitteeID` + score columns during
+`ReviewStage = Committee Review`. Same pattern as elsewhere in this app: SharePoint permissions
+grant broad write, screens enforce who edits what and when.

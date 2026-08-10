@@ -18,6 +18,7 @@ status values — they are TBD pending Appendix B (D-2, Constitution I).
 | `CRITERION_ANCHORS.Score` | 0, 1, 3, 5 (fixed; no criterion-specific scale) | RQ110 |
 | `PROGRAMS.State` | Active, Retired | added 2026-07-26 — retire instead of delete |
 | `PROGRAM_OPTIONS.State` | Active, Retired | added 2026-07-26 — retire instead of delete |
+| `COMMITTEES.State` | Active, Ranked | added 2026-08-07 — no Draft (DTD writes rows directly); no Closed (`Ranked` is terminal, DTD advances applicants out via `ReviewStage`) |
 | `PLACEMENTS.IsFinalized` | Yes, No | data-model |
 | `NOTIFICATIONS.NotificationType` | Pending Action, Advance, Reminder, Disposition | data-model |
 | `NOTIFICATIONS.SendOutcome` | Sent, Failed | data-model |
