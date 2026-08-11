@@ -1112,7 +1112,7 @@
                       Variant: Vertical
                       Properties:
                         Height: =180
-                        Items: =Filter(APPLICATION_DOCUMENTS, ApplicationID.Id = locApp.ID)
+                        Items: =locApp.Attachments
                         ShowScrollbar: =false
                         TemplatePadding: =0
                         TemplateSize: =44
@@ -1128,7 +1128,7 @@
                               FontWeight: =Typography.WeightMedium
                               Height: =40
                               Size: =Typography.SizeBody
-                              Text: =ThisItem.DocumentType.Value
+                              Text: =ThisItem.DisplayName
                               Width: =400
                               X: =0
                               Y: =0

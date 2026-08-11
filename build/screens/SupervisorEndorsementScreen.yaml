@@ -57,9 +57,9 @@
 #      referenced inside the UpdateContext that defines it, which is why
 #      locApp is set in the second block and read in the third.
 #
-#   4. Data sources (eight): APPLICATIONS, SUPERVISOR_ENDORSEMENTS,
+#   4. Data sources (seven): APPLICATIONS, SUPERVISOR_ENDORSEMENTS,
 #      APPLICATION_PROGRAM_CHOICES, APPLICATION_COMPETENCIES, COMPETENCIES,
-#      COMPETENCY_TYPES, APPLICATION_DOCUMENTS, PROGRAM_OPTIONS.
+#      COMPETENCY_TYPES, PROGRAM_OPTIONS.
 #   5. Preview (F5) — OnVisible does not run on the design surface.
 #
 # ---------------------------------------------------------------------------
@@ -1265,7 +1265,10 @@
                       Variant: Vertical
                       Properties:
                         Height: =180
-                        Items: =Filter(APPLICATION_DOCUMENTS, ApplicationID.Id = locApp.ID)
+                        # OI-APP-1: applicants attach files to the APPLICATIONS row's
+                        # native attachment collection. No per-slot type — the label
+                        # below shows the file name instead of a document type.
+                        Items: =locApp.Attachments
                         ShowScrollbar: =false
                         TemplatePadding: =0
                         TemplateSize: =44
@@ -1281,7 +1284,7 @@
                               FontWeight: =Typography.WeightMedium
                               Height: =40
                               Size: =Typography.SizeBody
-                              Text: =ThisItem.DocumentType.Value
+                              Text: =ThisItem.DisplayName
                               Width: =400
                               X: =0
                               Y: =0

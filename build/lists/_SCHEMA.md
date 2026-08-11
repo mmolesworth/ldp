@@ -117,7 +117,7 @@ The four scoring anchors (0/1/3/5) for a catalog criterion. Four rows per criter
 ## Tier 2 — depend on Tier 0/1
 
 ### APPLICATIONS  → CYCLES
-The central application record. Supporting documents live on `APPLICATION_DOCUMENTS`.
+The central application record. Supporting documents are the row's native SharePoint attachments (OI-APP-1).
 
 | Column | Type | Required | Notes |
 |---|---|---|---|
@@ -158,16 +158,6 @@ Committee rating sheets — versioned per program. Reused across cycles until re
 ---
 
 ## Tier 3 — depend on Tier 2
-
-### APPLICATION_DOCUMENTS  → APPLICATIONS
-One row per required supporting document. Each row holds the file as its own attachment.
-
-| Column | Type | Required | Notes |
-|---|---|---|---|
-| ID | Number | Yes | Auto-number. |
-| ApplicationID | Lookup(APPLICATIONS.ApplicantEmail) | Yes | Owning application. **Index at creation.** |
-| DocumentType | Choice | Yes | Resume, Statement of Interest, Performance Appraisal. |
-| *(Attachments)* | built-in | No | One file per row by convention. |
 
 ### APPLICATION_COMPETENCIES  → APPLICATIONS, COMPETENCIES
 An application's selected competencies (join). The competency's TYPE is deliberately not stored here.

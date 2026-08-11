@@ -91,28 +91,22 @@
 #      exists here, so the click does nothing at all and the user is stuck.
 #      OnHidden runs on every exit path, including ones added later.
 #
-#   6. STEP 5 ATTACHMENTS — build by hand, three times. Canvas exposes
-#      attachments only through a Form control's data card, which has no YAML
-#      representation, so this cannot be pasted (Constitution IV).
+#   6. STEP 5 ATTACHMENTS — build by hand. Canvas exposes attachments only
+#      through a Form control's data card, which has no YAML representation, so
+#      this cannot be pasted (Constitution IV).
 #
-#      For each of Resume / Statement of Interest / Performance Appraisal:
+#      One Edit Form on APPLICATIONS with only the Attachments card. Applicants
+#      add multiple files to the single unnamed attachment collection on their
+#      APPLICATIONS row. Trades per-slot identity for simplicity — see OI-APP-1.
+#
 #        a. Insert > Forms > Edit, inside conStep5AP.
-#        b. DataSource = APPLICATION_DOCUMENTS.
-#        c. Item = LookUp(APPLICATION_DOCUMENTS,
-#                    And(ApplicationID.Id = locApp.ID,
-#                        DocumentType.Value = "Resume"))      <- per slot
-#        d. Fields: remove every card EXCEPT Attachments.
-#        e. DefaultMode = FormMode.Edit.
-#        f. Size and place it beside the matching txtDoc*AP box:
-#             Resume     X = 650, Y = 104, Width = Parent.Width - 700, Height = 52
-#             Statement  X = 650, Y = 174, same size
-#             Appraisal  X = 650, Y = 244, same size
-#        g. The Attachments card's OnAddFile / OnRemoveFile:
+#        b. DataSource = APPLICATIONS.
+#        c. Item = locApp.
+#        d. DefaultMode = FormMode.Edit.
+#        e. Fields: remove every card EXCEPT Attachments.
+#        f. Size to fill conStep5AP.
+#        g. Attachments card OnAddFile / OnRemoveFile:
 #             SubmitForm(<that form>); Set(gblFormDirty, true)
-#
-#      The card gives attach, remove and download for free. The trash button
-#      beside each box is a harder reset — it deletes the ROW and recreates an
-#      empty one, for when a slot is wrong rather than a file.
 #
 #   7. Preview (F5) — OnVisible does not run on the design surface.
 #
@@ -140,13 +134,14 @@
 #    not a wizard state.
 #
 # ---------------------------------------------------------------------------
-# TWO KNOWN BLOCKERS — unchanged, both still open
+# KNOWN LIMITATIONS
 # ---------------------------------------------------------------------------
 # OI-APP-1  (see build/OPEN_ISSUES.md)
-# OI-APP-1  Step 5 cannot deliver three independent document slots. SharePoint
-#           item attachments are ONE unnamed collection with no per-slot
-#           identity, no MIME filter and no size guard. Step 5 ships as a
-#           placeholder stating the three options. Blocks US1 verification.
+# OI-APP-1  Step 5 uses SharePoint's native item attachments — ONE unnamed
+#           collection on the APPLICATIONS row. No per-slot identity, no MIME
+#           filter, no size guard. Accepted as-is 2026-08-11 to keep the
+#           applicant experience simple; DTD cannot report which of the three
+#           required documents is missing.
 # D-2       Step 3's ten dropdowns have no values. _CHOICES.md marks OPM
 #           competencies, technical competencies and ECQs "TBD — Appendix B",
 #           and Constitution I forbids inventing them. Items: =Table() renders
@@ -2196,7 +2191,7 @@
                   X: =dtpSessionAP.X + 10
                   Y: =dtpSessionAP.Y - Self.Height / 2
       
-      # STEP 5 — Supporting documents (RQ009, FR-006) — OI-APP-1 BLOCKER
+      # STEP 5 — Supporting documents (RQ009, FR-006) — OI-APP-1
       # ===========================================================================
       - conStep5AP:
           Control: GroupContainer@1.5.0
@@ -2252,335 +2247,17 @@
                   Width: =Parent.Width - 48
                   X: =24
                   Y: =36
-            # ---- THREE DOCUMENT SLOTS ----
-            # One APPLICATION_DOCUMENTS row per type, each holding its own attachment.
-            # Item attachments on APPLICATIONS are a single unnamed collection, so
-            # there is no way to tell a resume from a statement of interest; a row per
-            # type gives each slot an identity.
+            # ---- ATTACHMENTS FORM ----
+            # A single Edit Form on APPLICATIONS with only the Attachments card.
+            # Applicants add multiple files to the native item-attachment collection
+            # on their APPLICATIONS row. See the STEP 5 ATTACHMENTS block in the
+            # header at the top of this file for build steps — the Form control has
+            # no YAML representation (Constitution IV), so it is inserted in Studio.
             #
-            # THE UPLOAD CONTROL IS NOT HERE, AND CANNOT BE. Canvas exposes
-            # attachments only through a Form control's data card, which has no YAML
-            # form — it must be inserted in Studio. Constitution IV, unavoidably.
-            # Build steps are in the header block at the top of this file.
-            #
-            # Each slot below is the modern-input-label pair used on every other step:
-            # a disabled Classic/TextInput showing the file state, with a Label
-            # astride its top border naming the slot. The gap to the right of each box
-            # is where the Attachments control goes.
-            #
-            # Remove is the Attachments control's own X. The trash button here deletes
-            # the ROW, which is a harder reset — used when a slot is wrong rather than
-            # when a file is.
-            - txtDocResumeAP:
-                Control: Classic/TextInput@2.3.2
-                Properties:
-                  BorderColor: =ColorPalette.Gray300
-                  BorderThickness: =1
-                  Color: =ColorPalette.TextBody
-                  # CountRows on the row's attachments. If Studio reports that
-                  # Attachments is not readable outside a Form, fall back to
-                  # If(IsBlank(<row>), "Slot missing", "Ready for upload") — the row
-                  # existing is the part this screen can always see.
-                  Default: |-
-                    =If(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Resume"))),
-                       "Not set up yet",
-                       If(CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Resume")).Attachments) = 0,
-                          "No file attached",
-                          First(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Resume")).Attachments).DisplayName))
-                  DisabledBorderColor: =ColorPalette.Gray300
-                  DisabledColor: =ColorPalette.TextBody
-                  DisabledFill: =ColorPalette.White
-                  DisplayMode: =DisplayMode.Disabled
-                  Fill: =ColorPalette.White
-                  Font: =Typography.Family
-                  Height: =40
-                  PaddingLeft: =12
-                  Size: =Typography.SizeBody
-                  Width: =560
-                  X: =24
-                  Y: =110
-            - icoDocResumeAP:
-                Control: Classic/Icon@2.5.0
-                Properties:
-                  BorderStyle: =BorderStyle.None
-                  Color: =ColorPalette.TextHelp
-                  Height: =18
-                  Icon: =Icon.Trash
-                  Visible: |-
-                    =And(Not(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Resume")))),
-                       CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Resume")).Attachments) > 0)
-                  Width: =18
-                  X: =603
-                  Y: =121
-            - btnDocResumeAP:
-                Control: Classic/Button@2.2.0
-                Properties:
-                  BorderColor: =RGBA(0, 0, 0, 0)
-                  BorderStyle: =BorderStyle.Solid
-                  BorderThickness: =0
-                  Color: =RGBA(0, 0, 0, 0)
-                  DisplayMode: |-
-                    =If(Or(locCycle.State.Value <> "Open",
-                           And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
-                       DisplayMode.Disabled, DisplayMode.Edit)
-                  Fill: =RGBA(0, 0, 0, 0)
-                  FocusedBorderColor: =ColorPalette.FocusOnLight
-                  FocusedBorderThickness: =2
-                  Height: =32
-                  HoverColor: =RGBA(0, 0, 0, 0)
-                  HoverFill: =ColorPalette.DangerLight
-                  # Removes the ROW, attachment and all, then puts an empty slot back
-                  # so the Attachments control still has something to bind to.
-                  OnSelect: |-
-                    =Remove(APPLICATION_DOCUMENTS, LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Resume")));
-                    Patch(APPLICATION_DOCUMENTS, Defaults(APPLICATION_DOCUMENTS),
-                      {
-                        ApplicationID: {
-                          '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
-                          Id: locApp.ID,
-                          Value: locApp.ApplicantEmail
-                        },
-                        DocumentType: { Value: "Resume" }
-                      });
-                    Set(gblFormDirty, true)
-                  PressedColor: =RGBA(0, 0, 0, 0)
-                  PressedFill: =ColorPalette.DangerLight
-                  RadiusBottomLeft: =6
-                  RadiusBottomRight: =6
-                  RadiusTopLeft: =6
-                  RadiusTopRight: =6
-                  Size: =Typography.SizeCaption
-                  Text: =""
-                  Tooltip: |-
-                    ="Remove the resume"
-                  Visible: |-
-                    =And(Not(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Resume")))),
-                       CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Resume")).Attachments) > 0)
-                  Width: =32
-                  X: =596
-                  Y: =114
-            - txtDocStatementAP:
-                Control: Classic/TextInput@2.3.2
-                Properties:
-                  BorderColor: =ColorPalette.Gray300
-                  BorderThickness: =1
-                  Color: =ColorPalette.TextBody
-                  # CountRows on the row's attachments. If Studio reports that
-                  # Attachments is not readable outside a Form, fall back to
-                  # If(IsBlank(<row>), "Slot missing", "Ready for upload") — the row
-                  # existing is the part this screen can always see.
-                  Default: |-
-                    =If(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Statement of Interest"))),
-                       "Not set up yet",
-                       If(CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Statement of Interest")).Attachments) = 0,
-                          "No file attached",
-                          First(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Statement of Interest")).Attachments).DisplayName))
-                  DisabledBorderColor: =ColorPalette.Gray300
-                  DisabledColor: =ColorPalette.TextBody
-                  DisabledFill: =ColorPalette.White
-                  DisplayMode: =DisplayMode.Disabled
-                  Fill: =ColorPalette.White
-                  Font: =Typography.Family
-                  Height: =40
-                  PaddingLeft: =12
-                  Size: =Typography.SizeBody
-                  Width: =560
-                  X: =24
-                  Y: =180
-            - icoDocStatementAP:
-                Control: Classic/Icon@2.5.0
-                Properties:
-                  BorderStyle: =BorderStyle.None
-                  Color: =ColorPalette.TextHelp
-                  Height: =18
-                  Icon: =Icon.Trash
-                  Visible: |-
-                    =And(Not(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Statement of Interest")))),
-                       CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Statement of Interest")).Attachments) > 0)
-                  Width: =18
-                  X: =603
-                  Y: =191
-            - btnDocStatementAP:
-                Control: Classic/Button@2.2.0
-                Properties:
-                  BorderColor: =RGBA(0, 0, 0, 0)
-                  BorderStyle: =BorderStyle.Solid
-                  BorderThickness: =0
-                  Color: =RGBA(0, 0, 0, 0)
-                  DisplayMode: |-
-                    =If(Or(locCycle.State.Value <> "Open",
-                           And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
-                       DisplayMode.Disabled, DisplayMode.Edit)
-                  Fill: =RGBA(0, 0, 0, 0)
-                  FocusedBorderColor: =ColorPalette.FocusOnLight
-                  FocusedBorderThickness: =2
-                  Height: =32
-                  HoverColor: =RGBA(0, 0, 0, 0)
-                  HoverFill: =ColorPalette.DangerLight
-                  # Removes the ROW, attachment and all, then puts an empty slot back
-                  # so the Attachments control still has something to bind to.
-                  OnSelect: |-
-                    =Remove(APPLICATION_DOCUMENTS, LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Statement of Interest")));
-                    Patch(APPLICATION_DOCUMENTS, Defaults(APPLICATION_DOCUMENTS),
-                      {
-                        ApplicationID: {
-                          '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
-                          Id: locApp.ID,
-                          Value: locApp.ApplicantEmail
-                        },
-                        DocumentType: { Value: "Statement of Interest" }
-                      });
-                    Set(gblFormDirty, true)
-                  PressedColor: =RGBA(0, 0, 0, 0)
-                  PressedFill: =ColorPalette.DangerLight
-                  RadiusBottomLeft: =6
-                  RadiusBottomRight: =6
-                  RadiusTopLeft: =6
-                  RadiusTopRight: =6
-                  Size: =Typography.SizeCaption
-                  Text: =""
-                  Tooltip: |-
-                    ="Remove the statement of interest"
-                  Visible: |-
-                    =And(Not(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Statement of Interest")))),
-                       CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Statement of Interest")).Attachments) > 0)
-                  Width: =32
-                  X: =596
-                  Y: =184
-            - txtDocAppraisalAP:
-                Control: Classic/TextInput@2.3.2
-                Properties:
-                  BorderColor: =ColorPalette.Gray300
-                  BorderThickness: =1
-                  Color: =ColorPalette.TextBody
-                  # CountRows on the row's attachments. If Studio reports that
-                  # Attachments is not readable outside a Form, fall back to
-                  # If(IsBlank(<row>), "Slot missing", "Ready for upload") — the row
-                  # existing is the part this screen can always see.
-                  Default: |-
-                    =If(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Performance Appraisal"))),
-                       "Not set up yet",
-                       If(CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Performance Appraisal")).Attachments) = 0,
-                          "No file attached",
-                          First(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Performance Appraisal")).Attachments).DisplayName))
-                  DisabledBorderColor: =ColorPalette.Gray300
-                  DisabledColor: =ColorPalette.TextBody
-                  DisabledFill: =ColorPalette.White
-                  DisplayMode: =DisplayMode.Disabled
-                  Fill: =ColorPalette.White
-                  Font: =Typography.Family
-                  Height: =40
-                  PaddingLeft: =12
-                  Size: =Typography.SizeBody
-                  Width: =560
-                  X: =24
-                  Y: =250
-            - icoDocAppraisalAP:
-                Control: Classic/Icon@2.5.0
-                Properties:
-                  BorderStyle: =BorderStyle.None
-                  Color: =ColorPalette.TextHelp
-                  Height: =18
-                  Icon: =Icon.Trash
-                  Visible: |-
-                    =And(Not(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Performance Appraisal")))),
-                       CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Performance Appraisal")).Attachments) > 0)
-                  Width: =18
-                  X: =603
-                  Y: =261
-            - btnDocAppraisalAP:
-                Control: Classic/Button@2.2.0
-                Properties:
-                  BorderColor: =RGBA(0, 0, 0, 0)
-                  BorderStyle: =BorderStyle.Solid
-                  BorderThickness: =0
-                  Color: =RGBA(0, 0, 0, 0)
-                  DisplayMode: |-
-                    =If(Or(locCycle.State.Value <> "Open",
-                           And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
-                       DisplayMode.Disabled, DisplayMode.Edit)
-                  Fill: =RGBA(0, 0, 0, 0)
-                  FocusedBorderColor: =ColorPalette.FocusOnLight
-                  FocusedBorderThickness: =2
-                  Height: =32
-                  HoverColor: =RGBA(0, 0, 0, 0)
-                  HoverFill: =ColorPalette.DangerLight
-                  # Removes the ROW, attachment and all, then puts an empty slot back
-                  # so the Attachments control still has something to bind to.
-                  OnSelect: |-
-                    =Remove(APPLICATION_DOCUMENTS, LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Performance Appraisal")));
-                    Patch(APPLICATION_DOCUMENTS, Defaults(APPLICATION_DOCUMENTS),
-                      {
-                        ApplicationID: {
-                          '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
-                          Id: locApp.ID,
-                          Value: locApp.ApplicantEmail
-                        },
-                        DocumentType: { Value: "Performance Appraisal" }
-                      });
-                    Set(gblFormDirty, true)
-                  PressedColor: =RGBA(0, 0, 0, 0)
-                  PressedFill: =ColorPalette.DangerLight
-                  RadiusBottomLeft: =6
-                  RadiusBottomRight: =6
-                  RadiusTopLeft: =6
-                  RadiusTopRight: =6
-                  Size: =Typography.SizeCaption
-                  Text: =""
-                  Tooltip: |-
-                    ="Remove the performance appraisal"
-                  Visible: |-
-                    =And(Not(IsBlank(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Performance Appraisal")))),
-                       CountRows(LookUp(APPLICATION_DOCUMENTS, And(ApplicationID.Id = locApp.ID, DocumentType.Value = "Performance Appraisal")).Attachments) > 0)
-                  Width: =32
-                  X: =596
-                  Y: =254
-            # LABELS LAST — each straddles the top border of its box.
-            - lblDocResumeAP:
-                Control: Label@2.5.1
-                Properties:
-                  Color: =ColorPalette.TextHelp
-                  Fill: =ColorPalette.White
-                  Font: =Typography.Family
-                  Height: =16
-                  PaddingLeft: =4
-                  PaddingRight: =4
-                  Size: =Typography.SizeCaption
-                  Text: ="Resume"
-                  Width: =Len(Self.Text) * 6 + 16
-                  Wrap: =false
-                  X: =txtDocResumeAP.X + 10
-                  Y: =txtDocResumeAP.Y - Self.Height / 2
-            - lblDocStatementAP:
-                Control: Label@2.5.1
-                Properties:
-                  Color: =ColorPalette.TextHelp
-                  Fill: =ColorPalette.White
-                  Font: =Typography.Family
-                  Height: =16
-                  PaddingLeft: =4
-                  PaddingRight: =4
-                  Size: =Typography.SizeCaption
-                  Text: ="Statement of Interest"
-                  Width: =Len(Self.Text) * 6 + 16
-                  Wrap: =false
-                  X: =txtDocStatementAP.X + 10
-                  Y: =txtDocStatementAP.Y - Self.Height / 2
-            - lblDocAppraisalAP:
-                Control: Label@2.5.1
-                Properties:
-                  Color: =ColorPalette.TextHelp
-                  Fill: =ColorPalette.White
-                  Font: =Typography.Family
-                  Height: =16
-                  PaddingLeft: =4
-                  PaddingRight: =4
-                  Size: =Typography.SizeCaption
-                  Text: ="Performance Appraisal"
-                  Width: =Len(Self.Text) * 6 + 16
-                  Wrap: =false
-                  X: =txtDocAppraisalAP.X + 10
-                  Y: =txtDocAppraisalAP.Y - Self.Height / 2
+            # No slot-per-type identity: DTD cannot tell resume from statement from
+            # appraisal. Accepted 2026-08-11 (OI-APP-1). Container Height=428 was
+            # sized for the three-slot layout that used to live here — resize as
+            # needed once the Attachments Form is in place.
       
       # STEP 6 — Review and submit (RQ012, RQ013; FR-009, FR-010)
       # ===========================================================================
@@ -2919,9 +2596,15 @@
                 Control: Classic/Icon@2.5.0
                 Properties:
                   BorderStyle: =BorderStyle.None
-                  Color: =ColorPalette.TextHelp
+                  # OI-APP-1: no per-slot identity, so we can only check that at
+                  # least one file is attached.
+                  Color: |-
+                    =If(Or(IsBlank(locApp), CountRows(locApp.Attachments) = 0),
+                       ColorPalette.DangerText, ColorPalette.SuccessText)
                   Height: =20
-                  Icon: =Icon.Warning
+                  Icon: |-
+                    =If(Or(IsBlank(locApp), CountRows(locApp.Attachments) = 0),
+                       Icon.Warning, Icon.Check)
                   Width: =20
                   X: =32
                   Y: =281
@@ -2940,12 +2623,17 @@
                 Control: Label@2.5.1
                 Properties:
                   Align: =Align.Right
-                  Color: =ColorPalette.TextHelp
+                  Color: |-
+                    =If(Or(IsBlank(locApp), CountRows(locApp.Attachments) = 0),
+                       ColorPalette.DangerText, ColorPalette.SuccessText)
                   Font: =Typography.Family
                   FontWeight: =Typography.WeightMedium
                   Height: =30
                   Size: =Typography.SizeHeading
-                  Text: ="Not checked yet"
+                  Text: |-
+                    =If(Or(IsBlank(locApp), CountRows(locApp.Attachments) = 0),
+                       "At least one required",
+                       CountRows(locApp.Attachments) & " attached")
                   Width: =280
                   X: =Parent.Width * 0.56 - 300
                   Y: =276
@@ -3138,33 +2826,6 @@
                             Filter(APPLICATION_COMPETENCIES,
                               ApplicationID.Id = locApp.ID,
                               Not(CompetencyID.Id in colAppComps.CompId)));
-                          // Three document slots exist for every draft. An attachment needs a row
-                          // to attach to, so the rows must be created before the Attachments
-                          // controls have anything to bind to — including on a brand-new
-                          // application, where locApp only exists after the Patch above.
-                          //
-                          // Guarded per type rather than delete-and-rewrite: these rows CARRY THE
-                          // FILES. Removing one to recreate it would destroy the attachment.
-                          ForAll(
-                            Filter(
-                              Table(
-                                { DocType: "Resume" },
-                                { DocType: "Statement of Interest" },
-                                { DocType: "Performance Appraisal" }
-                              ),
-                              IsBlank(LookUp(APPLICATION_DOCUMENTS,
-                                And(ApplicationID.Id = locApp.ID, DocumentType.Value = DocType)))
-                            ) As dt,
-                            Patch(APPLICATION_DOCUMENTS, Defaults(APPLICATION_DOCUMENTS),
-                              {
-                                ApplicationID: {
-                                  '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
-                                  Id: locApp.ID,
-                                  Value: locApp.ApplicantEmail
-                                },
-                                DocumentType: { Value: dt.DocType }
-                              })
-                          );
                     Set(gblFormDirty, false);
                     Notify("Application submitted.", NotificationType.Success);
                     Navigate('Application Status Screen')
@@ -3403,33 +3064,6 @@
                   ApplicationID.Id = locApp.ID,
                   Not(CompetencyID.Id in colAppComps.CompId)));
       
-              // Three document slots exist for every draft. An attachment needs a row
-              // to attach to, so the rows must be created before the Attachments
-              // controls have anything to bind to — including on a brand-new
-              // application, where locApp only exists after the Patch above.
-              //
-              // Guarded per type rather than delete-and-rewrite: these rows CARRY THE
-              // FILES. Removing one to recreate it would destroy the attachment.
-              ForAll(
-                Filter(
-                  Table(
-                    { DocType: "Resume" },
-                    { DocType: "Statement of Interest" },
-                    { DocType: "Performance Appraisal" }
-                  ),
-                  IsBlank(LookUp(APPLICATION_DOCUMENTS,
-                    And(ApplicationID.Id = locApp.ID, DocumentType.Value = DocType)))
-                ) As dt,
-                Patch(APPLICATION_DOCUMENTS, Defaults(APPLICATION_DOCUMENTS),
-                  {
-                    ApplicationID: {
-                      '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
-                      Id: locApp.ID,
-                      Value: locApp.ApplicantEmail
-                    },
-                    DocumentType: { Value: dt.DocType }
-                  })
-              );
               Notify("Draft saved. You can close this and come back to it.", NotificationType.Success)
             PressedColor: =Self.Color
             PressedFill: |-

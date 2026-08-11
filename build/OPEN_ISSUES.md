@@ -7,18 +7,20 @@ Opened 2026-07-31. Add new items at the bottom of their section; do not renumber
 
 ---
 
-## OI-APP-1 — three document slots cannot be delivered
+## OI-APP-1 — supporting documents have no per-slot identity
 
 **Where:** `build/screens/ApplicationScreen.yaml` step 5; surfaced on `DTDApplicationsScreen.yaml`
-Documents tab.
-**What:** SharePoint attachments are a single undifferentiated collection on the list item. The
-requirement (RQ009, FR-006) asks for three named slots — resume, statement of interest, performance
-appraisal — and there is no way to label or read them back individually, nor to list them read-only
-on the DTD panel.
-**Status:** the Documents tab says so honestly rather than pretending. Step 6's checklist shows
-"Not checked" for documents for the same reason.
-**Likely fix:** a document library keyed to the application instead of list attachments. That is a
-schema addition, not a screen change.
+and `SupervisorEndorsementScreen.yaml` Documents tabs.
+**What:** step 5 uses SharePoint's native item-attachment collection on the APPLICATIONS row.
+Applicants can add multiple files, but they are one undifferentiated set — nothing distinguishes a
+resume from a statement of interest from a performance appraisal. DTD cannot report which of the
+three required documents (RQ009, FR-006) is missing; step 6's completeness checklist shows "Not
+checked" for documents for the same reason.
+**Status:** accepted 2026-08-11. The prior three-row `APPLICATION_DOCUMENTS` design solved this but
+was replaced with the native collection to keep the applicant experience simple. Downstream screens
+list attachments by file name.
+**Likely fix (if reopened):** a document library keyed to the application, or reintroduce a
+join list with a `DocumentType` slot.
 
 ---
 
@@ -253,7 +255,7 @@ operations only.
 
 **Hard constraint to respect now, not later:** index `ApplicationID` on any new child list **at
 creation**. Adding an index to a list already past 5,000 items is painful and sometimes requires
-emptying it. Every existing join table already does this; `APPLICATION_DOCUMENTS` must too.
+emptying it. Every existing join table already does this.
 
 **When to design it:** before the second production cycle closes. The first cycle can run without
 it; the migration cost rises with every cycle that accumulates, and retrofitting a document library
