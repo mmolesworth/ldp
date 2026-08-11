@@ -1,0 +1,510 @@
+# Admin Dashboard Screen — DTD cycle overview at a glance.
+# Classic controls only (Constitution II). Colours = ColorPalette.*, sizes = Typography.*
+#
+# ---------------------------------------------------------------------------
+# LAYOUT
+# ---------------------------------------------------------------------------
+#
+#   conHeaderAD                Navy900 title strip — "Admin Dashboard · {cycle}"
+#
+#   Row 1 — 4 KPI tiles (PowerLibs kpi-tile-1 pattern, no trend arrows since
+#   we have no historical periods to compare against yet):
+#     · Applicants  — everyone not in Draft
+#     · Submitted   — waiting on DTD validation
+#     · In Review   — anywhere in the review pipeline
+#     · Placed      — PLACEMENTS rows for this cycle
+#
+#   Row 2 — 2 horizontal bar charts (PowerLibs bar-chart-1 pattern):
+#     · Applicants by program        — count of APPLICATION_PROGRAM_CHOICES
+#                                      per Active program
+#     · Applicants by review stage   — count per ReviewStage value
+
+- conBodyAD:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =RGBA(0, 0, 0, 0)
+      Height: =692
+      Width: =Parent.Width
+      X: =0
+      # Env banner + utility bar slim: 76px combined.
+      Y: =76
+    Children:
+      # ===========================================================================
+      # HEADER
+      # ===========================================================================
+      - conHeaderAD:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.Light
+            Fill: =ColorPalette.Navy900
+            Height: =48
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =12
+          Children:
+            - lblHeaderTitleAD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextOnDark
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =28
+                  Size: =Typography.SizeTitle
+                  Text: |-
+                    ="Admin Dashboard  ·  " &
+                     Coalesce(locCycleAD.CycleName, "(no open cycle)")
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =(Parent.Height - Self.Height) / 2
+      # ===========================================================================
+      # ROW 1 — KPI TILES
+      # 4 tiles at 264 wide × 120 tall, 20px gap between.
+      # Total: 4 * 264 + 3 * 20 = 1116. Fits in 1152-wide body area.
+      # ===========================================================================
+      - conKpiApplicantsAD:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            BorderThickness: =1
+            DropShadow: =DropShadow.Light
+            Fill: =ColorPalette.White
+            Height: =120
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =(Parent.Width - 108) / 4
+            X: =24
+            Y: =conHeaderAD.Y + conHeaderAD.Height + 16
+          Children:
+            - lblKpiApplicantsCaptionAD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =18
+                  Size: =Typography.SizeCaption
+                  Text: ="APPLICANTS"
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =16
+            - lblKpiApplicantsValueAD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =52
+                  Size: =Typography.SizeTitle
+                  Text: |-
+                    =Text(CountRows(
+                       Filter(APPLICATIONS,
+                          CycleID.Id = locCycleAD.ID,
+                          ApplicationStatus.Value <> "Draft")))
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =44
+      - conKpiSubmittedAD:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            BorderThickness: =1
+            DropShadow: =DropShadow.Light
+            Fill: =ColorPalette.White
+            Height: =120
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =(Parent.Width - 108) / 4
+            X: =conKpiApplicantsAD.X + conKpiApplicantsAD.Width + 20
+            Y: =conKpiApplicantsAD.Y
+          Children:
+            - lblKpiSubmittedCaptionAD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =18
+                  Size: =Typography.SizeCaption
+                  Text: ="SUBMITTED"
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =16
+            - lblKpiSubmittedValueAD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =52
+                  Size: =Typography.SizeTitle
+                  Text: |-
+                    =Text(CountRows(
+                       Filter(APPLICATIONS,
+                          CycleID.Id = locCycleAD.ID,
+                          ApplicationStatus.Value = "Submitted")))
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =44
+      - conKpiInReviewAD:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            BorderThickness: =1
+            DropShadow: =DropShadow.Light
+            Fill: =ColorPalette.White
+            Height: =120
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =(Parent.Width - 108) / 4
+            X: =conKpiSubmittedAD.X + conKpiSubmittedAD.Width + 20
+            Y: =conKpiApplicantsAD.Y
+          Children:
+            - lblKpiInReviewCaptionAD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =18
+                  Size: =Typography.SizeCaption
+                  Text: ="IN REVIEW"
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =16
+            - lblKpiInReviewValueAD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =52
+                  Size: =Typography.SizeTitle
+                  Text: |-
+                    =Text(CountRows(
+                       Filter(APPLICATIONS,
+                          CycleID.Id = locCycleAD.ID,
+                          Or(ReviewStage.Value = "Pending First-Line",
+                             ReviewStage.Value = "Pending Second-Line",
+                             ReviewStage.Value = "Pending DTD Validation",
+                             ReviewStage.Value = "Committee Review"))))
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =44
+      - conKpiPlacedAD:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            BorderThickness: =1
+            DropShadow: =DropShadow.Light
+            Fill: =ColorPalette.White
+            Height: =120
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =(Parent.Width - 108) / 4
+            X: =conKpiInReviewAD.X + conKpiInReviewAD.Width + 20
+            Y: =conKpiApplicantsAD.Y
+          Children:
+            - lblKpiPlacedCaptionAD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =18
+                  Size: =Typography.SizeCaption
+                  Text: ="PLACED"
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =16
+            - lblKpiPlacedValueAD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.SuccessText
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =52
+                  Size: =Typography.SizeTitle
+                  Text: |-
+                    =Text(CountRows(
+                       Filter(PLACEMENTS,
+                          CycleID.Id = locCycleAD.ID)))
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =44
+      # ===========================================================================
+      # ROW 2 — BAR CHARTS
+      # 2 charts at 552 wide × 340 tall, 20px gap between.
+      # Each: title + gallery of horizontal bars.
+      # ===========================================================================
+      - conChartProgramsAD:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.Light
+            Fill: =ColorPalette.White
+            Height: =220
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =conKpiApplicantsAD.Y + conKpiApplicantsAD.Height + 16
+          Children:
+            - lblChartProgramsTitleAD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =24
+                  Size: =Typography.SizeHeading
+                  Text: ="Applicants by program"
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =16
+            # Hidden label holds the max value in the dataset. Bar width divides
+            # by this so the longest bar fills the track. A gallery cannot read
+            # its own AllItems from inside the template, so we hoist Max here.
+            - lblProgramsMaxAD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =1
+                  Size: =Typography.SizeCaption
+                  Text: |-
+                    =Text(Max(
+                       ForAll(Filter(PROGRAMS, State.Value = "Active"),
+                          With({pid: ID},
+                             CountRows(Filter(APPLICATION_PROGRAM_CHOICES,
+                                ProgramID.Id = pid)))),
+                       Value))
+                  Visible: =false
+                  Width: =40
+                  X: =0
+                  Y: =0
+            - galBarProgramsAD:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Height: =Parent.Height - Self.Y - 16
+                  Items: |-
+                    =SortByColumns(
+                       ForAll(
+                          Filter(PROGRAMS, State.Value = "Active"),
+                          With({pid: ID, pname: ProgramName},
+                             {
+                                Label: pname,
+                                Value: CountRows(Filter(APPLICATION_PROGRAM_CHOICES,
+                                          ProgramID.Id = pid))
+                             })),
+                       "Value", SortOrder.Descending)
+                  ShowScrollbar: =true
+                  TemplatePadding: =4
+                  TemplateSize: =64
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =lblChartProgramsTitleAD.Y + lblChartProgramsTitleAD.Height + 12
+                Children:
+                  - lblBarProgramLabelAD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextBody
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =Parent.TemplateHeight - 4
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.Label
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =180
+                        X: =0
+                        Y: =0
+                  - recBarProgramTrackAD:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        Fill: =ColorPalette.Gray300
+                        Height: =16
+                        Width: =260
+                        X: =190
+                        Y: =(Parent.TemplateHeight - Self.Height) / 2
+                  - recBarProgramFillAD:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        Fill: =ColorPalette.Blue600
+                        Height: =16
+                        Width: |-
+                          =Min(ThisItem.Value /
+                                 Max(1, Value(lblProgramsMaxAD.Text)),
+                               1) * 260
+                        X: =190
+                        Y: =(Parent.TemplateHeight - Self.Height) / 2
+                  - lblBarProgramValueAD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Align: =Align.Right
+                        Color: =ColorPalette.TextBody
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =Parent.TemplateHeight - 4
+                        Size: =Typography.SizeBody
+                        Text: =Text(ThisItem.Value)
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =40
+                        X: =460
+                        Y: =0
+      - conChartStagesAD:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.Light
+            Fill: =ColorPalette.White
+            Height: =220
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =conChartProgramsAD.Y + conChartProgramsAD.Height + 16
+          Children:
+            - lblChartStagesTitleAD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =24
+                  Size: =Typography.SizeHeading
+                  Text: ="Applicants by review stage"
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =16
+            - lblStagesMaxAD:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =1
+                  Size: =Typography.SizeCaption
+                  Text: |-
+                    =Text(Max(
+                       ForAll(
+                          ["Pending First-Line",
+                           "Pending Second-Line",
+                           "Pending DTD Validation",
+                           "Committee Review",
+                           "Pending Placement",
+                           "Pending Notification",
+                           "Complete"] As stg,
+                          CountRows(Filter(APPLICATIONS,
+                             CycleID.Id = locCycleAD.ID,
+                             ReviewStage.Value = stg.Value))),
+                       Value))
+                  Visible: =false
+                  Width: =40
+                  X: =0
+                  Y: =0
+            - galBarStagesAD:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Height: =Parent.Height - Self.Y - 16
+                  Items: |-
+                    =ForAll(
+                       ["Pending First-Line",
+                        "Pending Second-Line",
+                        "Pending DTD Validation",
+                        "Committee Review",
+                        "Pending Placement",
+                        "Pending Notification",
+                        "Complete"] As stg,
+                       {
+                          Label: stg.Value,
+                          Value: CountRows(Filter(APPLICATIONS,
+                                    CycleID.Id = locCycleAD.ID,
+                                    ReviewStage.Value = stg.Value))
+                       })
+                  ShowScrollbar: =true
+                  TemplatePadding: =4
+                  TemplateSize: =36
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =lblChartStagesTitleAD.Y + lblChartStagesTitleAD.Height + 12
+                Children:
+                  - lblBarStageLabelAD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextBody
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =Parent.TemplateHeight - 4
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.Label
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =200
+                        X: =0
+                        Y: =0
+                  - recBarStageTrackAD:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        Fill: =ColorPalette.Gray300
+                        Height: =14
+                        Width: =240
+                        X: =210
+                        Y: =(Parent.TemplateHeight - Self.Height) / 2
+                  - recBarStageFillAD:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        Fill: =ColorPalette.Blue600
+                        Height: =14
+                        Width: |-
+                          =Min(ThisItem.Value /
+                                 Max(1, Value(lblStagesMaxAD.Text)),
+                               1) * 240
+                        X: =210
+                        Y: =(Parent.TemplateHeight - Self.Height) / 2
+                  - lblBarStageValueAD:
+                      Control: Label@2.5.1
+                      Properties:
+                        Align: =Align.Right
+                        Color: =ColorPalette.TextBody
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =Parent.TemplateHeight - 4
+                        Size: =Typography.SizeBody
+                        Text: =Text(ThisItem.Value)
+                        VerticalAlign: =VerticalAlign.Middle
+                        Width: =40
+                        X: =460
+                        Y: =0

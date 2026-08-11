@@ -1,3 +1,4 @@
+
 - conUtilityBar:
     Control: GroupContainer@1.5.0
     Variant: ManualLayout
@@ -27,12 +28,12 @@
           Properties:
             BorderStyle: =BorderStyle.None
             Color: =ColorPalette.TextOnDark
-            Fill: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.Blue600
             Font: =Typography.Family
             Height: =28
-            HoverFill: =ColorPalette.Navy700
-            OnSelect: =Navigate('Supervisor Endorsement Screen')
-            PressedFill: =ColorPalette.Navy700
+            HoverFill: =ColorPalette.Blue700
+            OnSelect: =Navigate('Review Choice Screen')
+            PressedFill: =ColorPalette.Blue700
             Size: =Typography.SizeCaption
             Text: ="Reviewers"
             Width: =100
@@ -43,12 +44,12 @@
           Properties:
             BorderStyle: =BorderStyle.None
             Color: =ColorPalette.TextOnDark
-            Fill: =RGBA(0, 0, 0, 0)
+            Fill: =ColorPalette.Blue600
             Font: =Typography.Family
             Height: =28
-            HoverFill: =ColorPalette.Navy700
+            HoverFill: =ColorPalette.Blue700
             OnSelect: =Navigate('Admin Dashboard Screen')
-            PressedFill: =ColorPalette.Navy700
+            PressedFill: =ColorPalette.Blue700
             Size: =Typography.SizeCaption
             Text: ="Administrators"
             Width: =130

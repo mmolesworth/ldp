@@ -1,0 +1,224 @@
+
+- conBodyRC:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =RGBA(0, 0, 0, 0)
+      Height: =692
+      Width: =Parent.Width
+      X: =0
+      Y: =76
+    Children:
+      - conHeaderRC:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.Light
+            Fill: =ColorPalette.Navy900
+            Height: =88
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =12
+          Children:
+            - lblHeaderTitleRC:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextOnDark
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =30
+                  Size: =Typography.SizeTitle
+                  Text: ="Which review are you doing today?"
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =16
+            - lblHeaderSubRC:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.Blue50
+                  Font: =Typography.Family
+                  Height: =24
+                  Size: =Typography.SizeBody
+                  Text: ="Pick the workspace that matches what you're here to do."
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =48
+      - conCardSupRC:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            BorderThickness: =1
+            DropShadow: =DropShadow.Light
+            Fill: =ColorPalette.White
+            Height: =260
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =460
+            X: =(Parent.Width - 944) / 2
+            Y: =conHeaderRC.Y + conHeaderRC.Height + 60
+      - btnCardSupRC:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =RGBA(0, 0, 0, 0)
+            Fill: =RGBA(0, 0, 0, 0)
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =conCardSupRC.Height
+            HoverFill: =ColorPalette.Blue50
+            OnSelect: =Navigate('Supervisor Endorsement Screen')
+            PressedFill: =ColorPalette.Blue50
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Text: =""
+            Width: =conCardSupRC.Width
+            X: =conCardSupRC.X
+            Y: =conCardSupRC.Y
+      - lblCardSupHeadRC:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =32
+            OnSelect: =Select(btnCardSupRC)
+            Size: =Typography.SizeTitle
+            Text: ="Supervisor review"
+            Width: =conCardSupRC.Width - 40
+            X: =conCardSupRC.X + 20
+            Y: =conCardSupRC.Y + 32
+      - lblCardSupDescRC:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =60
+            OnSelect: =Select(btnCardSupRC)
+            Size: =Typography.SizeBody
+            Text: |-
+              ="Approve or decline an employee's application to the Leadership Development Program."
+            Width: =conCardSupRC.Width - 40
+            X: =conCardSupRC.X + 20
+            Y: =lblCardSupHeadRC.Y + lblCardSupHeadRC.Height + 8
+      - lblCardSupCTARC:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.Blue600
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =20
+            OnSelect: =Select(btnCardSupRC)
+            Size: =Typography.SizeBody
+            Text: ="Go to Supervisor review  →"
+            Width: =conCardSupRC.Width - 40
+            X: =conCardSupRC.X + 20
+            Y: =conCardSupRC.Y + conCardSupRC.Height - 44
+      - conCardCommRC:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            BorderColor: =ColorPalette.Gray200
+            BorderThickness: =1
+            DropShadow: =DropShadow.Light
+            Fill: =ColorPalette.White
+            Height: =260
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =460
+            X: =conCardSupRC.X + conCardSupRC.Width + 24
+            Y: =conCardSupRC.Y
+      - btnCardCommRC:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =RGBA(0, 0, 0, 0)
+            Fill: =RGBA(0, 0, 0, 0)
+            FocusedBorderColor: =ColorPalette.FocusOnLight
+            FocusedBorderThickness: =2
+            Font: =Typography.Family
+            Height: =conCardCommRC.Height
+            HoverFill: =ColorPalette.Blue50
+            OnSelect: =Navigate('Committee Queue Screen')
+            PressedFill: =ColorPalette.Blue50
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Text: =""
+            Width: =conCardCommRC.Width
+            X: =conCardCommRC.X
+            Y: =conCardCommRC.Y
+      - lblCardCommHeadRC:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextHeading
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightBold
+            Height: =32
+            OnSelect: =Select(btnCardCommRC)
+            Size: =Typography.SizeTitle
+            Text: ="Committee review"
+            Width: =conCardCommRC.Width - 40
+            X: =conCardCommRC.X + 20
+            Y: =conCardCommRC.Y + 32
+      - lblCardCommDescRC:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.TextBody
+            Font: =Typography.Family
+            Height: =60
+            OnSelect: =Select(btnCardCommRC)
+            Size: =Typography.SizeBody
+            Text: |-
+              ="Score and rank applicants against your committee's rubric for a program."
+            Width: =conCardCommRC.Width - 40
+            X: =conCardCommRC.X + 20
+            Y: =lblCardCommHeadRC.Y + lblCardCommHeadRC.Height + 8
+      - lblCardCommCTARC:
+          Control: Label@2.5.1
+          Properties:
+            Color: =ColorPalette.Blue600
+            Font: =Typography.Family
+            FontWeight: =Typography.WeightMedium
+            Height: =20
+            OnSelect: =Select(btnCardCommRC)
+            Size: =Typography.SizeBody
+            Text: ="Go to Committee review  →"
+            Width: =conCardCommRC.Width - 40
+            X: =conCardCommRC.X + 20
+            Y: =conCardCommRC.Y + conCardCommRC.Height - 44
+      - btnCancelRC:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderStyle: =BorderStyle.None
+            Color: =ColorPalette.TextHelp
+            Fill: =RGBA(0, 0, 0, 0)
+            Font: =Typography.Family
+            Height: =32
+            HoverColor: =ColorPalette.TextHeading
+            HoverFill: =RGBA(0, 0, 0, 0.03)
+            OnSelect: =Navigate('Landing Screen')
+            PressedColor: =ColorPalette.TextHeading
+            PressedFill: =RGBA(0, 0, 0, 0.06)
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            Size: =Typography.SizeCaption
+            Text: ="Cancel — back to home"
+            Width: =220
+            X: =(Parent.Width - Self.Width) / 2
+            Y: =conCardSupRC.Y + conCardSupRC.Height + 32

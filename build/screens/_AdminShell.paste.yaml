@@ -1,13 +1,16 @@
-- conAdminShell_5:
+
+- conAdminShell:
     Control: GroupContainer@1.5.0
     Variant: ManualLayout
+    Group: AdminShell
     Properties:
       Fill: =ColorPalette.Navy850
-      Height: =Parent.Height - Self.Y
       Width: =Parent.Width
+      X: =0
       Y: =conUtilityBar.Y + conUtilityBar.Height
+      Height: =Parent.Height - Self.Y
     Children:
-      - conSidebar_5:
+      - conSidebar:
           Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
@@ -16,9 +19,10 @@
             Height: =Parent.Height
             RadiusBottomRight: =10
             RadiusTopRight: =10
-            Width: =If(gblSidebar, 300, 68)
+            Width: |-
+              =If(gblSidebar, 300, 68)
           Children:
-            - conShellTitle_5:
+            - conShellTitle:
                 Control: GroupContainer@1.5.0
                 Variant: AutoLayout
                 Properties:
@@ -27,53 +31,44 @@
                   LayoutDirection: =LayoutDirection.Horizontal
                   Width: =Parent.Width
                 Children:
-                  - lblPlaceholder_2:
-                      Control: Label@2.5.1
-                      Properties:
-                        BorderColor: =RGBA(0, 18, 107, 1)
-                        Font: =Font.'Open Sans'
-                        LayoutMinHeight: =16
-                        LayoutMinWidth: =16
-                        Text: =""
-                        Width: =25
-                  - lblShellTitle_5:
+                  - lblShellTitle:
                       Control: Label@2.5.1
                       Properties:
                         Color: =ColorPalette.TextOnDark
-                        FillPortions: =1
+                        FillPortions: =4
                         Font: =Typography.Family
                         FontWeight: =Typography.WeightBold
                         Height: =Parent.Height
                         LayoutMinWidth: =0
-                        PaddingLeft: =0
+                        PaddingLeft: =20
                         Size: =Typography.SizeBody
                         Text: ="LDP Administration"
                         Visible: =gblSidebar
                         Wrap: =false
-                  - icoShellToggle_5:
+                  - icoShellToggle:
                       Control: Classic/Icon@2.5.0
                       Properties:
                         AlignInContainer: =AlignInContainer.Center
                         Color: =ColorPalette.TextOnDark
-                        FillPortions: =0.4
+                        FillPortions: =1
                         Height: =Parent.Height * 0.9
-                        Icon: =If(gblSidebar, Icon.Cancel, Icon.Hamburger)
-                        LayoutMinWidth: =If(gblSidebar, 0, Parent.Width)
+                        Icon: |-
+                          =If(gblSidebar, Icon.Cancel, Icon.Hamburger)
+                        LayoutMinWidth: =0
                         OnSelect: =Set(gblSidebar, !gblSidebar)
                         PaddingBottom: =15
                         PaddingTop: =15
-                        Width: =0
-            - conShellItems_5:
+            - conShellItems:
                 Control: GroupContainer@1.5.0
                 Variant: AutoLayout
                 Properties:
                   DropShadow: =DropShadow.None
-                  Height: =Parent.Height - conShellUser_5.Height - conShellTitle_5.Height
+                  Height: =Parent.Height - conShellUser.Height - conShellTitle.Height
                   LayoutDirection: =LayoutDirection.Vertical
                   Width: =Parent.Width
-                  Y: =conShellTitle_5.Height
+                  Y: =conShellTitle.Height
                 Children:
-                  - galShellNav_5:
+                  - galShellNav:
                       Control: Gallery@2.15.0
                       Variant: Vertical
                       Properties:
@@ -99,7 +94,7 @@
                         TemplateSize: =45
                         Width: =Parent.Width
                       Children:
-                        - lblShellDivider_5:
+                        - lblShellDivider:
                             Control: Label@2.5.1
                             Properties:
                               Align: =Align.Center
@@ -108,15 +103,17 @@
                               FontWeight: =Typography.WeightMedium
                               Height: =Parent.TemplateHeight - 15
                               PaddingBottom: =10
-                              PaddingLeft: =If(gblSidebar, Parent.TemplateWidth * 0.1, 0)
+                              PaddingLeft: |-
+                                =If(gblSidebar, Parent.TemplateWidth * 0.1, 0)
                               PaddingRight: =0
                               PaddingTop: =0
                               Size: =Typography.SizeCaption
                               Text: ="___"
-                              Visible: =And(ThisItem.isHeader, Not(gblSidebar))
+                              Visible: |-
+                                =And(ThisItem.isHeader, Not(gblSidebar))
                               Width: =Parent.TemplateWidth
                               Y: =15
-                        - lblShellHeader_5:
+                        - lblShellHeader:
                             Control: Label@2.5.1
                             Properties:
                               Color: =ColorPalette.TextOnDarkMuted
@@ -124,16 +121,18 @@
                               FontWeight: =Typography.WeightMedium
                               Height: =Parent.TemplateHeight - 15
                               PaddingBottom: =0
-                              PaddingLeft: =If(gblSidebar, Parent.TemplateWidth * 0.1, 0)
+                              PaddingLeft: |-
+                                =If(gblSidebar, Parent.TemplateWidth * 0.1, 0)
                               PaddingRight: =0
                               PaddingTop: =0
                               Size: =Typography.SizeCaption
                               Text: =ThisItem.labelText
-                              Visible: =And(ThisItem.isHeader, gblSidebar)
+                              Visible: |-
+                                =And(ThisItem.isHeader, gblSidebar)
                               Width: =Parent.TemplateWidth
                               Wrap: =false
                               Y: =15
-                        - conShellItem_5:
+                        - conShellItem:
                             Control: GroupContainer@1.5.0
                             Variant: AutoLayout
                             Properties:
@@ -141,19 +140,23 @@
                               Height: =Parent.TemplateHeight
                               LayoutAlignItems: =LayoutAlignItems.Center
                               LayoutDirection: =LayoutDirection.Horizontal
-                              LayoutGap: =If(gblSidebar, 10, 0)
-                              LayoutJustifyContent: =If(gblSidebar, LayoutJustifyContent.Start, LayoutJustifyContent.Center)
-                              PaddingLeft: =If(gblSidebar, Parent.TemplateWidth * 0.1, 0)
+                              LayoutGap: |-
+                                =If(gblSidebar, 10, 0)
+                              LayoutJustifyContent: |-
+                                =If(gblSidebar, LayoutJustifyContent.Start, LayoutJustifyContent.Center)
+                              PaddingLeft: |-
+                                =If(gblSidebar, Parent.TemplateWidth * 0.1, 0)
                               Visible: =Not(ThisItem.isHeader)
                               Width: =Parent.TemplateWidth
                             Children:
-                              - imgShellItem_5:
+                              - imgShellItem:
                                   Control: Image@2.2.3
                                   Properties:
                                     Height: =Parent.Height * 0.58
-                                    Image: ="data:image/svg+xml," & EncodeUrl(ThisItem.iconSvg)
+                                    Image: |-
+                                      ="data:image/svg+xml," & EncodeUrl(ThisItem.iconSvg)
                                     Width: =Self.Height
-                              - lblShellItem_5:
+                              - lblShellItem:
                                   Control: Label@2.5.1
                                   Properties:
                                     Color: =ColorPalette.TextOnDark
@@ -167,9 +170,9 @@
                                     Size: =Typography.SizeBody
                                     Text: =ThisItem.labelText
                                     Visible: =gblSidebar
-                                    Width: =Parent.Width - imgShellItem_5.Width - Parent.LayoutGap
+                                    Width: =Parent.Width - imgShellItem.Width - Parent.LayoutGap
                                     Wrap: =false
-                        - btnShellItem_5:
+                        - btnShellItem:
                             Control: Classic/Button@2.2.0
                             Properties:
                               BorderStyle: =BorderStyle.None
@@ -197,7 +200,7 @@
                               Visible: =Not(ThisItem.isHeader)
                               Width: =Parent.TemplateWidth * 0.9
                               X: =Parent.TemplateWidth * 0.05
-            - conShellUser_5:
+            - conShellUser:
                 Control: GroupContainer@1.5.0
                 Variant: AutoLayout
                 Properties:
@@ -207,7 +210,7 @@
                   Width: =Parent.Width
                   Y: =Parent.Height - Self.Height
                 Children:
-                  - lblShellUser_5:
+                  - lblShellUser:
                       Control: Label@2.5.1
                       Properties:
                         Align: =Align.Center
@@ -220,7 +223,8 @@
                         Size: =Typography.SizeCaption
                         Text: =User().FullName
                         Visible: =gblSidebar
-      - conMainArea_5:
+
+      - conMainArea:
           Control: GroupContainer@1.5.0
           Variant: ManualLayout
           Properties:
@@ -228,6 +232,6 @@
             Height: =Parent.Height - 5
             RadiusTopLeft: =10
             RadiusTopRight: =10
-            Width: =Parent.Width - conSidebar_5.Width - 5
-            X: =conSidebar_5.Width
+            Width: =Parent.Width - conSidebar.Width - 5
+            X: =conSidebar.Width
             Y: =5

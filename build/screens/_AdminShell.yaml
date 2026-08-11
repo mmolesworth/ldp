@@ -107,28 +107,16 @@
                   LayoutDirection: =LayoutDirection.Horizontal
                   Width: =Parent.Width
                 Children:
-                  - icoShellLogo:
-                      Control: Classic/Icon@2.5.0
-                      Properties:
-                        AlignInContainer: =AlignInContainer.Center
-                        Color: =ColorPalette.TextOnDark
-                        FillPortions: =0.5
-                        Height: =Parent.Height * 0.9
-                        Icon: =Icon.CameraAperture
-                        LayoutMinWidth: =0
-                        PaddingBottom: =10
-                        PaddingLeft: =10
-                        PaddingTop: =10
                   - lblShellTitle:
                       Control: Label@2.5.1
                       Properties:
                         Color: =ColorPalette.TextOnDark
-                        FillPortions: =1
+                        FillPortions: =4
                         Font: =Typography.Family
                         FontWeight: =Typography.WeightBold
                         Height: =Parent.Height
                         LayoutMinWidth: =0
-                        PaddingLeft: =0
+                        PaddingLeft: =20
                         Size: =Typography.SizeBody
                         Text: ="LDP Administration"
                         Visible: =gblSidebar
@@ -140,16 +128,14 @@
                       Properties:
                         AlignInContainer: =AlignInContainer.Center
                         Color: =ColorPalette.TextOnDark
-                        FillPortions: =0.4
+                        FillPortions: =1
                         Height: =Parent.Height * 0.9
                         Icon: |-
                           =If(gblSidebar, Icon.Cancel, Icon.Hamburger)
-                        LayoutMinWidth: |-
-                          =If(gblSidebar, 0, Parent.Width)
+                        LayoutMinWidth: =0
                         OnSelect: =Set(gblSidebar, !gblSidebar)
                         PaddingBottom: =15
                         PaddingTop: =15
-                        Width: =0
             - conShellItems:
                 Control: GroupContainer@1.5.0
                 Variant: AutoLayout

@@ -1,0 +1,957 @@
+# Placement Screen — DTD's placement workspace.
+# Classic controls only (Constitution II). Colours = ColorPalette.*, sizes = Typography.*
+#
+# ---------------------------------------------------------------------------
+# LAYOUT — master/detail
+# ---------------------------------------------------------------------------
+#
+#   conHeaderPL   Navy900 title strip — "Placement · <cycle>"
+#
+#   conLeftPL     Applicant list (left, ~340 wide):
+#                   Filters (Applied to + Status) + Search + count
+#                   galApplicantsPL — one row per applicant this cycle,
+#                     name + status pill. Click sets locSelectedAppPL.
+#
+#   conRightPL    Detail workspace (fills right):
+#                   Applicant name + current placement status
+#                   galProgramsPL — one row per program they applied to,
+#                     showing percent + preference + a per-row [Place]
+#                     button (adaptive: Place / Transfer / Placed / etc.)
+#                   Footer buttons: Not Selected / Reconsider / Unplace
+#                     (adaptive to state)
+#
+#   Modals (declared LAST for z-order):
+#     conPlaceModalPL / conPlaceScrimPL — confirm placement (transfer or
+#       program-with-options); direct Patch otherwise.
+#     conNotSelModalPL / conNotSelScrimPL — confirm Not Selected.
+#
+# ---------------------------------------------------------------------------
+# WHY THIS SHAPE
+# ---------------------------------------------------------------------------
+# One applicant gets one placement. The DECISION unit is the applicant, so
+# the row is the applicant. Programs the applicant applied to (multiple)
+# live as a vertical list on the right — scales to N programs without a
+# column pivot. The gallery on the left never duplicates an applicant.
+
+- conBodyPL:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      DropShadow: =DropShadow.None
+      Fill: =RGBA(0, 0, 0, 0)
+      Height: =692
+      Width: =Parent.Width
+      X: =0
+      Y: =76
+    Children:
+      # ===========================================================================
+      # HEADER
+      # ===========================================================================
+      - conHeaderPL:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.Light
+            Fill: =ColorPalette.Navy900
+            Height: =48
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =Parent.Width - 48
+            X: =24
+            Y: =12
+          Children:
+            - lblHeaderTitlePL:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextOnDark
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =28
+                  Size: =Typography.SizeTitle
+                  Text: |-
+                    ="Placement  ·  " & Coalesce(locCyclePL.CycleName, "(no open cycle)")
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =(Parent.Height - Self.Height) / 2
+      # ===========================================================================
+      # LEFT PANEL — applicant list with filters
+      # ===========================================================================
+      - conLeftPL:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.Light
+            Fill: =ColorPalette.White
+            Height: =Parent.Height - Self.Y - 16
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =340
+            X: =24
+            Y: =conHeaderPL.Y + conHeaderPL.Height + 12
+          Children:
+            # ---- Search (only filter for now) -----------------------------
+            - lblFilterSearchTitlePL:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =18
+                  Size: =Typography.SizeCaption
+                  Text: ="SEARCH"
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =16
+            - txtSearchPL:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextHeading
+                  Default: =""
+                  Fill: =ColorPalette.White
+                  Font: =Typography.Family
+                  Height: =36
+                  HintText: ="Name…"
+                  PaddingLeft: =12
+                  Size: =Typography.SizeBody
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =lblFilterSearchTitlePL.Y + lblFilterSearchTitlePL.Height + 4
+            - lblCountPL:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =20
+                  Size: =Typography.SizeCaption
+                  Text: |-
+                    =Text(CountRows(galApplicantsPL.AllItems)) & " applicants"
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =txtSearchPL.Y + txtSearchPL.Height + 12
+            - recDividerListPL:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Fill: =ColorPalette.Gray200
+                  Height: =1
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =lblCountPL.Y + lblCountPL.Height + 8
+            # ---- Applicant gallery — bare Filter + Search + Sort ----------
+            # No ForAll hydration. Row template does its own LookUp on
+            # PLACEMENTS for the status pill. Status / Applied-to filters
+            # deferred until we've validated the shape works.
+            - galApplicantsPL:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Height: =Parent.Height - Self.Y - 8
+                  Items: |-
+                    =SortByColumns(
+                       Search(
+                          Filter(APPLICATIONS,
+                             CycleID.Id = locCyclePL.ID,
+                             ApplicationStatus.Value <> "Draft",
+                             ApplicationStatus.Value <> "Withdrawn"),
+                          txtSearchPL.Text, "ApplicantName"),
+                       "ApplicantName", SortOrder.Ascending)
+                  ShowScrollbar: =true
+                  TemplatePadding: =0
+                  TemplateSize: =60
+                  Width: =Parent.Width
+                  X: =0
+                  Y: =recDividerListPL.Y + recDividerListPL.Height + 4
+                Children:
+                  - recRowBgPL:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        Fill: |-
+                          =If(ThisItem.ID = locSelectedAppPL.ID,
+                             ColorPalette.Blue50,
+                             RGBA(0, 0, 0, 0))
+                        Height: =Parent.TemplateHeight - 1
+                        Width: =Parent.TemplateWidth
+                        X: =0
+                        Y: =0
+                  - recRowAccentPL:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        Fill: |-
+                          =If(ThisItem.ID = locSelectedAppPL.ID,
+                             ColorPalette.Blue600,
+                             RGBA(0, 0, 0, 0))
+                        Height: =Parent.TemplateHeight - 1
+                        Width: =3
+                        X: =0
+                        Y: =0
+                  - lblRowNamePL:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: |-
+                          =If(ThisItem.ID = locSelectedAppPL.ID,
+                             ColorPalette.Blue700,
+                             ColorPalette.TextHeading)
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =22
+                        Size: =Typography.SizeBody
+                        Text: =Coalesce(ThisItem.ApplicantName, "—")
+                        Width: =Parent.TemplateWidth - 32
+                        X: =16
+                        Y: =8
+                  - lblRowStatusPL:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: |-
+                          =With({pl: LookUp(PLACEMENTS,
+                                       ApplicationID.Id = ThisItem.ID)},
+                             Switch(true,
+                                ThisItem.PlacementOutcome.Value = "Not Selected",
+                                   ColorPalette.WarningText,
+                                Not(IsBlank(pl.ProgramID.Id)),
+                                   ColorPalette.SuccessText,
+                                ColorPalette.TextHelp))
+                        Font: =Typography.Family
+                        Height: =18
+                        Size: =Typography.SizeCaption
+                        Text: |-
+                          =With({pl: LookUp(PLACEMENTS,
+                                       ApplicationID.Id = ThisItem.ID)},
+                             Switch(true,
+                                ThisItem.PlacementOutcome.Value = "Not Selected",
+                                   "●  Not Selected",
+                                Not(IsBlank(pl.ProgramID.Id)),
+                                   "●  Placed in " & pl.ProgramID.Value,
+                                "●  Undecided"))
+                        Width: =Parent.TemplateWidth - 32
+                        X: =16
+                        Y: =30
+                  - btnRowSelectPL:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderStyle: =BorderStyle.None
+                        Color: =RGBA(0, 0, 0, 0)
+                        Fill: =RGBA(0, 0, 0, 0)
+                        FocusedBorderColor: =ColorPalette.FocusOnLight
+                        FocusedBorderThickness: =2
+                        Font: =Typography.Family
+                        Height: =Parent.TemplateHeight
+                        HoverFill: =ColorPalette.Gray25
+                        OnSelect: |-
+                          =UpdateContext({ locSelectedAppPL: ThisItem })
+                        PressedFill: =ColorPalette.Gray50
+                        Size: =Typography.SizeBody
+                        Text: =""
+                        Width: =Parent.TemplateWidth
+                        X: =0
+                        Y: =0
+      # ===========================================================================
+      # RIGHT PANEL — detail workspace
+      # ===========================================================================
+      - conRightPL:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.Light
+            Fill: =ColorPalette.White
+            Height: =conLeftPL.Height
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Width: =Parent.Width - Self.X - 24
+            X: =conLeftPL.X + conLeftPL.Width + 16
+            Y: =conLeftPL.Y
+          Children:
+            # ---- Empty state (no applicant selected) ----------------------
+            - lblEmptyDetailPL:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Center
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =40
+                  Size: =Typography.SizeBody
+                  Text: ="Select an applicant from the list to review."
+                  VerticalAlign: =VerticalAlign.Middle
+                  Visible: =IsBlank(locSelectedAppPL.ID)
+                  Width: =Parent.Width - 32
+                  X: =16
+                  Y: =Parent.Height / 2 - 20
+            # ---- Applicant header (name + status) -------------------------
+            - lblDetailNamePL:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =32
+                  Size: =Typography.SizeTitle
+                  Text: =Coalesce(locSelectedAppPL.ApplicantName, "")
+                  VerticalAlign: =VerticalAlign.Middle
+                  Visible: =Not(IsBlank(locSelectedAppPL.ID))
+                  Width: =Parent.Width - 48
+                  X: =24
+                  Y: =20
+            - lblDetailStatusPL:
+                Control: Label@2.5.1
+                Properties:
+                  Color: |-
+                    =Switch(true,
+                       locSelectedAppPL.PlacementOutcome.Value = "Not Selected",
+                          ColorPalette.WarningText,
+                       Not(IsBlank(LookUp(PLACEMENTS,
+                          ApplicationID.Id = locSelectedAppPL.ID).ProgramID.Id)),
+                          ColorPalette.SuccessText,
+                       ColorPalette.TextHelp)
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =22
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =With({pl: LookUp(PLACEMENTS,
+                                 ApplicationID.Id = locSelectedAppPL.ID)},
+                       Switch(true,
+                          locSelectedAppPL.PlacementOutcome.Value = "Not Selected",
+                             "●  Not Selected",
+                          Not(IsBlank(pl.ProgramID.Id)),
+                             "●  Placed in " & pl.ProgramID.Value &
+                             If(IsBlank(pl.ProgramOptionID.Value), "",
+                                "  (" & pl.ProgramOptionID.Value & ")"),
+                          "●  No decision yet"))
+                  Visible: =Not(IsBlank(locSelectedAppPL.ID))
+                  Width: =Parent.Width - 48
+                  X: =24
+                  Y: =lblDetailNamePL.Y + lblDetailNamePL.Height + 4
+            - recDividerDetailPL:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Fill: =ColorPalette.Gray200
+                  Height: =1
+                  Visible: =Not(IsBlank(locSelectedAppPL.ID))
+                  Width: =Parent.Width - 48
+                  X: =24
+                  Y: =lblDetailStatusPL.Y + lblDetailStatusPL.Height + 16
+            # ---- Programs applied to (with per-row Place button) ----------
+            - lblProgramsHeaderPL:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =20
+                  Size: =Typography.SizeCaption
+                  Text: ="PROGRAMS APPLIED TO"
+                  Visible: =Not(IsBlank(locSelectedAppPL.ID))
+                  Width: =Parent.Width - 48
+                  X: =24
+                  Y: =recDividerDetailPL.Y + recDividerDetailPL.Height + 20
+            - galProgramsPL:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  BorderColor: =RGBA(0, 0, 0, 0)
+                  Height: |-
+                    =Max(72,
+                       CountRows(Filter(APPLICATION_PROGRAM_CHOICES,
+                          ApplicationID.Id = locSelectedAppPL.ID)) * 72)
+                  Items: |-
+                    =SortByColumns(
+                       ForAll(
+                          Filter(APPLICATION_PROGRAM_CHOICES,
+                             ApplicationID.Id = locSelectedAppPL.ID) As ch,
+                          With({pl: LookUp(PLACEMENTS,
+                                     ApplicationID.Id = locSelectedAppPL.ID)},
+                             {
+                                Choice:      ch,
+                                ProgramId:   ch.ProgramID.Id,
+                                ProgramName: ch.ProgramID.Value,
+                                Score:       Coalesce(ch.FinalScore, 0),
+                                Percent:     Coalesce(ch.PercentOfPossible, 0),
+                                Preference:  ch.Rank,
+                                Placement:   pl,
+                                PlacedHere:  pl.ProgramID.Id = ch.ProgramID.Id,
+                                PlacedElsewhere:
+                                   And(Not(IsBlank(pl.ProgramID.Id)),
+                                       pl.ProgramID.Id <> ch.ProgramID.Id)
+                             })),
+                       "Preference", SortOrder.Ascending)
+                  ShowScrollbar: =true
+                  TemplatePadding: =0
+                  TemplateSize: =72
+                  Visible: =Not(IsBlank(locSelectedAppPL.ID))
+                  Width: =Parent.Width - 48
+                  X: =24
+                  Y: =lblProgramsHeaderPL.Y + lblProgramsHeaderPL.Height + 6
+                Children:
+                  - recProgRowBgPL:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        Fill: |-
+                          =If(ThisItem.PlacedHere,
+                             ColorPalette.Blue50,
+                             ColorPalette.White)
+                        Height: =Parent.TemplateHeight - 8
+                        Width: =Parent.TemplateWidth
+                        X: =0
+                        Y: =4
+                  - lblProgNamePL:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHeading
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =22
+                        Size: =Typography.SizeBody
+                        Text: =ThisItem.ProgramName
+                        Width: =Parent.TemplateWidth - 260
+                        X: =16
+                        Y: =12
+                  - lblProgMetaPL:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =ColorPalette.TextHelp
+                        Font: =Typography.Family
+                        Height: =20
+                        Size: =Typography.SizeCaption
+                        Text: |-
+                          =Text(ThisItem.Score) & "  ·  " &
+                           Text(Round(ThisItem.Percent * 100, 0)) & "%  ·  " &
+                           Switch(ThisItem.Preference,
+                              1, "1st choice",
+                              2, "2nd choice",
+                              3, "3rd choice",
+                              "—")
+                        Width: =Parent.TemplateWidth - 260
+                        X: =16
+                        Y: =lblProgNamePL.Y + lblProgNamePL.Height + 2
+                  - btnProgPlacePL:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: |-
+                          =If(ThisItem.PlacedHere,
+                             ColorPalette.Gray300,
+                             ColorPalette.Blue600)
+                        BorderStyle: =BorderStyle.Solid
+                        BorderThickness: =1
+                        Color: |-
+                          =If(ThisItem.PlacedHere,
+                             ColorPalette.TextHelp,
+                             ColorPalette.Blue600)
+                        DisplayMode: |-
+                          =If(ThisItem.PlacedHere,
+                             DisplayMode.Disabled, DisplayMode.Edit)
+                        Fill: =ColorPalette.White
+                        FocusedBorderColor: =ColorPalette.FocusOnLight
+                        FocusedBorderThickness: =1
+                        Font: =Typography.Family
+                        FontWeight: =Typography.WeightMedium
+                        Height: =36
+                        HoverBorderColor: =ColorPalette.Blue700
+                        HoverColor: =ColorPalette.Blue700
+                        HoverFill: =ColorPalette.Blue50
+                        OnSelect: |-
+                          =If(
+                             // Direct patch: unplaced, no options
+                             And(IsBlank(ThisItem.Placement.ProgramID.Id),
+                                 locSelectedAppPL.PlacementOutcome.Value <> "Not Selected",
+                                 CountRows(Filter(PROGRAM_OPTIONS,
+                                    ProgramID.Id = ThisItem.ProgramId,
+                                    State.Value = "Active")) = 0),
+                             // -- direct place --
+                             Patch(PLACEMENTS, Defaults(PLACEMENTS),
+                                { ApplicationID:
+                                     { Id: locSelectedAppPL.ID,
+                                       Value: locSelectedAppPL.ApplicantEmail },
+                                  ProgramID:
+                                     { Id: ThisItem.ProgramId,
+                                       Value: ThisItem.ProgramName },
+                                  CycleID:
+                                     { Id: locCyclePL.ID,
+                                       Value: locCyclePL.CycleName },
+                                  PlacedBy:    User().Email,
+                                  PlacedDate:  Today(),
+                                  IsFinalized: { Value: "No" } });
+                             Patch(APPLICATIONS, locSelectedAppPL,
+                                { PlacementOutcome: { Value: "Placed" },
+                                  ReviewStage:      { Value: "Pending Notification" } }),
+                             // -- otherwise open modal --
+                             UpdateContext({
+                                locPlaceAppPL:      locSelectedAppPL,
+                                locPlacePlPL:       ThisItem.Placement,
+                                locPlaceProgIdPL:   ThisItem.ProgramId,
+                                locPlaceProgNamePL: ThisItem.ProgramName,
+                                locPlaceOptionPL:
+                                   LookUp(PROGRAM_OPTIONS,
+                                      ID = Coalesce(
+                                              ThisItem.Choice.ProgramOptionID.Id,
+                                              ThisItem.Placement.ProgramOptionID.Id)),
+                                locPlacementModalPL: true }))
+                        PressedBorderColor: =ColorPalette.Blue700
+                        PressedColor: =ColorPalette.Blue700
+                        PressedFill: =ColorPalette.Blue50
+                        RadiusBottomLeft: =6
+                        RadiusBottomRight: =6
+                        RadiusTopLeft: =6
+                        RadiusTopRight: =6
+                        Size: =Typography.SizeBody
+                        Text: |-
+                          =Switch(true,
+                             ThisItem.PlacedHere,     "✓ Placed",
+                             ThisItem.PlacedElsewhere, "Transfer here",
+                             "Place")
+                        Width: =160
+                        X: =Parent.TemplateWidth - Self.Width - 16
+                        Y: =(Parent.TemplateHeight - Self.Height) / 2
+            # ---- Footer actions -------------------------------------------
+            - btnNotSelectedPL:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorPalette.WarningText
+                  BorderStyle: =BorderStyle.Solid
+                  BorderThickness: =1
+                  Color: =ColorPalette.WarningText
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.FocusOnLight
+                  FocusedBorderThickness: =1
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =36
+                  HoverBorderColor: =ColorPalette.WarningText
+                  HoverColor: =ColorPalette.WarningText
+                  HoverFill: =ColorPalette.WarningLight
+                  OnSelect: |-
+                    =UpdateContext({
+                       locNotSelAppPL:   locSelectedAppPL,
+                       locNotSelNamePL:  Coalesce(locSelectedAppPL.ApplicantName, "This applicant"),
+                       locNotSelModalPL: true })
+                  PressedBorderColor: =ColorPalette.WarningText
+                  PressedColor: =ColorPalette.WarningText
+                  PressedFill: =ColorPalette.WarningLight
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  Size: =Typography.SizeBody
+                  Text: ="Not Selected"
+                  Visible: |-
+                    =And(Not(IsBlank(locSelectedAppPL.ID)),
+                         locSelectedAppPL.PlacementOutcome.Value <> "Not Selected")
+                  Width: =160
+                  X: =24
+                  Y: =Parent.Height - Self.Height - 20
+            - btnReconsiderPL:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorPalette.Blue600
+                  BorderStyle: =BorderStyle.Solid
+                  BorderThickness: =1
+                  Color: =ColorPalette.Blue600
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.FocusOnLight
+                  FocusedBorderThickness: =1
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =36
+                  HoverBorderColor: =ColorPalette.Blue700
+                  HoverColor: =ColorPalette.Blue700
+                  HoverFill: =ColorPalette.Blue50
+                  OnSelect: |-
+                    =Patch(APPLICATIONS, locSelectedAppPL,
+                       { PlacementOutcome: { Value: "Decision Pending" },
+                         ReviewStage:      { Value: "Pending Placement" } })
+                  PressedBorderColor: =ColorPalette.Blue700
+                  PressedColor: =ColorPalette.Blue700
+                  PressedFill: =ColorPalette.Blue50
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  Size: =Typography.SizeBody
+                  Text: ="Reconsider"
+                  Visible: |-
+                    =And(Not(IsBlank(locSelectedAppPL.ID)),
+                         locSelectedAppPL.PlacementOutcome.Value = "Not Selected")
+                  Width: =160
+                  X: =24
+                  Y: =Parent.Height - Self.Height - 20
+            - btnUnplacePL:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderStyle: =BorderStyle.Solid
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.FocusOnLight
+                  FocusedBorderThickness: =1
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =36
+                  HoverBorderColor: =ColorPalette.Gray300
+                  HoverColor: =ColorPalette.TextHeading
+                  HoverFill: =ColorPalette.Gray25
+                  OnSelect: |-
+                    =With({pl: LookUp(PLACEMENTS,
+                                 ApplicationID.Id = locSelectedAppPL.ID)},
+                       Remove(PLACEMENTS, pl));
+                     Patch(APPLICATIONS, locSelectedAppPL,
+                       { PlacementOutcome: { Value: "Decision Pending" },
+                         ReviewStage:      { Value: "Pending Placement" } })
+                  PressedBorderColor: =ColorPalette.Gray300
+                  PressedColor: =ColorPalette.TextHeading
+                  PressedFill: =ColorPalette.Gray50
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  Size: =Typography.SizeBody
+                  Text: ="Unplace"
+                  Visible: |-
+                    =And(Not(IsBlank(locSelectedAppPL.ID)),
+                         Not(IsBlank(LookUp(PLACEMENTS,
+                            ApplicationID.Id = locSelectedAppPL.ID).ProgramID.Id)))
+                  Width: =160
+                  X: =btnNotSelectedPL.X + btnNotSelectedPL.Width + 12
+                  Y: =btnNotSelectedPL.Y
+      # ===========================================================================
+      # PLACE / TRANSFER MODAL — declared LAST for z-order.
+      # ===========================================================================
+      - conPlaceScrimPL:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =RGBA(0, 0, 0, 0.4)
+            Height: =Parent.Height
+            Visible: =locPlacementModalPL
+            Width: =Parent.Width
+            X: =0
+            Y: =0
+      - conPlaceModalPL:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.Bold
+            Fill: =ColorPalette.White
+            Height: =280
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Visible: =locPlacementModalPL
+            Width: =520
+            X: =(Parent.Width - Self.Width) / 2
+            Y: =(Parent.Height - Self.Height) / 2
+          Children:
+            - lblPlaceModalTitlePL:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =28
+                  Size: =Typography.SizeHeading
+                  Text: |-
+                    =If(Not(IsBlank(locPlacePlPL.ID)) And locPlacePlPL.ProgramID.Id <> locPlaceProgIdPL,
+                        "Transfer placement",
+                        "Confirm placement")
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =20
+            - lblPlaceModalBodyPL:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextBody
+                  Font: =Typography.Family
+                  Height: =60
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    ="Place " & Coalesce(locPlaceAppPL.ApplicantName, "this applicant") &
+                     " in " & Coalesce(locPlaceProgNamePL, "the program") &
+                     If(Not(IsBlank(locPlacePlPL.ID)) And locPlacePlPL.ProgramID.Id <> locPlaceProgIdPL,
+                        " (moving from " & locPlacePlPL.ProgramID.Value & ").",
+                        ".")
+                  VerticalAlign: =VerticalAlign.Top
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =lblPlaceModalTitlePL.Y + lblPlaceModalTitlePL.Height + 8
+            - lblPlaceModalOptionCaptionPL:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =18
+                  Size: =Typography.SizeCaption
+                  Text: ="Program option"
+                  Visible: |-
+                    =CountRows(Filter(PROGRAM_OPTIONS,
+                       ProgramID.Id = locPlaceProgIdPL,
+                       State.Value = "Active")) > 0
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =lblPlaceModalBodyPL.Y + lblPlaceModalBodyPL.Height + 8
+            - drpPlaceModalOptionPL:
+                Control: Classic/DropDown@2.3.1
+                Properties:
+                  AllowEmptySelection: =true
+                  BorderColor: =ColorPalette.Gray300
+                  Color: =ColorPalette.TextHeading
+                  Default: =Coalesce(locPlaceOptionPL.OptionName, "")
+                  Fill: =ColorPalette.White
+                  Font: =Typography.Family
+                  Height: =36
+                  Items: |-
+                    =ForAll(
+                       Sort(
+                          Filter(PROGRAM_OPTIONS,
+                             ProgramID.Id = locPlaceProgIdPL,
+                             State.Value = "Active"),
+                          OptionName),
+                       OptionName)
+                  OnChange: |-
+                    =UpdateContext({
+                       locPlaceOptionPL:
+                          LookUp(PROGRAM_OPTIONS,
+                             ProgramID.Id = locPlaceProgIdPL,
+                             OptionName = drpPlaceModalOptionPL.Selected.Value) })
+                  Size: =Typography.SizeBody
+                  Visible: =lblPlaceModalOptionCaptionPL.Visible
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =lblPlaceModalOptionCaptionPL.Y + lblPlaceModalOptionCaptionPL.Height + 4
+            - btnPlaceModalCancelPL:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderStyle: =BorderStyle.Solid
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.FocusOnLight
+                  FocusedBorderThickness: =1
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =36
+                  HoverBorderColor: =ColorPalette.Gray300
+                  HoverColor: =ColorPalette.TextHeading
+                  HoverFill: =ColorPalette.Gray25
+                  OnSelect: |-
+                    =UpdateContext({ locPlacementModalPL: false })
+                  PressedBorderColor: =ColorPalette.Gray300
+                  PressedColor: =ColorPalette.TextHeading
+                  PressedFill: =ColorPalette.Gray50
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  Size: =Typography.SizeBody
+                  Text: ="Cancel"
+                  Width: =120
+                  X: =Parent.Width - 264
+                  Y: =Parent.Height - Self.Height - 20
+            - btnPlaceModalConfirmPL:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =ColorPalette.TextOnDark
+                  Fill: =ColorPalette.Blue600
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =36
+                  HoverColor: =ColorPalette.TextOnDark
+                  HoverFill: =ColorPalette.Blue700
+                  OnSelect: |-
+                    =If(IsBlank(drpPlaceModalOptionPL.Selected.Value),
+                       // No option selected — Patch without ProgramOptionID.
+                       Patch(PLACEMENTS,
+                          If(IsBlank(locPlacePlPL.ID),
+                             Defaults(PLACEMENTS),
+                             locPlacePlPL),
+                          {
+                             ApplicationID:
+                                { Id:    locPlaceAppPL.ID,
+                                  Value: locPlaceAppPL.ApplicantEmail },
+                             ProgramID:
+                                { Id:    locPlaceProgIdPL,
+                                  Value: locPlaceProgNamePL },
+                             CycleID:
+                                { Id:    locCyclePL.ID,
+                                  Value: locCyclePL.CycleName },
+                             PlacedBy:    User().Email,
+                             PlacedDate:  Today(),
+                             IsFinalized: { Value: "No" }
+                          }),
+                       // Option selected — fresh LookUp on the dropdown's
+                       // Selected.Value bypasses locPlaceOptionPL entirely
+                       // (which has Error type since we can't anchor it in
+                       // OnVisible). opt has PROGRAM_OPTIONS schema.
+                       With({opt: LookUp(PROGRAM_OPTIONS,
+                                    And(ProgramID.Id = locPlaceProgIdPL,
+                                        OptionName =
+                                           drpPlaceModalOptionPL.Selected.Value))},
+                          Patch(PLACEMENTS,
+                             If(IsBlank(locPlacePlPL.ID),
+                                Defaults(PLACEMENTS),
+                                locPlacePlPL),
+                             {
+                                ApplicationID:
+                                   { Id:    locPlaceAppPL.ID,
+                                     Value: locPlaceAppPL.ApplicantEmail },
+                                ProgramID:
+                                   { Id:    locPlaceProgIdPL,
+                                     Value: locPlaceProgNamePL },
+                                ProgramOptionID:
+                                   { Id:    opt.ID,
+                                     Value: opt.OptionName },
+                                CycleID:
+                                   { Id:    locCyclePL.ID,
+                                     Value: locCyclePL.CycleName },
+                                PlacedBy:    User().Email,
+                                PlacedDate:  Today(),
+                                IsFinalized: { Value: "No" }
+                             })));
+                     Patch(APPLICATIONS, locPlaceAppPL,
+                       { PlacementOutcome: { Value: "Placed" },
+                         ReviewStage:      { Value: "Pending Notification" } });
+                     UpdateContext({ locPlacementModalPL: false })
+                  PressedColor: =ColorPalette.TextOnDark
+                  PressedFill: =ColorPalette.Blue700
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =If(Not(IsBlank(locPlacePlPL.ID)) And locPlacePlPL.ProgramID.Id <> locPlaceProgIdPL,
+                        "Transfer",
+                        "Place")
+                  Width: =120
+                  X: =Parent.Width - 136
+                  Y: =Parent.Height - Self.Height - 20
+      # ===========================================================================
+      # NOT-SELECTED CONFIRMATION MODAL
+      # ===========================================================================
+      - conNotSelScrimPL:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =RGBA(0, 0, 0, 0.4)
+            Height: =Parent.Height
+            Visible: =locNotSelModalPL
+            Width: =Parent.Width
+            X: =0
+            Y: =0
+      - conNotSelModalPL:
+          Control: GroupContainer@1.5.0
+          Variant: ManualLayout
+          Properties:
+            DropShadow: =DropShadow.Bold
+            Fill: =ColorPalette.White
+            Height: =200
+            RadiusBottomLeft: =12
+            RadiusBottomRight: =12
+            RadiusTopLeft: =12
+            RadiusTopRight: =12
+            Visible: =locNotSelModalPL
+            Width: =480
+            X: =(Parent.Width - Self.Width) / 2
+            Y: =(Parent.Height - Self.Height) / 2
+          Children:
+            - lblNotSelTitlePL:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =28
+                  Size: =Typography.SizeHeading
+                  Text: ="Not Selected for This Cycle?"
+                  VerticalAlign: =VerticalAlign.Middle
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =20
+            - lblNotSelBodyPL:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextBody
+                  Font: =Typography.Family
+                  Height: =60
+                  Size: =Typography.SizeBody
+                  Text: |-
+                    =Coalesce(locNotSelNamePL, "This applicant") &
+                     " will not be placed in a program this cycle. You can reverse this later with Reconsider."
+                  VerticalAlign: =VerticalAlign.Top
+                  Width: =Parent.Width - 40
+                  X: =20
+                  Y: =lblNotSelTitlePL.Y + lblNotSelTitlePL.Height + 8
+            - btnNotSelCancelPL:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorPalette.Gray300
+                  BorderStyle: =BorderStyle.Solid
+                  BorderThickness: =1
+                  Color: =ColorPalette.TextBody
+                  Fill: =ColorPalette.White
+                  FocusedBorderColor: =ColorPalette.FocusOnLight
+                  FocusedBorderThickness: =1
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =36
+                  HoverBorderColor: =ColorPalette.Gray300
+                  HoverColor: =ColorPalette.TextHeading
+                  HoverFill: =ColorPalette.Gray25
+                  OnSelect: |-
+                    =UpdateContext({ locNotSelModalPL: false })
+                  PressedBorderColor: =ColorPalette.Gray300
+                  PressedColor: =ColorPalette.TextHeading
+                  PressedFill: =ColorPalette.Gray50
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  Size: =Typography.SizeBody
+                  Text: ="Cancel"
+                  Width: =120
+                  X: =Parent.Width - 264
+                  Y: =Parent.Height - Self.Height - 20
+            - btnNotSelConfirmPL:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderStyle: =BorderStyle.None
+                  Color: =ColorPalette.TextOnDark
+                  Fill: =ColorPalette.WarningText
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightBold
+                  Height: =36
+                  HoverColor: =ColorPalette.TextOnDark
+                  HoverFill: =ColorPalette.WarningText
+                  OnSelect: |-
+                    =Patch(APPLICATIONS, locNotSelAppPL,
+                       { PlacementOutcome: { Value: "Not Selected" },
+                         ReviewStage:      { Value: "Pending Notification" } });
+                     UpdateContext({ locNotSelModalPL: false })
+                  PressedColor: =ColorPalette.TextOnDark
+                  PressedFill: =ColorPalette.WarningText
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  Size: =Typography.SizeBody
+                  Text: ="Not select"
+                  Width: =120
+                  X: =Parent.Width - 136
+                  Y: =Parent.Height - Self.Height - 20
