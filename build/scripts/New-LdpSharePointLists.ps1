@@ -1,7 +1,7 @@
 #Requires -Version 7.2
 <#
 .SYNOPSIS
-    Provisions the 15 SharePoint lists for the LDP Application (Phase I).
+    Provisions the 19 SharePoint lists for the LDP Application (Phase I).
 
 .DESCRIPTION
     Creates every list, column, lookup relationship, and index defined in
