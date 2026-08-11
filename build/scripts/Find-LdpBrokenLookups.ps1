@@ -9,8 +9,14 @@
     cause is a Lookup whose target list was deleted or re-provisioned, leaving
     the lookup pointing at a GUID that no longer resolves.
 
-    Every row this script returns is a broken lookup. Delete each named field
-    from its list at Settings > List settings > Columns, then re-run to
+    Reports only USER-CREATED, VISIBLE, DELETABLE lookup columns whose target
+    is missing. Built-in SharePoint lookups (AppAuthor, user-info fields, etc.)
+    are excluded — they cannot be deleted from the UI and are not what the
+    error is asking about, even though many of them resolve to hidden system
+    lists a naive check would flag as broken.
+
+    Every row this script returns is a broken lookup you own. Delete each named
+    field from its list at Settings > List settings > Columns, then re-run to
     confirm.
 
     An empty result means no broken lookups; the field type in error is
@@ -38,19 +44,29 @@ $ErrorActionPreference = 'Stop'
 
 Connect-PnPOnline -Url $SiteUrl -Interactive -ClientId $ClientId
 try {
-    # Map every list ID on the site so we can resolve each lookup's target.
-    # Built once, outside the per-list loop.
+    # Resolution map INCLUDES hidden lists. Built-in lookups (AppAuthor, user
+    # info, etc.) target hidden system lists like the User Information List, so
+    # a map of visible lists only would flag every one of them as broken.
     $siteLists = @{}
-    foreach ($l in (Get-PnPList)) {
+    foreach ($l in (Get-PnPList -Includes Hidden)) {
         $siteLists[$l.Id.ToString('B').ToUpper()] = $l.Title
     }
 
-    # Only walk the LDP lists (UPPER_SNAKE_CASE names) and skip hidden system
-    # lists — SharePoint ships plenty of its own that we do not care about.
+    # Walk only the LDP lists (UPPER_SNAKE_CASE names).
     $ldpLists = Get-PnPList | Where-Object { -not $_.Hidden -and $_.Title -cmatch '^[A-Z_]+$' }
 
+    # Only report fields the USER can act on. The error message says "delete
+    # these fields" — a built-in field cannot be deleted from the UI, so it is
+    # not what the error is asking about. Filter to visible + deletable +
+    # not-inherited-from-base-type.
     $broken = foreach ($list in $ldpLists) {
-        foreach ($f in (Get-PnPField -List $list | Where-Object TypeAsString -eq 'Lookup')) {
+        $customLookups = Get-PnPField -List $list | Where-Object {
+            $_.TypeAsString -eq 'Lookup' -and
+            -not $_.Hidden -and
+            -not $_.FromBaseType -and
+            $_.CanBeDeleted
+        }
+        foreach ($f in $customLookups) {
             $targetGuid = try { ([xml]$f.SchemaXml).Field.List } catch { $null }
             $targetOk   = $targetGuid -and $siteLists.ContainsKey($targetGuid.ToUpper())
             if (-not $targetOk) {
