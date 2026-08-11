@@ -1,0 +1,30 @@
+With({d: LookUp(colSupDecisionsSE, level = ThisItem.level)},
+   Patch(SUPERVISOR_ENDORSEMENTS,
+     Coalesce(
+       LookUp(SUPERVISOR_ENDORSEMENTS,
+         And(ApplicationID.Id = locApp.ID,
+             SupervisorLevel.Value = ThisItem.level)),
+       Defaults(SUPERVISOR_ENDORSEMENTS)),
+     {
+       ApplicationID: {
+         '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
+         Id: locApp.ID,
+         Value: locApp.ApplicantEmail
+       },
+       SupervisorEmail: User().Email,
+       SupervisorLevel: { Value: ThisItem.level },
+       Decision: { Value: d.decision },
+       DispositionStatement: Coalesce(d.comment, ""),
+       DecisionDate: Today()
+     }));
+UpdateContext({
+  locApp: Patch(APPLICATIONS, locApp,
+    { ReviewStage: { Value:
+        If(ThisItem.level = "First Line",
+           If(IsBlank(Trim(locApp.SecondLineSupervisorEmail)),
+              "Needs Supervisor Assigned",
+              "Pending Second-Line"),
+           "Pending DTD Validation") } }),
+  varOpenSupItemSE: Blank()
+});
+Notify("Your decision has been recorded.", NotificationType.Success)
