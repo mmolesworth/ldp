@@ -1,7 +1,7 @@
 #Requires -Version 7.2
 <#
 .SYNOPSIS
-    Provisions the 18 SharePoint lists for the LDP Application (Phase I).
+    Provisions the 17 SharePoint lists for the LDP Application (Phase I).
 
 .DESCRIPTION
     Creates every list, column, lookup relationship, and index defined in
@@ -131,9 +131,12 @@ $script:Lists = [ordered]@{
     'PROGRAMS' = @{
         Description = 'The three program groupings (NEXT, MDP, HPP). Parent of PROGRAM_OPTIONS; scored at this level.'
         Fields      = @(
-            @{ Name = 'ProgramName'; Type = 'Text'; Required = $true }
-            @{ Name = 'Description'; Type = 'Note' }
-            @{ Name = 'State';       Type = 'Choice'; Required = $true; Choices = @('Active', 'Retired') }
+            @{ Name = 'ProgramName';  Type = 'Text'; Required = $true }
+            # Short label for tight UI (tab bars, chips). Required so nothing
+            # displays a blank tab; backfill existing rows before re-running.
+            @{ Name = 'Abbreviation'; Type = 'Text'; Required = $true }
+            @{ Name = 'Description';  Type = 'Note' }
+            @{ Name = 'State';        Type = 'Choice'; Required = $true; Choices = @('Active', 'Retired') }
         )
     }
 
@@ -182,7 +185,7 @@ $script:Lists = [ordered]@{
     }
 
     'APPLICATIONS' = @{
-        Description = 'The central application record. Supporting documents are native SharePoint attachments.'
+        Description = 'The central application record. Supporting documents are native SharePoint attachments. Final placement lives on PlacementProgramID / PlacementOptionID (see the lookups section) — no separate PLACEMENTS list.'
         Fields      = @(
             @{ Name = 'ApplicantEmail';           Type = 'Text';   Required = $true }
             @{ Name = 'ApplicantName';            Type = 'Text';   Required = $true }
@@ -319,14 +322,12 @@ $script:Lists = [ordered]@{
         )
     }
 
-    'PLACEMENTS' = @{
-        Description = 'DTD placement of an applicant into a program option within a cycle.'
-        Fields      = @(
-            @{ Name = 'PlacedBy';    Type = 'Text';   Required = $true }
-            @{ Name = 'PlacedDate';  Type = 'Date';   Required = $true }
-            @{ Name = 'IsFinalized'; Type = 'Choice'; Required = $true; Choices = @('Yes', 'No') }
-        )
-    }
+    # PLACEMENTS deprecated 2026-08-11. One placement per applicant is 1:1 with
+    # APPLICATIONS, so the placement is now two lookups on APPLICATIONS
+    # (PlacementProgramID + PlacementOptionID) plus the existing
+    # PlacementOutcome choice. PlacedBy / PlacedDate / IsFinalized were dropped
+    # as unneeded per DTD. If the PLACEMENTS list exists in SharePoint from an
+    # earlier run, delete manually — nothing writes to it.
 
     'NOTIFICATIONS' = @{
         Description = 'Append-only log of notifications sent. ApplicationID is a Number, not a Lookup, by design.'
@@ -382,17 +383,18 @@ $script:Lookups = @(
     @{ List = 'COMMITTEES';                  Name = 'RatingSheetID';             Target = 'RATING_SHEETS';               ShowField = 'ID';            Required = $true }
     @{ List = 'COMMITTEE_CRITERION_SCORES';  Name = 'ApplicationProgramChoiceID'; Target = 'APPLICATION_PROGRAM_CHOICES'; ShowField = 'ID';            Required = $true }
     @{ List = 'COMMITTEE_CRITERION_SCORES';  Name = 'RatingCriterionID';         Target = 'RATING_CRITERIA';             ShowField = 'ID';            Required = $true }
-    @{ List = 'PLACEMENTS';                  Name = 'ApplicationID';      Target = 'APPLICATIONS';       ShowField = 'ApplicantEmail'; Required = $true }
-    @{ List = 'PLACEMENTS';                  Name = 'ProgramID';          Target = 'PROGRAMS';           ShowField = 'ProgramName';   Required = $true }
-    @{ List = 'PLACEMENTS';                  Name = 'ProgramOptionID';    Target = 'PROGRAM_OPTIONS';    ShowField = 'OptionName';    Required = $false }
-    @{ List = 'PLACEMENTS';                  Name = 'CycleID';            Target = 'CYCLES';             ShowField = 'CycleName';     Required = $true }
+    # Final placement lives on APPLICATIONS as of 2026-08-11. Both optional:
+    # blank means no decision yet; PlacementOutcome = "Not Selected" is set
+    # without either lookup.
+    @{ List = 'APPLICATIONS';                Name = 'PlacementProgramID'; Target = 'PROGRAMS';           ShowField = 'ProgramName';   Required = $false }
+    @{ List = 'APPLICATIONS';                Name = 'PlacementOptionID';  Target = 'PROGRAM_OPTIONS';    ShowField = 'OptionName';    Required = $false }
 )
 
 # ---------------------------------------------------------------------------
 # PASS 4 — indexes (Constitution III)
 # ---------------------------------------------------------------------------
 $script:Indexes = [ordered]@{
-    'APPLICATIONS'                = @('CycleID', 'ApplicantEmail', 'ApplicationStatus', 'ReviewStage', 'PlacementOutcome')
+    'APPLICATIONS'                = @('CycleID', 'ApplicantEmail', 'ApplicationStatus', 'ReviewStage', 'PlacementOutcome', 'PlacementProgramID')
     'APPLICATION_COMPETENCIES'    = @('ApplicationID', 'CompetencyID')
     'APPLICATION_PROGRAM_CHOICES' = @('ApplicationID', 'ProgramID', 'ProgramOptionID', 'CommitteeID')
     'SUPERVISOR_ENDORSEMENTS'     = @('ApplicationID')
@@ -402,7 +404,6 @@ $script:Indexes = [ordered]@{
     'CRITERION_ANCHORS'           = @('CatalogCriterionID')
     'COMMITTEES'                  = @('ProgramID', 'CycleID', 'State')
     'COMMITTEE_CRITERION_SCORES'  = @('ApplicationProgramChoiceID', 'RatingCriterionID')
-    'PLACEMENTS'                  = @('ApplicationID', 'ProgramID', 'ProgramOptionID', 'CycleID')
     'NOTIFICATIONS'               = @('ApplicationID')
     'CHANGE_HISTORY'              = @('ApplicationID')
     'CYCLES'                      = @('State')

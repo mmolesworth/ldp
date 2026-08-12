@@ -175,22 +175,6 @@
                   Width: =Parent.Width - 32
                   X: =16
                   Y: =galTabsCS.Y + galTabsCS.Height
-            - lblTabPlaceholderCS:
-                Control: Label@2.5.1
-                Properties:
-                  Align: =Align.Center
-                  Color: =ColorPalette.TextHelp
-                  Font: =Typography.Family
-                  Height: =40
-                  Size: =Typography.SizeBody
-                  Text: |-
-                    ="Tab " & Text(locDetailTabCS) &
-                     " content — added in a later step."
-                  VerticalAlign: =VerticalAlign.Middle
-                  Visible: =locDetailTabCS = 5
-                  Width: =Parent.Width - 32
-                  X: =16
-                  Y: =recTabsRuleCS.Y + recTabsRuleCS.Height + 40
             - txtPersNameCS:
                 Control: Classic/TextInput@2.3.2
                 Properties:

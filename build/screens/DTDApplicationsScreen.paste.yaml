@@ -2572,24 +2572,6 @@
             Wrap: =false
             X: =txtEligDateDTD.X + 10
             Y: =txtEligDateDTD.Y - Self.Height / 2
-      - lblTabDocumentsDTD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextBody
-            Font: =Typography.Family
-            Height: =Parent.Height - 130
-            Size: =Typography.SizeBody
-            Text: |-
-              ="Résumé, statement of interest and performance appraisal are stored as SharePoint attachments on this application.
-              
-              They cannot be listed here yet: the attachment control exists only inside a Form data card, and this panel is read-only. Open the item in SharePoint to view them.
-              
-              Tracked as OI-APP-1."
-            VerticalAlign: =VerticalAlign.Top
-            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 5)
-            Width: =Parent.Width - 48
-            X: =24
-            Y: =118
 
 - recClearScrimDTD:
     Control: Rectangle@2.3.0

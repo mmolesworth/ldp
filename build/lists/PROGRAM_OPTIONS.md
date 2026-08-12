@@ -34,6 +34,7 @@ That is the Application Screen's step 2 dropdowns today. A retired option must n
 appear as a new choice, but must still display on applications that already chose it.
 
 **Delete guard (FR-038b):** an option is deletable only when nothing references it —
-`APPLICATION_PROGRAM_CHOICES.ProgramOptionID`, `PLACEMENTS.ProgramOptionID` (both indexed), in any
-cycle. Both are now OPTIONAL lookups, so a program with no options orphans nothing by having none. Test with `IsEmpty(Filter(…))`, never `CountRows` — `CountRows` does not delegate to
-SharePoint and would silently pass after 500 rows.
+`APPLICATION_PROGRAM_CHOICES.ProgramOptionID` and `APPLICATIONS.PlacementOptionID`, in any cycle.
+Both are OPTIONAL lookups, so a program with no options orphans nothing by having none. Test with
+`IsEmpty(Filter(…))`, never `CountRows` — `CountRows` does not delegate to SharePoint and would
+silently pass after 500 rows.

@@ -159,7 +159,7 @@
           Properties:
             DropShadow: =DropShadow.Light
             Fill: =ColorPalette.White
-            Height: =76 + Min(2, CountRows(colSupAppsSE)) * 64
+            Height: =177
             RadiusBottomLeft: =12
             RadiusBottomRight: =12
             RadiusTopLeft: =12
@@ -307,10 +307,10 @@
             Fill: =ColorPalette.White
             # Sized for the standard tabs (Tabs 1-5 are 330px content from
             # Y=114 → 444). Tab 6 (Supervisor Review) is 700px and WILL
-            # CLIP at this height — visible portion is 480-114 = 366px, so
+            # CLIP at this height — visible portion is 450-114 = 336px, so
             # the card headers show but expanded bodies get cut off.
             # Shrink the tab 6 body separately if you need it fully visible.
-            Height: =480
+            Height: =450
             RadiusBottomLeft: =12
             RadiusBottomRight: =12
             RadiusTopLeft: =12
@@ -1388,7 +1388,7 @@
                       Properties:
                         BorderThickness: =0
                         DropShadow: =DropShadow.None
-                        Height: =340
+                        Height: =240
                         Visible: =varOpenSupItemSE = ThisItem.id
                         Width: =galSupsSE.TemplateWidth
                         Y: =lblSupTitleSE.Height
@@ -1430,7 +1430,7 @@
                         Size: =Typography.SizeBody
                         Text: ="Recommend"
                         Visible: =varOpenSupItemSE = ThisItem.id
-                        Width: =galSupsSE.TemplateWidth - 40
+                        Width: =(galSupsSE.TemplateWidth - 52) / 2
                         X: =20
                         Y: =lblSupTitleSE.Height + 20
                   - btnSupNotRecSE:
@@ -1471,9 +1471,9 @@
                         Size: =Typography.SizeBody
                         Text: ="Not Recommend"
                         Visible: =varOpenSupItemSE = ThisItem.id
-                        Width: =galSupsSE.TemplateWidth - 40
-                        X: =20
-                        Y: =btnSupRecSE.Y + btnSupRecSE.Height + 12
+                        Width: =(galSupsSE.TemplateWidth - 52) / 2
+                        X: =btnSupRecSE.X + btnSupRecSE.Width + 12
+                        Y: =btnSupRecSE.Y
                   - lblSupCommentTitleSE:
                       Control: Label@2.5.1
                       Properties:
@@ -1486,7 +1486,7 @@
                         Visible: =varOpenSupItemSE = ThisItem.id
                         Width: =galSupsSE.TemplateWidth - 40
                         X: =20
-                        Y: =btnSupNotRecSE.Y + btnSupNotRecSE.Height + 20
+                        Y: =btnSupRecSE.Y + btnSupRecSE.Height + 20
                   - txtSupCommentSE:
                       Control: Classic/TextInput@2.3.2
                       Properties:
@@ -1498,7 +1498,7 @@
                         FocusedBorderColor: =ColorPalette.FocusOnLight
                         FocusedBorderThickness: =2
                         Font: =Typography.Family
-                        Height: =120
+                        Height: =72
                         HintText: ="Explain why you are recommending or not recommending this application."
                         HoverBorderColor: =ColorPalette.Blue400
                         Mode: =TextMode.MultiLine
@@ -1534,7 +1534,12 @@
                         HoverFill: =ColorPalette.Blue700
                         OnSelect: |-
                           =With({d: LookUp(colSupDecisionsSE, level = ThisItem.level)},
-                             Patch(SUPERVISOR_ENDORSEMENTS, Defaults(SUPERVISOR_ENDORSEMENTS),
+                             Patch(SUPERVISOR_ENDORSEMENTS,
+                               Coalesce(
+                                 LookUp(SUPERVISOR_ENDORSEMENTS,
+                                   And(ApplicationID.Id = locApp.ID,
+                                       SupervisorLevel.Value = ThisItem.level)),
+                                 Defaults(SUPERVISOR_ENDORSEMENTS)),
                                {
                                  ApplicationID: {
                                    '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",

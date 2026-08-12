@@ -42,6 +42,7 @@ The three program groupings (NEXT, MDP, HPP). Parent of `PROGRAM_OPTIONS`; score
 |---|---|---|---|
 | ID | Number | Yes | Auto-number. **Primary key** for `PROGRAM_OPTIONS.ProgramID`. |
 | ProgramName | Text | Yes | NEXT, MDP, HPP. |
+| Abbreviation | Text | Yes | Short label for tight UI (tab bars, chips). Required — a blank tab is not an acceptable render. |
 | Description | Note | No | |
 | State | Choice | Yes | Active, Retired. |
 
@@ -137,6 +138,8 @@ The central application record. Supporting documents are the row's native ShareP
 | ServiceComputationDate | Date | No | |
 | ApplicationStatus | Choice | Yes | Draft, Submitted, Validated, Withdrawn. Owned by applicant + DTD acceptance. |
 | PlacementOutcome | Choice | Yes | Decision Pending, Placed, Not Selected, Placement Declined. |
+| PlacementProgramID | Lookup(PROGRAMS.ProgramName) | No | Program placed into. Blank = no decision yet; also blank when PlacementOutcome = Not Selected. |
+| PlacementOptionID | Lookup(PROGRAM_OPTIONS.OptionName) | No | Option placed into, when the program has options. Blank for MDP and NEXT. |
 | FirstLineSupervisorEmail | Text | No | Snapshot at submission. |
 | SecondLineSupervisorEmail | Text | No | Snapshot; empty → `Needs Supervisor Assigned`. |
 | AlternateSecondLineEmail | Text | No | **[PROPOSED — FR-012a]** |
@@ -219,19 +222,8 @@ An applicant's score for a program. Numbers are queryable; per-criterion breakdo
 | ScoredBy | Text | No | |
 | ScoredDate | Date | No | |
 
-### PLACEMENTS  → APPLICATIONS, PROGRAMS, PROGRAM_OPTIONS, CYCLES
-DTD's placement of an applicant into a program option within a cycle.
-
-| Column | Type | Required | Notes |
-|---|---|---|---|
-| ID | Number | Yes | Auto-number. |
-| ApplicationID | Lookup(APPLICATIONS.ApplicantEmail) | Yes | |
-| ProgramID | Lookup(PROGRAMS.ProgramName) | Yes | Program placed into. |
-| ProgramOptionID | Lookup(PROGRAM_OPTIONS.OptionName) | No | Blank for MDP and NEXT. |
-| CycleID | Lookup(CYCLES.CycleName) | Yes | |
-| PlacedBy | Text | Yes | |
-| PlacedDate | Date | Yes | |
-| IsFinalized | Choice | Yes | Yes, No. Locked at cohort finalize. |
+### PLACEMENTS — retired 2026-08-11
+Final placement collapsed into APPLICATIONS (`PlacementProgramID`, `PlacementOptionID`) plus the existing `PlacementOutcome`. PlacedBy / PlacedDate / IsFinalized were dropped as unneeded.
 
 ---
 

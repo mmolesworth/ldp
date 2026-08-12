@@ -41,7 +41,8 @@ optional because most programs genuinely have no option to record.
 - **The duplicate guard compared options** when the rule is about program-and-option together.
 
 Migrated by `build/scripts/Update-LdpProgramChoices.ps1`. `PLACEMENTS` had the identical defect and
-was fixed in the same run.
+was fixed in the same run — it has since been retired (2026-08-11), with final placement absorbed
+into `APPLICATIONS.PlacementProgramID` / `PlacementOptionID`.
 
 ## Revised 2026-08-07 — committee score moved onto the choice row
 

@@ -245,22 +245,23 @@
                   X: =16
                   Y: =galTabsCS.Y + galTabsCS.Height
             # ---- Placeholder for tabs 2..6 (Personnel below is tab 1) -----
-            - lblTabPlaceholderCS:
-                Control: Label@2.5.1
-                Properties:
-                  Align: =Align.Center
-                  Color: =ColorPalette.TextHelp
-                  Font: =Typography.Family
-                  Height: =40
-                  Size: =Typography.SizeBody
-                  Text: |-
-                    ="Tab " & Text(locDetailTabCS) &
-                     " content — added in a later step."
-                  VerticalAlign: =VerticalAlign.Middle
-                  Visible: =locDetailTabCS = 5
-                  Width: =Parent.Width - 32
-                  X: =16
-                  Y: =recTabsRuleCS.Y + recTabsRuleCS.Height + 40
+            # ---- Tab 5: Documents ------------------------------------------
+            # An Edit Form on APPLICATIONS with only the Attachments card,
+            # inserted in Studio (Constitution IV — the card has no YAML
+            # representation). Build steps:
+            #   Insert > Forms > Edit  (name it frmDocsCS)
+            #   DataSource   = APPLICATIONS
+            #   Item         = locApp
+            #   DefaultMode  = FormMode.View     (committee reads only)
+            #   Fields       = Attachments only  (remove every other card)
+            #   Visible      = locDetailTabCS = 5
+            #   X = 16
+            #   Y = recTabsRuleCS.Y + recTabsRuleCS.Height + 16
+            #   Width  = Parent.Width - 32
+            #   Height = Parent.Height - Self.Y - 16
+            #
+            # OI-APP-1: attachments are one undifferentiated collection on the
+            # APPLICATIONS row — committee sees file names, not per-slot identity.
             # ---- Tab 1: Personnel ------------------------------------------
             # 2-column grid of disabled TextInputs with floating labels.
             # DisplayMode.Disabled (not View) keeps the border + fill, so the

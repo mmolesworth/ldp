@@ -7,6 +7,7 @@
 |---|---|---|---|
 | ID | Number | Yes | SharePoint auto-number (Counter). **The primary key** — `PROGRAM_OPTIONS.ProgramID` is a Lookup that stores this value. |
 | ProgramName | Single line of text | Yes | NEXT, MDP, HPP. |
+| Abbreviation | Single line of text | Yes | Short label for tight UI (tab bars, chips). Required — a blank tab is not an acceptable render. |
 | Description | Multiple lines of text | No | |
 | State | Choice | Yes | Active, Retired. New programs default to Active. |
 

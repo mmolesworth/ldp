@@ -194,8 +194,7 @@ return — the lookup no longer matches `User().Email`, and the next save mints 
 ## OI-DATA-3 — join-table lookups display an ambiguous column
 
 **Where:** `APPLICATION_PROGRAM_CHOICES.ApplicationID`, `APPLICATION_COMPETENCIES.ApplicationID`,
-`SUPERVISOR_ENDORSEMENTS.ApplicationID`, `COMMITTEE_SCORES.ApplicationID`, `PLACEMENTS.ApplicationID`
-— all provisioned with `ShowField = 'ApplicantEmail'`.
+`SUPERVISOR_ENDORSEMENTS.ApplicationID` — all provisioned with `ShowField = 'ApplicantEmail'`.
 
 **What:** NOT a data defect. A SharePoint lookup stores an integer `LookupId`; `ShowField` only
 chooses what the list view renders. An applicant who applies in two cycles produces join rows that

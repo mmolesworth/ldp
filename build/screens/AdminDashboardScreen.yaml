@@ -12,7 +12,7 @@
 #     · Applicants  — everyone not in Draft
 #     · Submitted   — waiting on DTD validation
 #     · In Review   — anywhere in the review pipeline
-#     · Placed      — PLACEMENTS rows for this cycle
+#     · Placed      — APPLICATIONS with PlacementOutcome = "Placed" in this cycle
 #
 #   Row 2 — 2 horizontal bar charts (PowerLibs bar-chart-1 pattern):
 #     · Applicants by program        — count of APPLICATION_PROGRAM_CHOICES
@@ -249,8 +249,9 @@
                   Size: =Typography.SizeTitle
                   Text: |-
                     =Text(CountRows(
-                       Filter(PLACEMENTS,
-                          CycleID.Id = locCycleAD.ID)))
+                       Filter(APPLICATIONS,
+                          CycleID.Id = locCycleAD.ID,
+                          PlacementOutcome.Value = "Placed")))
                   VerticalAlign: =VerticalAlign.Middle
                   Width: =Parent.Width - 32
                   X: =16

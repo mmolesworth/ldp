@@ -1,14 +1,18 @@
 <#
 .SYNOPSIS
     Makes the PROGRAM the thing an applicant chooses, and the OPTION an extra
-    detail that only some programs have. Touches APPLICATION_PROGRAM_CHOICES
-    and PLACEMENTS. See build/lists/APPLICATION_PROGRAM_CHOICES.md, 2026-07-31.
+    detail that only some programs have. Touches APPLICATION_PROGRAM_CHOICES.
+    See build/lists/APPLICATION_PROGRAM_CHOICES.md, 2026-07-31.
+
+    PLACEMENTS was fixed in the same run originally, but has since been retired
+    (2026-08-11) — final placement now lives on APPLICATIONS.PlacementProgramID
+    / PlacementOptionID, so the PLACEMENTS half of this migration is gone.
 
 .DESCRIPTION
-    Both lists recorded only ProgramOptionID, and required it. MDP and NEXT
-    have no options, so an applicant could not choose them at all until
-    Add-LdpProgramOptions.ps1 invented an "N/A" option per program purely to
-    satisfy the constraint. This script records what was actually chosen and
+    APPLICATION_PROGRAM_CHOICES recorded only ProgramOptionID, and required it.
+    MDP and NEXT have no options, so an applicant could not choose them at all
+    until Add-LdpProgramOptions.ps1 invented an "N/A" option per program purely
+    to satisfy the constraint. This script records what was actually chosen and
     then removes the invention.
 
       1. ADD       ProgramID to both lists, unrequired.
@@ -66,10 +70,10 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# Both lists get the same treatment; PLACEMENTS is the same defect one table over.
+# Loop kept for a single list — the array shape survives the PLACEMENTS retirement
+# so nothing downstream had to change.
 $script:Targets = @(
     @{ List = 'APPLICATION_PROGRAM_CHOICES'; Label = 'ApplicationID' }
-    @{ List = 'PLACEMENTS';                  Label = 'ApplicationID' }
 )
 
 $script:Tally = [ordered]@{
@@ -237,7 +241,7 @@ try {
     Write-Host 'PHASE 5/5  Summary' -ForegroundColor Cyan
     foreach ($k in $script:Tally.Keys) { Write-Host ("  {0,-22} {1}" -f $k, $script:Tally[$k]) }
     Write-Host ''
-    Write-Host 'Then: refresh APPLICATION_PROGRAM_CHOICES, PLACEMENTS and PROGRAM_OPTIONS' -ForegroundColor Yellow
+    Write-Host 'Then: refresh APPLICATION_PROGRAM_CHOICES and PROGRAM_OPTIONS' -ForegroundColor Yellow
     Write-Host 'in Power Apps Studio, and re-paste the DTD Applications screen.' -ForegroundColor Yellow
     Write-Host ''
 }

@@ -1,5 +1,10 @@
 # LDP Application — Logical Data Model
 
+> **Partially superseded 2026-08-11.** `PLACEMENTS` was retired; final placement lives on
+> `APPLICATIONS.PlacementProgramID` / `PlacementOptionID`. `COMMITTEE_SCORES` was also retired
+> (2026-08-07) — aggregate on `APPLICATION_PROGRAM_CHOICES`; per-criterion detail on
+> `COMMITTEE_CRITERION_SCORES`. `build/lists/` is the source of truth.
+
 **Project:** NCUA OHR Leader Development Program Application (RITM0069731)
 **Scope:** Phase I
 **Backend:** SharePoint lists (Power Apps)

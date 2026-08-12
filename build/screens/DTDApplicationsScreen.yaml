@@ -3119,28 +3119,19 @@
       # It returns a single-column table, which is the shape a Classic/DropDown
       # matches Default against, so no ForAll projection is needed here.
       # ---- 5. Documents ----
-      # OI-APP-1 is still open: the three documents are native SharePoint
-      # attachments, and the attachment control only exists inside a Form data
-      # card — there is no read-only list control for them. Saying so is more
-      # use than an empty panel that looks broken.
-      - lblTabDocumentsDTD:
-          Control: Label@2.5.1
-          Properties:
-            Color: =ColorPalette.TextBody
-            Font: =Typography.Family
-            Height: =Parent.Height - 130
-            Size: =Typography.SizeBody
-            Text: |-
-              ="Résumé, statement of interest and performance appraisal are stored as SharePoint attachments on this application.
-              
-              They cannot be listed here yet: the attachment control exists only inside a Form data card, and this panel is read-only. Open the item in SharePoint to view them.
-              
-              Tracked as OI-APP-1."
-            VerticalAlign: =VerticalAlign.Top
-            Visible: =And(Not(IsBlank(locApp)), locDetailTab = 5)
-            Width: =Parent.Width - 48
-            X: =24
-            Y: =118
+      # An Edit Form on APPLICATIONS with only the Attachments card, inserted
+      # in Studio (Constitution IV — the card has no YAML representation).
+      # Build steps:
+      #   Insert > Forms > Edit  (name it frmDocsDTD)
+      #   DataSource   = APPLICATIONS
+      #   Item         = locApp
+      #   DefaultMode  = FormMode.View     (DTD reads, does not modify)
+      #   Fields       = Attachments only  (remove every other card)
+      #   Visible      = And(Not(IsBlank(locApp)), locDetailTab = 5)
+      #   X = 24, Y = 118, Width = Parent.Width - 48, Height = Parent.Height - 130
+      #
+      # OI-APP-1: attachments are one undifferentiated collection on the
+      # APPLICATIONS row — DTD sees file names, not per-slot identity.
 
 # ===========================================================================
 # CLEAR-VALIDATION CONFIRMATION — PowerLibs warning-modal-v2-1

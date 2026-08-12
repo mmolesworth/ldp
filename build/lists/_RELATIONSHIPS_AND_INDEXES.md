@@ -18,13 +18,13 @@
 | RATING_CRITERIA | RatingSheetID | RATING_SHEETS |
 | RATING_CRITERIA | CatalogCriterionID | CRITERION_CATALOG |
 | CRITERION_ANCHORS | CatalogCriterionID | CRITERION_CATALOG |
-| COMMITTEE_SCORES | ApplicationID | APPLICATIONS |
-| COMMITTEE_SCORES | ProgramID | PROGRAMS |
-| COMMITTEE_SCORES | RatingSheetID | RATING_SHEETS |
-| PLACEMENTS | ApplicationID | APPLICATIONS |
-| PLACEMENTS | ProgramID | PROGRAMS |
-| PLACEMENTS | ProgramOptionID (optional) | PROGRAM_OPTIONS |
-| PLACEMENTS | CycleID | CYCLES |
+| COMMITTEES | ProgramID | PROGRAMS |
+| COMMITTEES | CycleID | CYCLES |
+| COMMITTEES | RatingSheetID | RATING_SHEETS |
+| COMMITTEE_CRITERION_SCORES | ApplicationProgramChoiceID | APPLICATION_PROGRAM_CHOICES |
+| COMMITTEE_CRITERION_SCORES | RatingCriterionID | RATING_CRITERIA |
+| APPLICATIONS | PlacementProgramID (optional) | PROGRAMS |
+| APPLICATIONS | PlacementOptionID (optional) | PROGRAM_OPTIONS |
 
 **Append-only logs (NOT lookups):** `NOTIFICATIONS.ApplicationID` and `CHANGE_HISTORY.ApplicationID`
 are plain **Number** columns (store the ID value) so the log survives parent changes.
@@ -35,20 +35,23 @@ are plain **Number** columns (store the ID value) so the log survives parent cha
 
 | List | Indexed columns |
 |---|---|
-| APPLICATIONS | CycleID, ApplicantEmail, Status, RoutingStage |
+| APPLICATIONS | CycleID, ApplicantEmail, ApplicationStatus, ReviewStage, PlacementOutcome, PlacementProgramID |
 | APPLICATION_COMPETENCIES | ApplicationID, CompetencyID |
-| APPLICATION_PROGRAM_CHOICES | ApplicationID, ProgramID, ProgramOptionID |
+| APPLICATION_PROGRAM_CHOICES | ApplicationID, ProgramID, ProgramOptionID, CommitteeID |
 | SUPERVISOR_ENDORSEMENTS | ApplicationID |
 | RATING_SHEETS | ProgramID, State |
 | RATING_CRITERIA | RatingSheetID |
 | CRITERION_CATALOG | State |
 | CRITERION_ANCHORS | CatalogCriterionID |
-| COMMITTEE_SCORES | ApplicationID, ProgramID, RatingSheetID |
-| PLACEMENTS | ApplicationID, ProgramOptionID, CycleID |
+| COMMITTEES | ProgramID, CycleID, State |
+| COMMITTEE_CRITERION_SCORES | ApplicationProgramChoiceID, RatingCriterionID |
 | NOTIFICATIONS | ApplicationID |
 | CHANGE_HISTORY | ApplicationID |
 | CYCLES | State |
-| PROGRAM_OPTIONS | ProgramID |
+| PROGRAM_OPTIONS | ProgramID, State |
+| PROGRAMS | State |
+| COMPETENCY_TYPES | State |
+| COMPETENCIES | CompetencyTypeID, State |
 
 **Rule:** every gallery/lookup filters by an indexed, `CycleID`-scoped predicate first; no screen
 loads an unfiltered list (R2).

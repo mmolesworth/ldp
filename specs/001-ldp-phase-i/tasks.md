@@ -4,6 +4,9 @@ description: "Task list for LDP Application Phase I"
 
 # Tasks: LDP Application — Phase I
 
+> **Schema notes:** `EMPLOYEE_DIRECTORY` withdrawn 2026-07-26. `COMMITTEE_SCORES` retired 2026-08-07. `PLACEMENTS` retired 2026-08-11 (folded into `APPLICATIONS.PlacementProgramID` / `PlacementOptionID`). Tasks below referencing those lists remain historical; `build/` is the source of truth.
+
+
 **Input**: Design documents from `specs/001-ldp-phase-i/`
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/screens.md, quickstart.md
 

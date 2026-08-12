@@ -1,6 +1,8 @@
 # UI Contract — Screen Inventory, LDP Application Phase I
 
 > **`EMPLOYEE_DIRECTORY` withdrawn 2026-07-26.** Personnel and supervisor-chain data comes from an existing system of record (D-1). References to the interim list below are superseded; see `build/lists/EMPLOYEE_DIRECTORY.md`.
+>
+> **`COMMITTEE_SCORES` retired 2026-08-07** (see `_SCHEMA.md`). **`PLACEMENTS` retired 2026-08-11** — final placement is `APPLICATIONS.PlacementProgramID` / `PlacementOptionID`. `build/screens/` is the source of truth for screen bindings.
 
 **Feature**: `001-ldp-phase-i` | **Date**: 2026-07-25
 
