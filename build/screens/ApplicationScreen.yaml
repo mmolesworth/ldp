@@ -43,12 +43,10 @@
 #                       First(Sort(CYCLES, OpenDate, SortOrder.Descending)),
 #                       LookUp(CYCLES, State.Value = "Open")),
 #          locStep: 1,
-#          locDropRank2: false,
-#          locDropRank3: false,
 #          locCompTypeAP: First(SortByColumns(
 #                             Filter(COMPETENCY_TYPES, State.Value = "Active"),
 #                             "SortOrder", SortOrder.Ascending)).ID
-#      });Don
+#      });
 #      UpdateContext({
 #          locApp: LookUp(APPLICATIONS,
 #                    And(CycleID.Id = locCycle.ID, ApplicantEmail = User().Email))
@@ -61,24 +59,39 @@
 #                    CompName:  ac.CompetencyID.Value,
 #                    TypeId:    compRec.CompetencyTypeID.Id,
 #                    TypeName:  compRec.CompetencyTypeID.Value,
-#                    TypeOrder: typeRec.SortOrder }))))
+#                    TypeOrder: typeRec.SortOrder }))));
+#      ClearCollect(colProgChoicesAP,
+#          ForAll(
+#              SortByColumns(
+#                  Filter(APPLICATION_PROGRAM_CHOICES, ApplicationID.Id = locApp.ID),
+#                  "Rank", SortOrder.Ascending) As ch,
+#              { Rank:       ch.Rank,
+#                ProgId:     ch.ProgramID.Id,
+#                ProgName:   ch.ProgramID.Value,
+#                OptId:      ch.ProgramOptionID.Id,
+#                OptName:    ch.ProgramOptionID.Value,
+#                HasOptions: Not(IsEmpty(Filter(PROGRAM_OPTIONS,
+#                              ProgramID.Id = ch.ProgramID.Id,
+#                              State.Value = "Active"))) }))
 #
 #      The two With blocks name the parent-record lookups so each fires once
 #      per row (not three times) and so Power Fx type-inference sees a flatter
 #      expression — deeply nested LookUp chains inside ForAll's record literal
 #      can fail to fully type-infer and emit "Error type" for the last field.
 #
-#   THREE BLOCKS, IN THIS ORDER. locApp needs locCycle; colAppComps needs
-#   locApp. A variable cannot be referenced inside the UpdateContext that
-#   defines it, which is why these cannot be merged.
+#   FOUR BLOCKS, IN THIS ORDER. locApp needs locCycle; colAppComps and
+#   colProgChoicesAP both need locApp. A variable cannot be referenced inside
+#   the UpdateContext that defines it, which is why these cannot be merged.
 #
-#   colRanked is GONE (2026-08-01). It was collected here and read by nothing;
-#   the six step-2 dropdowns now restore from APPLICATION_PROGRAM_CHOICES via
-#   their own Default expressions.
-#
-#   The three false flags matter. locDropRank2/3 suppress a rank's Default so a
-#   removed choice stays removed; if they survive from a previous visit they
-#   would blank a draft's choices on load, and the next save would delete them.
+#   Step 2 rewritten 2026-08-12 to the competency-picker pattern:
+#   colProgChoicesAP is the source of truth for the applicant's picks, mutated
+#   by explicit Add / MoveUp / MoveDown / Remove actions. The old design bound
+#   six dropdowns' Default to LookUp(APPLICATION_PROGRAM_CHOICES, ...) and lost
+#   the selection on save because Power Apps clobbered Selected when Default
+#   went momentarily blank during the destructive Remove-then-Patch. No control
+#   in step 2 now reads APPLICATION_PROGRAM_CHOICES — the class of bug is gone.
+#   Rank is dense (1..N with no gaps); Remove compacts, MoveUp/MoveDown swap.
+#   locDropRank2/3 were retired in the same change.
 #
 #   5b. (screen) OnHidden — transcribe by hand:
 #
@@ -1070,19 +1083,46 @@
                   Width: =Parent.Width - 48
                   X: =24
                   Y: =36
-            - lblChoice1AP:
-                Control: Label@2.5.1
+            # ---- Add row: program picker + (if program has options) option
+            # picker + Add button. State lives in colProgChoicesAP; the Add
+            # button appends and Reset clears the pickers. Nothing reads
+            # APPLICATION_PROGRAM_CHOICES here — that's what the old
+            # rank-per-dropdown design got clobbered by on save.
+            - drpAddProgAP:
+                Control: Classic/DropDown@2.3.1
                 Properties:
-                  Color: =ColorPalette.TextHeading
+                  AllowEmptySelection: =true
+                  BorderColor: =ColorPalette.Gray300
+                  BorderThickness: =1
+                  ChevronBackground: =ColorPalette.Blue600
+                  ChevronFill: =ColorPalette.TextOnDark
+                  DisplayMode: |-
+                    =If(Or(locCycle.State.Value <> "Open",
+                           And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft"),
+                           CountRows(colProgChoicesAP) >= 3),
+                       DisplayMode.Disabled, DisplayMode.Edit)
+                  FocusedBorderThickness: =1
                   Font: =Typography.Family
-                  FontWeight: =Typography.WeightMedium
-                  Height: =22
+                  Height: =32
+                  # <> "Retired", NOT = "Active": PROGRAMS.State is blank on rows
+                  # created before the column existed (OI-DATA-2).
+                  # SINGLE-COLUMN TEXT: Classic/DropDown matches its displayed
+                  # column against a name YAML cannot set (PA2108) — ForAll
+                  # projects one text column so display and OnSelect read align.
+                  Items: |-
+                    =ForAll(
+                      Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName),
+                      ProgramName)
+                  OnChange: |-
+                    =Set(gblFormDirty, true);
+                    Reset(drpAddOptAP)
+                  SelectionColor: =ColorPalette.TextOnDark
+                  SelectionFill: =ColorPalette.Blue600
                   Size: =Typography.SizeBody
-                  Text: ="First choice (required)"
-                  Width: =240
+                  Width: =360
                   X: =24
                   Y: =88
-            - drpProgram1AP:
+            - drpAddOptAP:
                 Control: Classic/DropDown@2.3.1
                 Properties:
                   AllowEmptySelection: =true
@@ -1090,490 +1130,444 @@
                   BorderThickness: =1
                   ChevronBackground: =ColorPalette.Blue600
                   ChevronFill: =ColorPalette.TextOnDark
-                  Default: |-
-                    =LookUp(APPLICATION_PROGRAM_CHOICES,
-                      And(ApplicationID.Id = locApp.ID, Rank = 1)).ProgramID.Value
-                  FocusedBorderThickness: =1
-                  Font: =Typography.Family
-                  Height: =32
-                  # <> "Retired", NOT = "Active": PROGRAMS.State is blank on rows
-                  # created before the column existed and nothing backfills it, so an
-                  # equality test offers the applicant an empty list. See OI-DATA-2.
-                  # SINGLE-COLUMN TEXT. A Classic/DropDown displays and matches
-                  # Default against the column named by its Value property, and Value
-                  # is an output YAML cannot set (PA2108) — over a table of RECORDS
-                  # it picks a column of its own choosing, which is why this rendered
-                  # blank. ForAll projects one text column, so display and Default are
-                  # the same thing.
-                  #
-                  # <> "Retired", not = "Active": PROGRAMS.State is blank on rows
-                  # created before the column existed (OI-DATA-2).
-                  Items: |-
-                    =ForAll(
-                      Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName),
-                      ProgramName)
-                  OnChange: |-
-                    =Set(gblFormDirty, true)
-                  SelectionColor: =ColorPalette.TextOnDark
-                  SelectionFill: =ColorPalette.Blue600
-                  Size: =Typography.SizeBody
-                  Width: =360
-                  X: =24
-                  Y: =114
-            # Options filtered to the chosen program. ProgramID is indexed.
-            - drpOption1AP:
-                Control: Classic/DropDown@2.3.1
-                Properties:
-                  AllowEmptySelection: =true
-                  BorderColor: =ColorPalette.Gray300
-                  BorderThickness: =1
-                  ChevronBackground: =ColorPalette.Blue600
-                  ChevronFill: =ColorPalette.TextOnDark
-                  Default: |-
-                    =LookUp(APPLICATION_PROGRAM_CHOICES,
-                      And(ApplicationID.Id = locApp.ID, Rank = 1)).ProgramOptionID.Value
-                  FocusedBorderThickness: =1
-                  Font: =Typography.Family
-                  Height: =32
-                  Items: |-
-                    =ForAll(
-                      Sort(
-                        Filter(PROGRAM_OPTIONS,
-                          ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram1AP.Selected.Value).ID,
-                          Or(State.Value = "Active",
-                             OptionName = LookUp(APPLICATION_PROGRAM_CHOICES,
-                      And(ApplicationID.Id = locApp.ID, Rank = 1)).ProgramOptionID.Value)),
-                        OptionName),
-                      OptionName)
-                  OnChange: |-
-                    =Set(gblFormDirty, true)
-                  SelectionColor: =ColorPalette.TextOnDark
-                  SelectionFill: =ColorPalette.Blue600
-                  Size: =Typography.SizeBody
-                  # Hidden when the chosen program has no options — MDP and NEXT
-                  # today. IsEmpty(Filter(...)) rather than CountRows(...) = 0:
-                  # CountRows does not delegate to SharePoint and would answer from
-                  # the first 500 rows only.
-                  #
-                  # This property is also the single definition of "this program has
-                  # options". The submit gate and the review checklist both read
-                  # Self.Visible rather than repeating the query, so the rule cannot
-                  # drift between the picker and the validation.
-                  Visible: |-
-                    =Not(IsEmpty(Filter(PROGRAM_OPTIONS,
-                       ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram1AP.Selected.Value).ID,
-                       State.Value = "Active")))
-                  Width: =588
-                  X: =400
-                  Y: =114
-            - lblNoOption1AP:
-                Control: Label@2.5.1
-                Properties:
-                  Color: =ColorPalette.TextHelp
-                  Font: =Typography.Family
-                  Height: =32
-                  Size: =Typography.SizeBody
-                  Text: ="This program has no secondary options."
-                  VerticalAlign: =VerticalAlign.Middle
-                  # The mirror of the dropdown's Visible: shown exactly when the
-                  # dropdown is not, and only once a program has been picked. An
-                  # empty gap here reads as something failing to load.
-                  Visible: |-
-                    =And(Not(IsBlank(drpProgram1AP.Selected.Value)),
-                       Not(drpOption1AP.Visible))
-                  Width: =588
-                  X: =400
-                  Y: =114
-            - lblChoice2AP:
-                Control: Label@2.5.1
-                Properties:
-                  Color: =ColorPalette.TextHeading
-                  Font: =Typography.Family
-                  FontWeight: =Typography.WeightMedium
-                  Height: =22
-                  Size: =Typography.SizeBody
-                  Text: ="Second choice"
-                  Width: =240
-                  X: =24
-                  Y: =166
-            - drpProgram2AP:
-                Control: Classic/DropDown@2.3.1
-                Properties:
-                  AllowEmptySelection: =true
-                  BorderColor: =ColorPalette.Gray300
-                  BorderThickness: =1
-                  ChevronBackground: =ColorPalette.Blue600
-                  ChevronFill: =ColorPalette.TextOnDark
-                  Default: |-
-                    =If(locDropRank2, Blank(),
-                      LookUp(APPLICATION_PROGRAM_CHOICES,
-                        And(ApplicationID.Id = locApp.ID, Rank = 2)).ProgramID.Value)
-                  FocusedBorderThickness: =1
-                  Font: =Typography.Family
-                  Height: =32
-                  # <> "Retired", NOT = "Active": PROGRAMS.State is blank on rows
-                  # created before the column existed and nothing backfills it, so an
-                  # equality test offers the applicant an empty list. See OI-DATA-2.
-                  # SINGLE-COLUMN TEXT. A Classic/DropDown displays and matches
-                  # Default against the column named by its Value property, and Value
-                  # is an output YAML cannot set (PA2108) — over a table of RECORDS
-                  # it picks a column of its own choosing, which is why this rendered
-                  # blank. ForAll projects one text column, so display and Default are
-                  # the same thing.
-                  #
-                  # <> "Retired", not = "Active": PROGRAMS.State is blank on rows
-                  # created before the column existed (OI-DATA-2).
-                  Items: |-
-                    =ForAll(
-                      Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName),
-                      ProgramName)
-                  OnChange: |-
-                    =Set(gblFormDirty, true)
-                  SelectionColor: =ColorPalette.TextOnDark
-                  SelectionFill: =ColorPalette.Blue600
-                  Size: =Typography.SizeBody
-                  Width: =360
-                  X: =24
-                  Y: =192
-            - drpOption2AP:
-                Control: Classic/DropDown@2.3.1
-                Properties:
-                  AllowEmptySelection: =true
-                  BorderColor: =ColorPalette.Gray300
-                  BorderThickness: =1
-                  ChevronBackground: =ColorPalette.Blue600
-                  ChevronFill: =ColorPalette.TextOnDark
-                  Default: |-
-                    =If(locDropRank2, Blank(),
-                      LookUp(APPLICATION_PROGRAM_CHOICES,
-                        And(ApplicationID.Id = locApp.ID, Rank = 2)).ProgramOptionID.Value)
-                  FocusedBorderThickness: =1
-                  Font: =Typography.Family
-                  Height: =32
-                  Items: |-
-                    =ForAll(
-                      Sort(
-                        Filter(PROGRAM_OPTIONS,
-                          ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram2AP.Selected.Value).ID,
-                          Or(State.Value = "Active",
-                             OptionName = LookUp(APPLICATION_PROGRAM_CHOICES,
-                      And(ApplicationID.Id = locApp.ID, Rank = 2)).ProgramOptionID.Value)),
-                        OptionName),
-                      OptionName)
-                  OnChange: |-
-                    =Set(gblFormDirty, true)
-                  SelectionColor: =ColorPalette.TextOnDark
-                  SelectionFill: =ColorPalette.Blue600
-                  Size: =Typography.SizeBody
-                  # Hidden when the chosen program has no options — MDP and NEXT
-                  # today. IsEmpty(Filter(...)) rather than CountRows(...) = 0:
-                  # CountRows does not delegate to SharePoint and would answer from
-                  # the first 500 rows only.
-                  #
-                  # This property is also the single definition of "this program has
-                  # options". The submit gate and the review checklist both read
-                  # Self.Visible rather than repeating the query, so the rule cannot
-                  # drift between the picker and the validation.
-                  Visible: |-
-                    =Not(IsEmpty(Filter(PROGRAM_OPTIONS,
-                       ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram2AP.Selected.Value).ID,
-                       State.Value = "Active")))
-                  Width: =588
-                  X: =400
-                  Y: =192
-            - lblNoOption2AP:
-                Control: Label@2.5.1
-                Properties:
-                  Color: =ColorPalette.TextHelp
-                  Font: =Typography.Family
-                  Height: =32
-                  Size: =Typography.SizeBody
-                  Text: ="This program has no secondary options."
-                  VerticalAlign: =VerticalAlign.Middle
-                  # The mirror of the dropdown's Visible: shown exactly when the
-                  # dropdown is not, and only once a program has been picked. An
-                  # empty gap here reads as something failing to load.
-                  Visible: |-
-                    =And(Not(IsBlank(drpProgram2AP.Selected.Value)),
-                       Not(drpOption2AP.Visible))
-                  Width: =588
-                  X: =400
-                  Y: =192
-            - lblChoice3AP:
-                Control: Label@2.5.1
-                Properties:
-                  Color: =ColorPalette.TextHeading
-                  Font: =Typography.Family
-                  FontWeight: =Typography.WeightMedium
-                  Height: =22
-                  Size: =Typography.SizeBody
-                  Text: ="Third choice"
-                  Width: =240
-                  X: =24
-                  Y: =244
-            - drpProgram3AP:
-                Control: Classic/DropDown@2.3.1
-                Properties:
-                  AllowEmptySelection: =true
-                  BorderColor: =ColorPalette.Gray300
-                  BorderThickness: =1
-                  ChevronBackground: =ColorPalette.Blue600
-                  ChevronFill: =ColorPalette.TextOnDark
-                  Default: |-
-                    =If(locDropRank3, Blank(),
-                      LookUp(APPLICATION_PROGRAM_CHOICES,
-                        And(ApplicationID.Id = locApp.ID, Rank = 3)).ProgramID.Value)
-                  FocusedBorderThickness: =1
-                  Font: =Typography.Family
-                  Height: =32
-                  # <> "Retired", NOT = "Active": PROGRAMS.State is blank on rows
-                  # created before the column existed and nothing backfills it, so an
-                  # equality test offers the applicant an empty list. See OI-DATA-2.
-                  # SINGLE-COLUMN TEXT. A Classic/DropDown displays and matches
-                  # Default against the column named by its Value property, and Value
-                  # is an output YAML cannot set (PA2108) — over a table of RECORDS
-                  # it picks a column of its own choosing, which is why this rendered
-                  # blank. ForAll projects one text column, so display and Default are
-                  # the same thing.
-                  #
-                  # <> "Retired", not = "Active": PROGRAMS.State is blank on rows
-                  # created before the column existed (OI-DATA-2).
-                  Items: |-
-                    =ForAll(
-                      Sort(Filter(PROGRAMS, State.Value <> "Retired"), ProgramName),
-                      ProgramName)
-                  OnChange: |-
-                    =Set(gblFormDirty, true)
-                  SelectionColor: =ColorPalette.TextOnDark
-                  SelectionFill: =ColorPalette.Blue600
-                  Size: =Typography.SizeBody
-                  Width: =360
-                  X: =24
-                  Y: =270
-            - drpOption3AP:
-                Control: Classic/DropDown@2.3.1
-                Properties:
-                  AllowEmptySelection: =true
-                  BorderColor: =ColorPalette.Gray300
-                  BorderThickness: =1
-                  ChevronBackground: =ColorPalette.Blue600
-                  ChevronFill: =ColorPalette.TextOnDark
-                  Default: |-
-                    =If(locDropRank3, Blank(),
-                      LookUp(APPLICATION_PROGRAM_CHOICES,
-                        And(ApplicationID.Id = locApp.ID, Rank = 3)).ProgramOptionID.Value)
-                  FocusedBorderThickness: =1
-                  Font: =Typography.Family
-                  Height: =32
-                  Items: |-
-                    =ForAll(
-                      Sort(
-                        Filter(PROGRAM_OPTIONS,
-                          ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram3AP.Selected.Value).ID,
-                          Or(State.Value = "Active",
-                             OptionName = LookUp(APPLICATION_PROGRAM_CHOICES,
-                      And(ApplicationID.Id = locApp.ID, Rank = 3)).ProgramOptionID.Value)),
-                        OptionName),
-                      OptionName)
-                  OnChange: |-
-                    =Set(gblFormDirty, true)
-                  SelectionColor: =ColorPalette.TextOnDark
-                  SelectionFill: =ColorPalette.Blue600
-                  Size: =Typography.SizeBody
-                  # Hidden when the chosen program has no options — MDP and NEXT
-                  # today. IsEmpty(Filter(...)) rather than CountRows(...) = 0:
-                  # CountRows does not delegate to SharePoint and would answer from
-                  # the first 500 rows only.
-                  #
-                  # This property is also the single definition of "this program has
-                  # options". The submit gate and the review checklist both read
-                  # Self.Visible rather than repeating the query, so the rule cannot
-                  # drift between the picker and the validation.
-                  Visible: |-
-                    =Not(IsEmpty(Filter(PROGRAM_OPTIONS,
-                       ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram3AP.Selected.Value).ID,
-                       State.Value = "Active")))
-                  Width: =588
-                  X: =400
-                  Y: =270
-            - lblNoOption3AP:
-                Control: Label@2.5.1
-                Properties:
-                  Color: =ColorPalette.TextHelp
-                  Font: =Typography.Family
-                  Height: =32
-                  Size: =Typography.SizeBody
-                  Text: ="This program has no secondary options."
-                  VerticalAlign: =VerticalAlign.Middle
-                  # The mirror of the dropdown's Visible: shown exactly when the
-                  # dropdown is not, and only once a program has been picked. An
-                  # empty gap here reads as something failing to load.
-                  Visible: |-
-                    =And(Not(IsBlank(drpProgram3AP.Selected.Value)),
-                       Not(drpOption3AP.Visible))
-                  Width: =588
-                  X: =400
-                  Y: =270
-            # FR-004 — the same option cannot be chosen twice.
-            # Clearing a choice needs more than picking the blank entry that
-            # AllowEmptySelection adds: Reset restores a control's Default, and the
-            # Default here is the SAVED row — so a reset would put the choice back.
-            # locDropRankN suppresses that Default, and Reset then re-reads it as
-            # blank. UpdateContext runs BEFORE the Resets for exactly that reason.
-            #
-            # Nothing is written until Save. Choice 1 has no Remove — it is required.
-            #
-            # Icon plus a transparent button on top: Classic/Button has no Icon
-            # property. Same pair as the DTD Competencies tab, and Icon.Trash is the
-            # built-in — gblNavIcons carries DocumentEdit, Archive, ArchiveArrowBack
-            # and Eye but nothing for delete.
-            #
-            # NO AccessibleLabel: it is not a valid property on Classic/Button, only
-            # on inputs such as Classic/DatePicker. The Tooltip is the only name this
-            # control has, which is an OI-A11Y-1 gap rather than something to fake.
-            - icoClearChoice2AP:
-                Control: Classic/Icon@2.5.0
-                Properties:
-                  BorderStyle: =BorderStyle.None
-                  # TextHelp — the palette's muted text grey, 4.76:1 on white. The
-                  # Gray tokens are surface colours: Gray300 is 1.48:1 and Gray200
-                  # 1.24:1, both far under the 3:1 WCAG 1.4.11 wants for a
-                  # non-text control, so an icon drawn in either would be decorative
-                  # rather than visible.
-                  #
-                  # The hover fill stays DangerLight: quiet at rest, and the red
-                  # only appears at the moment the action is about to happen.
-                  Color: =ColorPalette.TextHelp
-                  Height: =18
-                  Icon: =Icon.Trash
-                  Visible: |-
-                    =Not(IsBlank(drpProgram2AP.Selected.Value))
-                  Width: =18
-                  X: =1011
-                  Y: =199
-            - btnClearChoice2AP:
-                Control: Classic/Button@2.2.0
-                Properties:
-                  BorderColor: =RGBA(0, 0, 0, 0)
-                  BorderStyle: =BorderStyle.Solid
-                  BorderThickness: =0
-                  Color: =RGBA(0, 0, 0, 0)
                   DisplayMode: |-
                     =If(Or(locCycle.State.Value <> "Open",
                            And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
                        DisplayMode.Disabled, DisplayMode.Edit)
-                  Fill: =RGBA(0, 0, 0, 0)
-                  FocusedBorderColor: =ColorPalette.FocusOnLight
-                  FocusedBorderThickness: =2
+                  FocusedBorderThickness: =1
+                  Font: =Typography.Family
                   Height: =32
-                  HoverColor: =RGBA(0, 0, 0, 0)
-                  HoverFill: =ColorPalette.DangerLight
-                  OnSelect: |-
-                    =UpdateContext({ locDropRank2: true }); Set(gblFormDirty, true);
-                    Reset(drpProgram2AP);
-                    Reset(drpOption2AP)
-                  PressedColor: =RGBA(0, 0, 0, 0)
-                  PressedFill: =ColorPalette.DangerLight
-                  RadiusBottomLeft: =6
-                  RadiusBottomRight: =6
-                  RadiusTopLeft: =6
-                  RadiusTopRight: =6
-                  Size: =Typography.SizeCaption
-                  Text: =""
-                  Tooltip: |-
-                    ="Remove program choice 2"
+                  # <> "Retired", NOT = "Active": mirrors OI-DATA-2's PROGRAMS
+                  # workaround — some rows in some tenants hold a blank State,
+                  # so equality returns nothing. Excluding "Retired" is safe
+                  # whether the row is Active or blank.
+                  Items: |-
+                    =ForAll(
+                      Sort(
+                        Filter(PROGRAM_OPTIONS,
+                          ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpAddProgAP.Selected.Value).ID,
+                          State.Value <> "Retired"),
+                        OptionName),
+                      OptionName)
+                  OnChange: |-
+                    =Set(gblFormDirty, true)
+                  SelectionColor: =ColorPalette.TextOnDark
+                  SelectionFill: =ColorPalette.Blue600
+                  Size: =Typography.SizeBody
+                  # Visible only when a program is picked AND that program has
+                  # active options. Same query the Add button and the mirror
+                  # label read so the "has options" rule lives in one place.
                   Visible: |-
-                    =Not(IsBlank(drpProgram2AP.Selected.Value))
-                  Width: =32
-                  X: =1004
-                  Y: =192
-            - icoClearChoice3AP:
-                Control: Classic/Icon@2.5.0
-                Properties:
-                  BorderStyle: =BorderStyle.None
-                  # TextHelp — the palette's muted text grey, 4.76:1 on white. The
-                  # Gray tokens are surface colours: Gray300 is 1.48:1 and Gray200
-                  # 1.24:1, both far under the 3:1 WCAG 1.4.11 wants for a
-                  # non-text control, so an icon drawn in either would be decorative
-                  # rather than visible.
-                  #
-                  # The hover fill stays DangerLight: quiet at rest, and the red
-                  # only appears at the moment the action is about to happen.
-                  Color: =ColorPalette.TextHelp
-                  Height: =18
-                  Icon: =Icon.Trash
-                  Visible: |-
-                    =Not(IsBlank(drpProgram3AP.Selected.Value))
-                  Width: =18
-                  X: =1011
-                  Y: =277
-            - btnClearChoice3AP:
-                Control: Classic/Button@2.2.0
-                Properties:
-                  BorderColor: =RGBA(0, 0, 0, 0)
-                  BorderStyle: =BorderStyle.Solid
-                  BorderThickness: =0
-                  Color: =RGBA(0, 0, 0, 0)
-                  DisplayMode: |-
-                    =If(Or(locCycle.State.Value <> "Open",
-                           And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
-                       DisplayMode.Disabled, DisplayMode.Edit)
-                  Fill: =RGBA(0, 0, 0, 0)
-                  FocusedBorderColor: =ColorPalette.FocusOnLight
-                  FocusedBorderThickness: =2
-                  Height: =32
-                  HoverColor: =RGBA(0, 0, 0, 0)
-                  HoverFill: =ColorPalette.DangerLight
-                  OnSelect: |-
-                    =UpdateContext({ locDropRank3: true }); Set(gblFormDirty, true);
-                    Reset(drpProgram3AP);
-                    Reset(drpOption3AP)
-                  PressedColor: =RGBA(0, 0, 0, 0)
-                  PressedFill: =ColorPalette.DangerLight
-                  RadiusBottomLeft: =6
-                  RadiusBottomRight: =6
-                  RadiusTopLeft: =6
-                  RadiusTopRight: =6
-                  Size: =Typography.SizeCaption
-                  Text: =""
-                  Tooltip: |-
-                    ="Remove program choice 3"
-                  Visible: |-
-                    =Not(IsBlank(drpProgram3AP.Selected.Value))
-                  Width: =32
-                  X: =1004
-                  Y: =270
-            - lblS2DupAP:
+                    =And(Not(IsBlank(drpAddProgAP.Selected.Value)),
+                       Not(IsEmpty(Filter(PROGRAM_OPTIONS,
+                         ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpAddProgAP.Selected.Value).ID,
+                         State.Value <> "Retired"))))
+                  Width: =468
+                  X: =400
+                  Y: =88
+            # Mirror label — shown when a program with no options is picked.
+            - lblAddNoOptAP:
                 Control: Label@2.5.1
                 Properties:
-                  Color: =ColorPalette.DangerText
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =32
+                  Size: =Typography.SizeBody
+                  Text: ="No secondary option required."
+                  VerticalAlign: =VerticalAlign.Middle
+                  Visible: |-
+                    =And(Not(IsBlank(drpAddProgAP.Selected.Value)),
+                       IsEmpty(Filter(PROGRAM_OPTIONS,
+                         ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpAddProgAP.Selected.Value).ID,
+                         State.Value <> "Retired")))
+                  Width: =468
+                  X: =400
+                  Y: =88
+            - btnAddProgAP:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  BorderColor: =ColorPalette.Blue600
+                  BorderStyle: =BorderStyle.Solid
+                  BorderThickness: =0
+                  Color: =ColorPalette.TextOnDark
+                  # Disabled when: no program picked; program has options but
+                  # option not picked; already at 3; the (program, option) pair
+                  # is already in colProgChoicesAP (FR-004: uniqueness on the
+                  # pair — HPP with different options is fine, MDP twice is not,
+                  # both would be (MDP, Blank)); cycle not Open; app not Draft.
+                  DisplayMode: |-
+                    =If(Or(IsBlank(drpAddProgAP.Selected.Value),
+                           And(drpAddOptAP.Visible, IsBlank(drpAddOptAP.Selected.Value)),
+                           CountRows(colProgChoicesAP) >= 3,
+                           Not(IsEmpty(Filter(colProgChoicesAP,
+                             ProgName = drpAddProgAP.Selected.Value,
+                             Coalesce(OptName, "") = Coalesce(drpAddOptAP.Selected.Value, "")))),
+                           locCycle.State.Value <> "Open",
+                           And(Not(IsBlank(locApp)), locApp.ApplicationStatus.Value <> "Draft")),
+                       DisplayMode.Disabled, DisplayMode.Edit)
+                  Fill: =ColorPalette.Blue600
+                  FocusedBorderColor: =ColorPalette.FocusOnLight
+                  FocusedBorderThickness: =3
+                  Font: =Typography.Family
+                  Height: =32
+                  HoverColor: =Self.Color
+                  HoverFill: =ColorPalette.Blue700
+                  # Resolve program/option to IDs at Add-time so the Save
+                  # handler does not repeat the LookUp per row.
+                  OnSelect: |-
+                    =With(
+                      { prg: LookUp(PROGRAMS, ProgramName = drpAddProgAP.Selected.Value),
+                        hasOpt: Not(IsEmpty(Filter(PROGRAM_OPTIONS,
+                                 ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpAddProgAP.Selected.Value).ID,
+                                 State.Value <> "Retired"))) },
+                      Collect(colProgChoicesAP,
+                        { Rank:       CountRows(colProgChoicesAP) + 1,
+                          ProgId:     prg.ID,
+                          ProgName:   prg.ProgramName,
+                          OptId:      If(hasOpt,
+                                         LookUp(PROGRAM_OPTIONS,
+                                           And(ProgramID.Id = prg.ID,
+                                               OptionName = drpAddOptAP.Selected.Value)).ID,
+                                         Blank()),
+                          OptName:    If(hasOpt, drpAddOptAP.Selected.Value, Blank()),
+                          HasOptions: hasOpt }));
+                    Set(gblFormDirty, true);
+                    Reset(drpAddProgAP);
+                    Reset(drpAddOptAP)
+                  PressedColor: =Self.Color
+                  PressedFill: =ColorPalette.Blue700
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  Size: =Typography.SizeBody
+                  Text: ="Add choice"
+                  Width: =120
+                  X: =880
+                  Y: =88
+            - lblProgMaxAP:
+                # Shown once at the ceiling. The Add row disables via its own
+                # rules; this label tells the applicant why nothing responded.
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
                   Font: =Typography.Family
                   Height: =20
                   Size: =Typography.SizeCaption
                   Text: |-
-                    ="The same choice has been made more than once. Pick a different program, or a different option under the same program."
-                  # Compares the PAIR, not the option. HPP may be ranked more than
-                  # once with a different option each time; MDP or NEXT twice is
-                  # still blocked and needs no special case, because both rows would
-                  # be (program, blank) and Coalesce makes those two blanks equal.
-                  Visible: |-
-                    =Or(
-                      And(Not(IsBlank(drpProgram1AP.Selected.Value)),
-                          drpProgram1AP.Selected.Value = drpProgram2AP.Selected.Value,
-                          Coalesce(drpOption1AP.Selected.Value, "") =
-                            Coalesce(drpOption2AP.Selected.Value, "")),
-                      And(Not(IsBlank(drpProgram1AP.Selected.Value)),
-                          drpProgram1AP.Selected.Value = drpProgram3AP.Selected.Value,
-                          Coalesce(drpOption1AP.Selected.Value, "") =
-                            Coalesce(drpOption3AP.Selected.Value, "")),
-                      And(Not(IsBlank(drpProgram2AP.Selected.Value)),
-                          drpProgram2AP.Selected.Value = drpProgram3AP.Selected.Value,
-                          Coalesce(drpOption2AP.Selected.Value, "") =
-                            Coalesce(drpOption3AP.Selected.Value, ""))
-                    )
+                    ="Maximum of 3 program choices reached. Remove one to change your selection."
+                  Visible: =CountRows(colProgChoicesAP) >= 3
                   Width: =Parent.Width - 48
                   X: =24
-                  Y: =318
+                  Y: =126
+            # ---- List of chosen programs (dense rank 1..N, sorted by Rank) ----
+            - lblChoiceListAP:
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHeading
+                  Font: =Typography.Family
+                  FontWeight: =Typography.WeightMedium
+                  Height: =22
+                  Size: =Typography.SizeBody
+                  Text: ="Your choices (in preference order)"
+                  Width: =Parent.Width - 48
+                  X: =24
+                  Y: =158
+            - lblChoiceEmptyAP:
+                # Shown until the first Add — otherwise the empty area reads as
+                # something failing to load.
+                Control: Label@2.5.1
+                Properties:
+                  Color: =ColorPalette.TextHelp
+                  Font: =Typography.Family
+                  Height: =32
+                  Size: =Typography.SizeBody
+                  Text: ="No choices yet. Pick a program above and click Add choice."
+                  VerticalAlign: =VerticalAlign.Middle
+                  Visible: =IsEmpty(colProgChoicesAP)
+                  Width: =Parent.Width - 48
+                  X: =24
+                  Y: =186
+            - galProgChoicesAP:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  BorderColor: =ColorPalette.Gray200
+                  Height: =192
+                  # Sorted by Rank ascending — 1st choice at the top. Rank is
+                  # dense (1..N with no gaps): Remove compacts, MoveUp/MoveDown
+                  # swap. This is what enables the "add-order equals rank" UX.
+                  Items: |-
+                    =SortByColumns(colProgChoicesAP, "Rank", SortOrder.Ascending)
+                  ShowScrollbar: =true
+                  TemplatePadding: =0
+                  TemplateSize: =56
+                  Visible: =Not(IsEmpty(colProgChoicesAP))
+                  Width: =Parent.Width - 48
+                  X: =24
+                  Y: =186
+                Children:
+                  - conProgChoiceRowAP:
+                      Control: GroupContainer@1.5.0
+                      Variant: ManualLayout
+                      Properties:
+                        DropShadow: =DropShadow.None
+                        Fill: =ColorPalette.White
+                        Height: =Parent.TemplateHeight
+                        Width: =Parent.TemplateWidth
+                      Children:
+                        # Rank badge — GroupContainer + Label. Labels do not
+                        # support Radius, so the round background is on the
+                        # container and the number is the child.
+                        - conProgRankBadgeAP:
+                            Control: GroupContainer@1.5.0
+                            Variant: ManualLayout
+                            Properties:
+                              DropShadow: =DropShadow.None
+                              Fill: =ColorPalette.Blue600
+                              Height: =28
+                              RadiusBottomLeft: =14
+                              RadiusBottomRight: =14
+                              RadiusTopLeft: =14
+                              RadiusTopRight: =14
+                              Width: =28
+                              X: =12
+                              Y: =14
+                            Children:
+                              - lblProgRankBadgeAP:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Align: =Align.Center
+                                    Color: =ColorPalette.TextOnDark
+                                    Font: =Typography.Family
+                                    FontWeight: =Typography.WeightBold
+                                    Height: =Parent.Height
+                                    Size: =Typography.SizeBody
+                                    Text: =Text(ThisItem.Rank)
+                                    VerticalAlign: =VerticalAlign.Middle
+                                    Width: =Parent.Width
+                                    X: =0
+                                    Y: =0
+                        - lblProgChoiceNameAP:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =ColorPalette.TextHeading
+                              Font: =Typography.Family
+                              FontWeight: =Typography.WeightMedium
+                              Height: =24
+                              Size: =Typography.SizeBody
+                              Text: =ThisItem.ProgName
+                              VerticalAlign: =VerticalAlign.Middle
+                              Width: =360
+                              X: =56
+                              Y: =8
+                        - lblProgChoiceOptAP:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =ColorPalette.TextHelp
+                              Font: =Typography.Family
+                              Height: =20
+                              Size: =Typography.SizeCaption
+                              # Blank OptName means the program has no options
+                              # (MDP/NEXT today) — say so plainly rather than
+                              # leave a bare gap that reads as missing data.
+                              Text: |-
+                                =If(IsBlank(ThisItem.OptName),
+                                   "No secondary option",
+                                   ThisItem.OptName)
+                              VerticalAlign: =VerticalAlign.Middle
+                              Width: =360
+                              X: =56
+                              Y: =32
+                        # ---- row actions: MoveUp / MoveDown / Remove ----
+                        # Icon + transparent button pattern — Classic/Button
+                        # has no Icon property. Hidden at the boundaries so
+                        # rank 1 has no up-chevron and the last row has no down.
+                        - icoProgUpAP:
+                            Control: Classic/Icon@2.5.0
+                            Properties:
+                              BorderStyle: =BorderStyle.None
+                              Color: =ColorPalette.TextHelp
+                              Height: =18
+                              Icon: =Icon.ChevronUp
+                              Visible: =ThisItem.Rank > 1
+                              Width: =18
+                              X: =Parent.Width - 136
+                              Y: =19
+                        - btnProgUpAP:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =RGBA(0, 0, 0, 0)
+                              BorderStyle: =BorderStyle.Solid
+                              BorderThickness: =0
+                              Color: =RGBA(0, 0, 0, 0)
+                              DisplayMode: |-
+                                =If(Or(locCycle.State.Value <> "Open",
+                                       And(Not(IsBlank(locApp)),
+                                           locApp.ApplicationStatus.Value <> "Draft")),
+                                   DisplayMode.Disabled, DisplayMode.Edit)
+                              Fill: =RGBA(0, 0, 0, 0)
+                              FocusedBorderColor: =ColorPalette.FocusOnLight
+                              FocusedBorderThickness: =2
+                              Height: =32
+                              HoverColor: =RGBA(0, 0, 0, 0)
+                              HoverFill: =ColorPalette.Blue50
+                              # Swap this row's Rank with the row above (Rank - 1).
+                              # Match on (ProgId, OptId) — FR-004 makes the pair
+                              # unique. Coalesce(OptId, 0) so MDP/NEXT rows (blank
+                              # OptId) still match themselves.
+                              # Two-step swap. Capture `above` in a context
+                              # var BEFORE any Patch so we can still reference
+                              # that row after its Rank changes. Then patch
+                              # `curr` by (ProgId, OptId) — the FR-004 unique
+                              # pair — no Rank in the LookUp, so it stays
+                              # unambiguous even when Ranks temporarily collide.
+                              # `With` cannot host a ;-chain in its second
+                              # argument (PA1002); UpdateContext is the safe
+                              # way to hold a row reference across statements.
+                              OnSelect: |-
+                                =UpdateContext({ locAboveRowAP: LookUp(colProgChoicesAP, Rank = ThisItem.Rank - 1) });
+                                Patch(colProgChoicesAP,
+                                  LookUp(colProgChoicesAP,
+                                    And(ProgId = ThisItem.ProgId,
+                                        Coalesce(OptId, 0) = Coalesce(ThisItem.OptId, 0))),
+                                  { Rank: ThisItem.Rank - 1 });
+                                Patch(colProgChoicesAP, locAboveRowAP, { Rank: ThisItem.Rank });
+                                Set(gblFormDirty, true)
+                              PressedColor: =RGBA(0, 0, 0, 0)
+                              PressedFill: =ColorPalette.Blue50
+                              RadiusBottomLeft: =6
+                              RadiusBottomRight: =6
+                              RadiusTopLeft: =6
+                              RadiusTopRight: =6
+                              Size: =Typography.SizeCaption
+                              Text: =""
+                              Tooltip: ="Move up"
+                              Visible: =ThisItem.Rank > 1
+                              Width: =32
+                              X: =Parent.Width - 143
+                              Y: =12
+                        - icoProgDownAP:
+                            Control: Classic/Icon@2.5.0
+                            Properties:
+                              BorderStyle: =BorderStyle.None
+                              Color: =ColorPalette.TextHelp
+                              Height: =18
+                              Icon: =Icon.ChevronDown
+                              Visible: =ThisItem.Rank < CountRows(colProgChoicesAP)
+                              Width: =18
+                              X: =Parent.Width - 96
+                              Y: =19
+                        - btnProgDownAP:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =RGBA(0, 0, 0, 0)
+                              BorderStyle: =BorderStyle.Solid
+                              BorderThickness: =0
+                              Color: =RGBA(0, 0, 0, 0)
+                              DisplayMode: |-
+                                =If(Or(locCycle.State.Value <> "Open",
+                                       And(Not(IsBlank(locApp)),
+                                           locApp.ApplicationStatus.Value <> "Draft")),
+                                   DisplayMode.Disabled, DisplayMode.Edit)
+                              Fill: =RGBA(0, 0, 0, 0)
+                              FocusedBorderColor: =ColorPalette.FocusOnLight
+                              FocusedBorderThickness: =2
+                              Height: =32
+                              HoverColor: =RGBA(0, 0, 0, 0)
+                              HoverFill: =ColorPalette.Blue50
+                              OnSelect: |-
+                                =UpdateContext({ locBelowRowAP: LookUp(colProgChoicesAP, Rank = ThisItem.Rank + 1) });
+                                Patch(colProgChoicesAP,
+                                  LookUp(colProgChoicesAP,
+                                    And(ProgId = ThisItem.ProgId,
+                                        Coalesce(OptId, 0) = Coalesce(ThisItem.OptId, 0))),
+                                  { Rank: ThisItem.Rank + 1 });
+                                Patch(colProgChoicesAP, locBelowRowAP, { Rank: ThisItem.Rank });
+                                Set(gblFormDirty, true)
+                              PressedColor: =RGBA(0, 0, 0, 0)
+                              PressedFill: =ColorPalette.Blue50
+                              RadiusBottomLeft: =6
+                              RadiusBottomRight: =6
+                              RadiusTopLeft: =6
+                              RadiusTopRight: =6
+                              Size: =Typography.SizeCaption
+                              Text: =""
+                              Tooltip: ="Move down"
+                              Visible: =ThisItem.Rank < CountRows(colProgChoicesAP)
+                              Width: =32
+                              X: =Parent.Width - 103
+                              Y: =12
+                        - icoProgRemoveAP:
+                            Control: Classic/Icon@2.5.0
+                            Properties:
+                              BorderStyle: =BorderStyle.None
+                              Color: =ColorPalette.TextHelp
+                              Height: =18
+                              Icon: =Icon.Trash
+                              Width: =18
+                              X: =Parent.Width - 48
+                              Y: =19
+                        - btnProgRemoveAP:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =RGBA(0, 0, 0, 0)
+                              BorderStyle: =BorderStyle.Solid
+                              BorderThickness: =0
+                              Color: =RGBA(0, 0, 0, 0)
+                              DisplayMode: |-
+                                =If(Or(locCycle.State.Value <> "Open",
+                                       And(Not(IsBlank(locApp)),
+                                           locApp.ApplicationStatus.Value <> "Draft")),
+                                   DisplayMode.Disabled, DisplayMode.Edit)
+                              Fill: =RGBA(0, 0, 0, 0)
+                              FocusedBorderColor: =ColorPalette.FocusOnLight
+                              FocusedBorderThickness: =2
+                              Height: =32
+                              HoverColor: =RGBA(0, 0, 0, 0)
+                              HoverFill: =ColorPalette.DangerLight
+                              # Remove, then compact: every row with Rank
+                              # above the removed rank drops by 1 so the list
+                              # stays dense at 1..N.
+                              # UpdateContext (not With) because a With's
+                              # second argument must be a single expression
+                              # (PA1002), and this handler chains three
+                              # statements.
+                              OnSelect: |-
+                                =UpdateContext({ locRemovedRankAP: ThisItem.Rank });
+                                RemoveIf(colProgChoicesAP,
+                                  ProgId = ThisItem.ProgId,
+                                  Coalesce(OptId, 0) = Coalesce(ThisItem.OptId, 0));
+                                ForAll(
+                                  Filter(colProgChoicesAP, Rank > locRemovedRankAP) As r,
+                                  Patch(colProgChoicesAP,
+                                    LookUp(colProgChoicesAP,
+                                      And(ProgId = r.ProgId,
+                                          Coalesce(OptId, 0) = Coalesce(r.OptId, 0))),
+                                    { Rank: r.Rank - 1 }));
+                                Set(gblFormDirty, true)
+                              PressedColor: =RGBA(0, 0, 0, 0)
+                              PressedFill: =ColorPalette.DangerLight
+                              RadiusBottomLeft: =6
+                              RadiusBottomRight: =6
+                              RadiusTopLeft: =6
+                              RadiusTopRight: =6
+                              Size: =Typography.SizeCaption
+                              Text: =""
+                              Tooltip: |-
+                                ="Remove " & ThisItem.ProgName
+                              Width: =32
+                              X: =Parent.Width - 55
+                              Y: =12
+                  - recProgChoiceLineAP:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =RGBA(0, 0, 0, 0)
+                        Fill: =ColorPalette.Gray200
+                        Height: =1
+                        Width: =Parent.TemplateWidth
+                        X: =0
+                        Y: =Parent.TemplateHeight - 1
       
       # ===========================================================================
       # STEP 3 — Competencies and ECQs (RQ006–008, FR-005) — see D-2 blocker
@@ -2431,21 +2425,11 @@
                 Properties:
                   BorderStyle: =BorderStyle.None
                   Color: |-
-                    =If(Or(IsBlank(drpProgram1AP.Selected.Value),
-                          And(drpOption1AP.Visible, IsBlank(drpOption1AP.Selected.Value)),
-                          And(Not(IsBlank(drpProgram2AP.Selected.Value)),
-                              drpOption2AP.Visible, IsBlank(drpOption2AP.Selected.Value)),
-                          And(Not(IsBlank(drpProgram3AP.Selected.Value)),
-                              drpOption3AP.Visible, IsBlank(drpOption3AP.Selected.Value))),
+                    =If(IsEmpty(colProgChoicesAP),
                        ColorPalette.DangerText, ColorPalette.SuccessText)
                   Height: =20
                   Icon: |-
-                    =If(Or(IsBlank(drpProgram1AP.Selected.Value),
-                          And(drpOption1AP.Visible, IsBlank(drpOption1AP.Selected.Value)),
-                          And(Not(IsBlank(drpProgram2AP.Selected.Value)),
-                              drpOption2AP.Visible, IsBlank(drpOption2AP.Selected.Value)),
-                          And(Not(IsBlank(drpProgram3AP.Selected.Value)),
-                              drpOption3AP.Visible, IsBlank(drpOption3AP.Selected.Value))),
+                    =If(IsEmpty(colProgChoicesAP),
                        Icon.Warning, Icon.Check)
                   Width: =20
                   X: =32
@@ -2466,24 +2450,14 @@
                 Properties:
                   Align: =Align.Right
                   Color: |-
-                    =If(Or(IsBlank(drpProgram1AP.Selected.Value),
-                          And(drpOption1AP.Visible, IsBlank(drpOption1AP.Selected.Value)),
-                          And(Not(IsBlank(drpProgram2AP.Selected.Value)),
-                              drpOption2AP.Visible, IsBlank(drpOption2AP.Selected.Value)),
-                          And(Not(IsBlank(drpProgram3AP.Selected.Value)),
-                              drpOption3AP.Visible, IsBlank(drpOption3AP.Selected.Value))),
+                    =If(IsEmpty(colProgChoicesAP),
                        ColorPalette.DangerText, ColorPalette.SuccessText)
                   Font: =Typography.Family
                   FontWeight: =Typography.WeightMedium
                   Height: =30
                   Size: =Typography.SizeHeading
                   Text: |-
-                    =If(Or(IsBlank(drpProgram1AP.Selected.Value),
-                          And(drpOption1AP.Visible, IsBlank(drpOption1AP.Selected.Value)),
-                          And(Not(IsBlank(drpProgram2AP.Selected.Value)),
-                              drpOption2AP.Visible, IsBlank(drpOption2AP.Selected.Value)),
-                          And(Not(IsBlank(drpProgram3AP.Selected.Value)),
-                              drpOption3AP.Visible, IsBlank(drpOption3AP.Selected.Value))),
+                    =If(IsEmpty(colProgChoicesAP),
                        "One choice required", "Complete")
                   Width: =280
                   X: =Parent.Width * 0.56 - 300
@@ -2690,12 +2664,7 @@
                             IsBlank(dtpScdAP.SelectedDate),
                             IsBlank(Trim(txtSup1AP.Text)),
                             IsBlank(Trim(txtSup2AP.Text))),
-                         Or(IsBlank(drpProgram1AP.Selected.Value),
-                            And(drpOption1AP.Visible, IsBlank(drpOption1AP.Selected.Value)),
-                            And(Not(IsBlank(drpProgram2AP.Selected.Value)),
-                                drpOption2AP.Visible, IsBlank(drpOption2AP.Selected.Value)),
-                            And(Not(IsBlank(drpProgram3AP.Selected.Value)),
-                                drpOption3AP.Visible, IsBlank(drpOption3AP.Selected.Value))),
+                         IsEmpty(colProgChoicesAP),
                          CountRows(Filter(COMPETENCY_TYPES,
                             State.Value = "Active",
                             Not(ID in colAppComps.TypeId))) > 0,
@@ -2742,38 +2711,24 @@
                             If(IsBlank(locApp.SubmittedDate), Today(), locApp.SubmittedDate)
                         })
                     });
-                    Remove(APPLICATION_PROGRAM_CHOICES,
-                      Filter(APPLICATION_PROGRAM_CHOICES, ApplicationID.Id = locApp.ID));
-                    // A row exists because a PROGRAM was chosen. The filter used to
-                    // test the OPTION, which meant an applicant choosing MDP or NEXT
-                    // — neither of which has options — wrote nothing at all once the
-                    // fabricated "N/A" rows were gone. The option rides along only
-                    // where there is one; the record form is wrapped in If() because
-                    // a lookup with a blank Id is not the same as no lookup.
-                    ForAll(
-                      Filter(
-                        Table(
-                          { PrgId: LookUp(PROGRAMS, ProgramName = drpProgram1AP.Selected.Value).ID,
-                            PrgName: drpProgram1AP.Selected.Value,
-                            OptId: LookUp(PROGRAM_OPTIONS,
-                              And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram1AP.Selected.Value).ID,
-                                  OptionName = drpOption1AP.Selected.Value)).ID,
-                            OptName: drpOption1AP.Selected.Value, Rnk: 1 },
-                          { PrgId: LookUp(PROGRAMS, ProgramName = drpProgram2AP.Selected.Value).ID,
-                            PrgName: drpProgram2AP.Selected.Value,
-                            OptId: LookUp(PROGRAM_OPTIONS,
-                              And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram2AP.Selected.Value).ID,
-                                  OptionName = drpOption2AP.Selected.Value)).ID,
-                            OptName: drpOption2AP.Selected.Value, Rnk: 2 },
-                          { PrgId: LookUp(PROGRAMS, ProgramName = drpProgram3AP.Selected.Value).ID,
-                            PrgName: drpProgram3AP.Selected.Value,
-                            OptId: LookUp(PROGRAM_OPTIONS,
-                              And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram3AP.Selected.Value).ID,
-                                  OptionName = drpOption3AP.Selected.Value)).ID,
-                            OptName: drpOption3AP.Selected.Value, Rnk: 3 }
-                        ),
-                        Not(IsBlank(PrgId))
-                      ) As ch,
+                    // RemoveIf, NOT Remove(source, Filter(...)): the latter
+                    // orphans rows in SharePoint (clears the ApplicationID
+                    // lookup rather than deleting the row) when the filter
+                    // condition keys on a lookup column's .Id. RemoveIf
+                    // delegates a direct DELETE and behaves correctly.
+                    // Refresh aligns the local cache with the server before
+                    // the delete, so RemoveIf does not try to delete a row
+                    // that was already removed out-of-band (which surfaces
+                    // as "Item Not Found").
+                    Refresh(APPLICATION_PROGRAM_CHOICES);
+                    RemoveIf(APPLICATION_PROGRAM_CHOICES, ApplicationID.Id = locApp.ID);
+                    // Program choices come from colProgChoicesAP (built in
+                    // OnVisible, mutated by the Add / MoveUp / MoveDown /
+                    // Remove actions on step 2). PrgId/OptId are resolved at
+                    // Add-time so the write is straight passthrough — no more
+                    // LookUp-per-row on save, and no dropdown Selected reads
+                    // (which the old "Default from LookUp" design lost).
+                    ForAll(colProgChoicesAP As ch,
                       Patch(APPLICATION_PROGRAM_CHOICES, Defaults(APPLICATION_PROGRAM_CHOICES),
                         {
                           ApplicationID: {
@@ -2783,8 +2738,8 @@
                           },
                           ProgramID: {
                             '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
-                            Id: ch.PrgId,
-                            Value: ch.PrgName
+                            Id: ch.ProgId,
+                            Value: ch.ProgName
                           },
                           ProgramOptionID:
                             If(Not(IsBlank(ch.OptId)),
@@ -2794,7 +2749,7 @@
                                 Value: ch.OptName
                               },
                               Blank()),
-                          Rank: ch.Rnk
+                          Rank: ch.Rank
                         })
                     );
                           // Competencies. ADD FIRST, THEN REMOVE — a failed write then costs the
@@ -2965,51 +2920,17 @@
                   })
               });
               Set(gblFormDirty, false);
-              // locDropRank2/3 are deliberately NOT cleared here. Clearing a flag
-              // un-suppresses that rank's Default, the Default still points at the
-              // saved row this handler has not deleted yet, and Power Apps updates a
-              // control when its Default changes — so the dropdown repopulates and
-              // the ForAll below writes the removed choice straight back.
-              //
-              // They are cleared in OnVisible instead, where the record is being
-              // reloaded anyway and no row is mid-flight. Leaving them set costs
-              // nothing: once the row is gone the Default is blank regardless, and a
-              // user's own selection is unaffected by a suppressed Default.
-      
-              // Save draft persists the program choices too. It used to patch
-              // APPLICATIONS alone, so an applicant could pick three programs, save,
-              // come back and find nothing — the choices only ever reached SharePoint
-              // on Submit.
-              //
-              // Safe to delete-and-rewrite here ONLY because the six dropdowns now
-              // restore from the saved rows on reopen. Without those Defaults this
-              // block would wipe the choices it just loaded.
-              Remove(APPLICATION_PROGRAM_CHOICES,
-                Filter(APPLICATION_PROGRAM_CHOICES, ApplicationID.Id = locApp.ID));
-              ForAll(
-                Filter(
-                  Table(
-                  { PrgId: LookUp(PROGRAMS, ProgramName = drpProgram1AP.Selected.Value).ID,
-                    PrgName: drpProgram1AP.Selected.Value,
-                    OptId: LookUp(PROGRAM_OPTIONS,
-                      And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram1AP.Selected.Value).ID,
-                          OptionName = drpOption1AP.Selected.Value)).ID,
-                    OptName: drpOption1AP.Selected.Value, Rnk: 1 },
-                  { PrgId: LookUp(PROGRAMS, ProgramName = drpProgram2AP.Selected.Value).ID,
-                    PrgName: drpProgram2AP.Selected.Value,
-                    OptId: LookUp(PROGRAM_OPTIONS,
-                      And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram2AP.Selected.Value).ID,
-                          OptionName = drpOption2AP.Selected.Value)).ID,
-                    OptName: drpOption2AP.Selected.Value, Rnk: 2 },
-                  { PrgId: LookUp(PROGRAMS, ProgramName = drpProgram3AP.Selected.Value).ID,
-                    PrgName: drpProgram3AP.Selected.Value,
-                    OptId: LookUp(PROGRAM_OPTIONS,
-                      And(ProgramID.Id = LookUp(PROGRAMS, ProgramName = drpProgram3AP.Selected.Value).ID,
-                          OptionName = drpOption3AP.Selected.Value)).ID,
-                    OptName: drpOption3AP.Selected.Value, Rnk: 3 }
-                  ),
-                  Not(IsBlank(PrgId))
-                ) As ch,
+
+              // Program choices: colProgChoicesAP is the source of truth
+              // (mutated only by explicit Add/MoveUp/MoveDown/Remove actions
+              // on step 2). Delete-and-rewrite is safe here because the step
+              // 2 pickers do not read APPLICATION_PROGRAM_CHOICES — no
+              // Default-clobber bug to re-introduce. Refresh before RemoveIf
+              // aligns the local cache with the server, avoiding "Item Not
+              // Found" when a row was already deleted out-of-band.
+              Refresh(APPLICATION_PROGRAM_CHOICES);
+              RemoveIf(APPLICATION_PROGRAM_CHOICES, ApplicationID.Id = locApp.ID);
+              ForAll(colProgChoicesAP As ch,
                 Patch(APPLICATION_PROGRAM_CHOICES, Defaults(APPLICATION_PROGRAM_CHOICES),
                   {
                     ApplicationID: {
@@ -3019,8 +2940,8 @@
                     },
                     ProgramID: {
                       '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference",
-                      Id: ch.PrgId,
-                      Value: ch.PrgName
+                      Id: ch.ProgId,
+                      Value: ch.ProgName
                     },
                     ProgramOptionID:
                       If(Not(IsBlank(ch.OptId)),
@@ -3030,7 +2951,7 @@
                           Value: ch.OptName
                         },
                         Blank()),
-                    Rank: ch.Rnk
+                    Rank: ch.Rank
                   })
               );
       

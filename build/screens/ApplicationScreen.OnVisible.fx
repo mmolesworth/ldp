@@ -14,8 +14,6 @@ UpdateContext({
                  First(Sort(CYCLES, OpenDate, SortOrder.Descending)),
                  LookUp(CYCLES, State.Value = "Open")),
     locStep: 1,
-    locDropRank2: false,
-    locDropRank3: false,
     locCompTypeAP: First(SortByColumns(
                        Filter(COMPETENCY_TYPES, State.Value = "Active"),
                        "SortOrder", SortOrder.Ascending)).ID
@@ -32,4 +30,23 @@ ClearCollect(colAppComps,
               CompName:  ac.CompetencyID.Value,
               TypeId:    compRec.CompetencyTypeID.Id,
               TypeName:  compRec.CompetencyTypeID.Value,
-              TypeOrder: typeRec.SortOrder }))))
+              TypeOrder: typeRec.SortOrder }))));
+// Program choices. Same shape as colAppComps: source of truth for what the
+// applicant has picked, mutated only by explicit Add/Remove/Reorder actions
+// on step 2. The Save/Submit handlers diff it against SharePoint. Rank is
+// dense (1..N with no gaps); Remove compacts, MoveUp/MoveDown swap ranks.
+// HasOptions carries the "this program requires an option" fact so the
+// gallery row and the Add-button gate do not each re-query PROGRAM_OPTIONS.
+ClearCollect(colProgChoicesAP,
+    ForAll(
+        SortByColumns(
+            Filter(APPLICATION_PROGRAM_CHOICES, ApplicationID.Id = locApp.ID),
+            "Rank", SortOrder.Ascending) As ch,
+        { Rank:       ch.Rank,
+          ProgId:     ch.ProgramID.Id,
+          ProgName:   ch.ProgramID.Value,
+          OptId:      ch.ProgramOptionID.Id,
+          OptName:    ch.ProgramOptionID.Value,
+          HasOptions: Not(IsEmpty(Filter(PROGRAM_OPTIONS,
+                        ProgramID.Id = ch.ProgramID.Id,
+                        State.Value = "Active"))) }))
